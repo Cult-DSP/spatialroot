@@ -20,6 +20,7 @@ Phase 10 — GUI Agent.
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
@@ -193,6 +194,8 @@ class RealtimeRunner(QObject):
         # Set up QProcess
         self._proc = QProcess(self)
         self._proc.setWorkingDirectory(self._repo_root)
+        # Ensure processedData directory exists, similar to offline pipeline
+        os.makedirs(os.path.join(self._repo_root, "processedData"), exist_ok=True)
         self._proc.readyReadStandardOutput.connect(self._on_stdout)
         self._proc.readyReadStandardError.connect(self._on_stderr)
         self._proc.finished.connect(self._on_finished)
