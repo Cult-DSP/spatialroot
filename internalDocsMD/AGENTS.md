@@ -1,8 +1,15 @@
 # spatialroot — Comprehensive Agent Context
 
-**Last Updated:** March 3, 2026  
+**Last Updated:** March 4, 2026  
 **Project:** spatialroot - Open Spatial Audio Infrastructure  
 **Lead Developer:** Lucian Parisi
+
+> **Phase 3 (2026-03-04):** ADM WAV preprocessing moved into `cult-transcoder`.
+> `runRealtime.py` now calls `cult_transcoder/build/cult-transcoder transcode --in-format adm_wav`
+> instead of `extractMetaData()` + Python oracle + `writeSceneOnly()`.
+> `runPipeline.py` is DEPRECATED — do not modify.
+> `spatialroot_adm_extract` (src/adm_extract/) is superseded — not built by setupCppTools() anymore.
+> See `cult_transcoder/internalDocsMD/AGENTS-CULT.md §8` and `DEV-PLAN-CULT.md Phase 3`.
 
 ---
 
@@ -888,7 +895,7 @@ The engine follows a sequential agent architecture where each agent handles one 
 
 - **`main.cpp`** — CLI entry point. Parses arguments (`--layout`, `--scene`, `--sources` or `--adm`, `--samplerate`, `--buffersize`, `--gain`, `--osc_port`, `--focus`, `--remap`), loads LUSID scene via `JSONLoader`, loads speaker layout via `LayoutLoader`, creates Streaming (opens source WAVs — either individual mono files via `--sources` or one multichannel ADM via `--adm`), creates Pose (analyzes layout, stores keyframes), creates Spatializer (builds speakers, computes output channels from layout, creates DBAP), creates RealtimeBackend (opens AudioIO with layout-derived channel count), wires all agents together. **Phase 10:** creates 6 `al::Parameter`/`al::ParameterBool` objects (`gain`, `focus`, `speaker_mix_db`, `sub_mix_db`, `auto_comp`, `paused`) seeded from CLI defaults; starts `al::ParameterServer` on `127.0.0.1:oscPort`; registers change callbacks (relaxed atomic stores to `RealtimeConfig`); `pendingAutoComp` flag consumed in main monitoring loop; prints sentinel `"[Main] ParameterServer listening on 127.0.0.1:<port>"` once server is confirmed up; calls `paramServer.stopServer()` first in shutdown. `--sources` and `--adm` are mutually exclusive; no `--channels` flag — channel count always derived from the layout.
 
-- **`runRealtime.py`** — Python launcher that mirrors `runPipeline.py`. Accepts the same inputs: ADM WAV file or LUSID package directory + speaker layout. For ADM sources, runs preprocessing (extract ADM metadata → parse to LUSID scene → write scene.lusid.json only — **no stem splitting**) then launches the C++ engine with `--adm` pointing to the original multichannel WAV. For LUSID packages, validates the package and launches with `--sources` pointing to the mono files folder. Provides `run_realtime_from_ADM()` and `run_realtime_from_LUSID()` entry points. Uses `checkSourceType()` to detect input type from CLI. **Phase 10:** added `--osc_port` (default 9009) and `--remap` passthrough to the C++ engine command; both threaded through all three call sites (`_launch_realtime_engine`, `run_realtime_from_ADM`, `run_realtime_from_LUSID`) and CLI parsing. No `--channels` parameter — channel count derived from speaker layout by the C++ engine.
+- **`runRealtime.py`** — Python launcher for the real-time spatial audio pipeline. Accepts an ADM WAV file or LUSID package directory + speaker layout. **Phase 3 (2026-03-04): preprocessing delegated to cult-transcoder.** For ADM sources, calls `cult_transcoder/build/cult-transcoder transcode --in-format adm_wav` to extract the BW64 axml chunk, convert to LUSID, and write `processedData/stageForRender/scene.lusid.json` atomically. Then launches the C++ engine with `--adm` pointing to the original multichannel WAV. For LUSID packages, validates and launches with `--sources`. Provides `run_realtime_from_ADM()` and `run_realtime_from_LUSID()` entry points. `scan_audio` parameter and `--scan_audio` CLI flag removed (Phase 3); all channels assumed active by cult-transcoder. `--osc_port` and `--remap` passthrough to C++ engine unchanged. **`runPipeline.py` is DEPRECATED** (do not modify — kept for reference only; it still uses the old Python oracle path).
 
 ### OSC Runtime Control Plane (Phase 10)
 

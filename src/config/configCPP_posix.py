@@ -28,15 +28,28 @@ def setupCppTools():
         print("\n✗ Error: Failed to initialize allolib submodule")
         return False
 
-    # Step 2: Initialize EBU submodules (libbw64 + libadm) if needed
-    if not initializeEbuSubmodules():
-        print("\n✗ Error: EBU submodule initialization failed — cannot build ADM extractor")
-        return False
+    # Step 2: [SUPERSEDED — Phase 3 — 2026-03-04] Initialize EBU submodules (libbw64 + libadm)
+    #
+    # libbw64 is now a git submodule of cult_transcoder (cult_transcoder/thirdparty/libbw64).
+    # spatialroot_adm_extract (src/adm_extract/) is DEPRECATED — cult-transcoder handles BW64
+    # axml extraction natively via --in-format adm_wav (using its own libbw64 copy).
+    # These steps are commented rather than removed pending final cleanup of src/adm_extract/.
+    # See: cult_transcoder/internalDocsMD/DEV-PLAN-CULT.md Phase 3
+    #      cult_transcoder/internalDocsMD/AGENTS-CULT.md §8
+    #
+    # if not initializeEbuSubmodules():
+    #     print("\n✗ Error: EBU submodule initialization failed — cannot build ADM extractor")
+    #     return False
 
-    # Step 3: Build the embedded ADM extractor tool
-    if not buildAdmExtractor():
-        print("\n✗ Error: ADM extractor build failed")
-        return False
+    # Step 3: [SUPERSEDED — Phase 3 — 2026-03-04] Build the embedded ADM extractor tool
+    #
+    # spatialroot_adm_extract is replaced by cult-transcoder --in-format adm_wav.
+    # The src/adm_extract/ CMake project is deprecated and should not be built.
+    # runRealtime.py now calls cult_transcoder/build/cult-transcoder directly.
+    #
+    # if not buildAdmExtractor():
+    #     print("\n✗ Error: ADM extractor build failed")
+    #     return False
 
     # Step 4: Build Spatial renderer if needed
     if not buildSpatialRenderer():

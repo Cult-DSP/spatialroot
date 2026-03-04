@@ -1,15 +1,39 @@
 """
 runRealtime.py — Python entry point for the spatialroot Real-Time Spatial Audio Engine
 
-Mirrors runPipeline.py: accepts the same inputs (ADM WAV or LUSID package +
-speaker layout), runs the same preprocessing pipeline, then launches the
-real-time C++ engine instead of the offline renderer.
+Phase 3 change (2026-03-04):
+  The ADM WAV preprocessing pipeline (extract metadata → parse XML → write
+  scene.lusid.json) has been moved entirely into the cult-transcoder binary.
+  run_realtime_from_ADM() now calls:
 
-Input types (identical to runPipeline.py):
-  1. ADM WAV file  → extract ADM metadata → parse to LUSID scene → package
-     (split stems + write scene.lusid.json) → launch real-time engine
+      cult_transcoder/build/cult-transcoder transcode
+          --in <wav> --in-format adm_wav
+          --out processedData/stageForRender/scene.lusid.json
+          --out-format lusid_json
+
+  cult-transcoder handles:
+    - BW64 axml chunk extraction (via libbw64 submodule)
+    - Writing the debug XML artifact to processedData/currentMetaData.xml
+    - ADM XML → LUSID scene conversion (same parity-tested logic as Phase 2)
+    - Atomic output write + report JSON at <out>.report.json
+
+  Removed from this file:
+    - extractMetaData() call (spatialroot_adm_extract subprocess)
+    - parse_adm_xml_to_lusid_scene() call (Python oracle)
+    - writeSceneOnly() call
+    - channelHasAudio() / exportAudioActivity() / scan_audio logic
+      (containsAudio is not used by CULT — all channels assumed active)
+    - soundfile import (was only used for synthetic channel count)
+
+  runPipeline.py is DEPRECATED (kept for reference, do not modify).
+  It still imports extractMetaData and the Python oracle — those remain
+  in place for that file only and must not be removed until runPipeline.py
+  is formally retired.
+
+Input types:
+  1. ADM WAV file  → cult-transcoder produces scene.lusid.json → launch engine
   2. LUSID package directory (already has scene.lusid.json + mono WAVs)
-     → validate → launch real-time engine directly
+     → validate → launch real-time engine directly (no preprocessing)
 
 Usage (CLI):
     # From ADM source:
@@ -33,9 +57,27 @@ import os
 from pathlib import Path
 
 from src.config.configCPP import setupCppTools
-from src.analyzeADM.extractMetadata import extractMetaData
-from src.analyzeADM.checkAudioChannels import channelHasAudio, exportAudioActivity
-from src.packageADM.packageForRender import packageForRender, writeSceneOnly
+
+# ---------------------------------------------------------------------------
+# REMOVED IMPORTS (Phase 3 — 2026-03-04):
+# These were only needed by the old ADM preprocessing pipeline that has been
+# moved into cult-transcoder. They are kept here as comments so it is clear
+# what was removed and why.
+#
+#   from src.analyzeADM.extractMetadata import extractMetaData
+#       → spatialroot_adm_extract subprocess; now replaced by cult-transcoder
+#         --in-format adm_wav which owns BW64 extraction directly.
+#
+#   from src.analyzeADM.checkAudioChannels import channelHasAudio, exportAudioActivity
+#       → containsAudio scanning is not used in the realtime pipeline.
+#         cult-transcoder assumes all channels active (AGENTS-CULT §4).
+#
+#   from src.packageADM.packageForRender import packageForRender, writeSceneOnly
+#       → writeSceneOnly() wrote scene.lusid.json from the Python oracle.
+#         cult-transcoder now writes this file directly.
+#         Stem splitting (packageForRender) was never used by the realtime
+#         pipeline — engine reads directly from the ADM WAV.
+# ---------------------------------------------------------------------------
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -249,25 +291,39 @@ def run_realtime_from_ADM(
     dbap_focus=1.5,
     samplerate=48000,
     buffersize=512,
-    scan_audio=False,
     remap_csv=None,
     osc_port=9009
 ):
     """
-    Run the complete ADM → real-time spatial audio pipeline.
+    Run the complete ADM WAV → LUSID → real-time spatial audio pipeline.
 
-    Same preprocessing as runPipeline.run_pipeline_from_ADM:
-      1. Setup C++ tools (idempotent)
-      2. Analyze audio channels for content  ← skipped by default (scan_audio=False)
-      3. Extract ADM metadata from source WAV
-      4. Parse ADM XML to LUSID scene
-      5. Write scene.lusid.json (no stem splitting — ADM direct streaming)
-    Then launches the real-time engine instead of the offline renderer.
+    Phase 3 (2026-03-04): preprocessing now delegated entirely to cult-transcoder.
+    This function:
+      1. Checks initialization flag
+      2. Calls setupCppTools() to verify/build C++ tools (idempotent)
+      3. Calls cult-transcoder to extract axml from BW64 WAV, convert to LUSID,
+         and write processedData/stageForRender/scene.lusid.json atomically
+      4. Launches the real-time C++ engine (ADM direct streaming mode)
+
+    REMOVED parameters vs. previous version:
+      scan_audio  — contained channels analysis logic now inside cult-transcoder.
+                    cult-transcoder assumes all channels active (AGENTS-CULT §4).
+                    The --scan_audio CLI flag is also removed.
+
+    REMOVED preprocessing steps vs. previous version:
+      - exportAudioActivity() / channelHasAudio()  — see scan_audio note above
+      - soundfile channel count query (was only for synthetic contains_audio_data)
+      - extractMetaData() subprocess (spatialroot_adm_extract binary)
+        → replaced by cult-transcoder --in-format adm_wav BW64 reader
+      - parse_adm_xml_to_lusid_scene() Python oracle call
+        → replaced by cult-transcoder's parity-tested adm_to_lusid converter
+      - writeSceneOnly() call
+        → cult-transcoder writes scene.lusid.json atomically (tmp + rename)
 
     Parameters
     ----------
     source_adm_file : str
-        Path to source ADM WAV file.
+        Path to source ADM WAV (BW64) file.
     source_speaker_layout : str
         Path to speaker layout JSON.
     master_gain : float
@@ -278,18 +334,6 @@ def run_realtime_from_ADM(
         Audio sample rate in Hz (default: 48000).
     buffersize : int
         Frames per audio callback (default: 512).
-    scan_audio : bool
-        Whether to run the full per-channel audio activity scan before
-        parsing the ADM XML (default: False).
-
-        When False (default): skips channelHasAudio() and exportAudioActivity().
-        A synthetic "all channels active" result is passed to the LUSID parser
-        instead, saving ~14 seconds of up-front I/O on large ADM files.
-        Use this for real-time playback where startup latency matters.
-
-        When True: runs the full scan and writes processedData/containsAudio.json.
-        Useful if the LUSID parser needs accurate per-channel silence data
-        (e.g., to suppress truly silent channels from the scene graph).
     remap_csv : str or Path, optional
         CSV file for output channel remapping (default: None = identity).
     osc_port : int
@@ -321,66 +365,70 @@ def run_realtime_from_ADM(
         print("  rm .init_complete && ./init.sh")
         return False
 
-    processed_data_dir = "processedData"
-
-    # Step 2: Audio channel analysis (optional — skipped by default)
+    # Step 2: Extract ADM metadata and produce scene.lusid.json via cult-transcoder.
+    #
+    # cult-transcoder handles everything that Steps 2–4 used to do in Python:
+    #   - Opens the BW64 WAV and reads the axml chunk (via libbw64 submodule)
+    #   - Writes the debug XML artifact to processedData/currentMetaData.xml
+    #   - Converts ADM XML → LUSID scene (same parity-tested logic as Phase 2)
+    #   - Writes scene.lusid.json atomically: <out>.tmp then rename to final path
+    #   - Writes <out>.report.json alongside the LUSID file
+    #
+    # REMOVED (Phase 3 — 2026-03-04):
+    #   Step 2 previously called exportAudioActivity() + channelHasAudio() or built
+    #   a synthetic "all channels active" dict, then queried soundfile for channel count.
+    #   cult-transcoder assumes all channels active (see AGENTS-CULT §4).
+    #   containsAudio.json is NOT written or consulted by the realtime pipeline.
+    #
+    #   Step 3 previously called parse_adm_xml_to_lusid_scene() (Python LUSID oracle)
+    #   Step 4 previously called writeSceneOnly() from src.packageADM.packageForRender.
+    #   Both are superseded by cult-transcoder.
+    #
     print("\n" + "=" * 80)
-    if scan_audio:
-        print("STEP 2: Analyzing audio channels and extracting ADM metadata")
-        print("=" * 80)
-        print("Scanning audio channels for content (scan_audio=True)...")
-        exportAudioActivity(source_adm_file, output_path="processedData/containsAudio.json", threshold_db=-100)
-        contains_audio_data = channelHasAudio(source_adm_file, threshold_db=-100, printChannelUpdate=False)
-    else:
-        print("STEP 2: Skipping audio channel scan (scan_audio=False — default)")
-        print("=" * 80)
-        # Build a synthetic all-channels-active result so the LUSID parser
-        # treats every channel as containing audio. The real-time engine
-        # handles silent channels gracefully during streaming — no scan needed.
-        import soundfile as sf
-        _info = sf.info(source_adm_file)
-        contains_audio_data = {
-            "sample_rate": _info.samplerate,
-            "threshold_db": -100,
-            "elapsed_seconds": 0.0,
-            "channels": [
-                {"channel_index": i, "rms_db": 0.0, "contains_audio": True}
-                for i in range(_info.channels)
-            ]
-        }
-        print(f"  Treating all {_info.channels} channels as active (no scan performed).")
-        print("  Pass scan_audio=True or --scan_audio on the CLI to run the full scan.")
-
-    # Extract ADM XML metadata from WAV
-    print("Extracting ADM metadata from WAV file...")
-    extracted_metadata = extractMetaData(source_adm_file, "processedData/currentMetaData.xml")
-
-    if extracted_metadata:
-        xml_path = extracted_metadata
-        print(f"Using extracted XML metadata at {xml_path}")
-    else:
-        print("Using default XML metadata file")
-        xml_path = "data/POE-ATMOS-FINAL-metadata.xml"
-
-    # Step 3: Parse ADM XML to LUSID scene
-    print("\n" + "=" * 80)
-    print("STEP 3: Parsing ADM metadata to LUSID scene")
+    print("STEP 2: ADM extraction + LUSID generation (cult-transcoder Phase 3)")
     print("=" * 80)
-    from LUSID.src.xml_etree_parser import parse_adm_xml_to_lusid_scene
-    lusid_scene = parse_adm_xml_to_lusid_scene(xml_path, contains_audio=contains_audio_data)
-    lusid_scene.summary()
 
-    # Step 4: Write scene.lusid.json ONLY (no stem splitting — ADM direct streaming)
-    print("\n" + "=" * 80)
-    print("STEP 4: Writing scene.lusid.json (ADM direct streaming — no stem splitting)")
-    print("=" * 80)
-    scene_json_path = writeSceneOnly(lusid_scene, processed_data_dir)
-    print(f"✓ Scene written to: {scene_json_path}")
-    print("  (Skipping stem splitting — engine reads directly from ADM WAV)")
+    cult_binary = project_root / "cult_transcoder" / "build" / "cult-transcoder"
+    scene_json_path = "processedData/stageForRender/scene.lusid.json"
 
-    # Step 5: Launch real-time engine in ADM direct streaming mode
+    if not cult_binary.exists():
+        print(f"✗ Error: cult-transcoder binary not found at {cult_binary}")
+        print("  Build it with:")
+        print("    cd cult_transcoder/build && cmake .. && make -j4")
+        return False
+
+    print(f"  Input:  {source_adm_file}")
+    print(f"  Output: {scene_json_path}")
+    print(f"  Binary: {cult_binary}")
+
+    transcode_result = subprocess.run(
+        [
+            str(cult_binary), "transcode",
+            "--in",         source_adm_file,
+            "--in-format",  "adm_wav",
+            "--out",        scene_json_path,
+            "--out-format", "lusid_json",
+        ],
+        check=False,
+    )
+
+    if transcode_result.returncode != 0:
+        print(f"\n✗ Error: cult-transcoder exited with code {transcode_result.returncode}")
+        print("  Check above output for details.")
+        print("  Common causes:")
+        print("    - WAV file has no axml chunk (not an ADM BW64 file)")
+        print("    - ADM XML failed to parse (malformed metadata)")
+        print("    - Output path not writable (check processedData/stageForRender/)")
+        return False
+
+    print(f"✓ scene.lusid.json written to: {scene_json_path}")
+
+    # Step 3: Launch real-time engine in ADM direct streaming mode.
+    #
+    # NOTE: Previously Step 5. Renumbered because Steps 2–4 are now a single
+    # cult-transcoder call. Functionality is identical.
     print("\n" + "=" * 80)
-    print("STEP 5: Launching real-time engine (ADM direct streaming)")
+    print("STEP 3: Launching real-time engine (ADM direct streaming)")
     print("=" * 80)
     return _launch_realtime_engine(
         scene_json=scene_json_path,
@@ -513,7 +561,9 @@ if __name__ == "__main__":
         master_gain = float(sys.argv[3]) if len(sys.argv) >= 4 else 0.5
         dbap_focus = float(sys.argv[4]) if len(sys.argv) >= 5 else 1.5
         buffersize = int(sys.argv[5]) if len(sys.argv) >= 6 else 512
-        scan_audio = "--scan_audio" in sys.argv  # flag: default OFF
+        # REMOVED (Phase 3 — 2026-03-04): scan_audio flag no longer exists.
+        # cult-transcoder handles channel analysis internally (all channels assumed active).
+        # scan_audio = "--scan_audio" in sys.argv  ← removed
 
         # Named optional args: --remap and --osc_port
         remap_csv = None
@@ -534,7 +584,7 @@ if __name__ == "__main__":
             success = run_realtime_from_ADM(
                 source_input, source_speaker_layout,
                 master_gain=master_gain, dbap_focus=dbap_focus,
-                buffersize=buffersize, scan_audio=scan_audio,
+                buffersize=buffersize,
                 remap_csv=remap_csv, osc_port=osc_port
             )
         elif source_type == "LUSID":
@@ -558,26 +608,29 @@ if __name__ == "__main__":
     else:
         print("\nUsage:")
         print("  python runRealtime.py <source> [speaker_layout] [master_gain] [dbap_focus] [buffersize]")
-        print("                        [--scan_audio] [--remap <csv>] [--osc_port <port>]")
+        print("                        [--remap <csv>] [--osc_port <port>]")
         print("\nArguments:")
         print("  <source>              ADM WAV file (.wav) or LUSID package directory")
         print("  [speaker_layout]      Speaker layout JSON (default: allosphere_layout.json)")
         print("  [master_gain]         Master gain 0.1–3.0 (default: 0.5)")
         print("  [dbap_focus]          DBAP focus/rolloff 0.2–5.0 (default: 1.5)")
         print("  [buffersize]          Audio buffer size in frames (default: 512)")
-        print("  [--scan_audio]        Run full per-channel audio activity scan before")
-        print("                        parsing ADM metadata (ADM path only, default: OFF).")
-        print("                        Adds ~14s startup time but filters truly silent channels.")
+        # REMOVED (Phase 3 — 2026-03-04): --scan_audio flag removed.
+        # cult-transcoder handles extraction internally; all channels assumed active.
+        # print("  [--scan_audio]        Run full per-channel audio activity scan before")
+        # print("                        parsing ADM metadata (ADM path only, default: OFF).")
+        # print("                        Adds ~14s startup time but filters truly silent channels.")
         print("  [--remap <csv>]       CSV file for output channel remapping (optional).")
         print("                        Format: 'layout,device' columns, 0-based, header required.")
         print("  [--osc_port <port>]   UDP port for GUI OSC control (default: 9009).")
         print("\nExamples:")
-        print("  # From ADM WAV (runs full preprocessing pipeline, scan skipped):")
+        print("  # From ADM WAV (cult-transcoder handles preprocessing):")
         print("  python runRealtime.py sourceData/driveExampleSpruce.wav")
         print("")
-        print("  # From ADM WAV with audio scan enabled:")
-        print("  python runRealtime.py sourceData/driveExampleSpruce.wav allosphere_layout.json 0.5 1.5 512 --scan_audio")
-        print("")
+        # REMOVED (Phase 3 — 2026-03-04): --scan_audio example removed.
+        # print("  # From ADM WAV with audio scan enabled:")
+        # print("  python runRealtime.py sourceData/driveExampleSpruce.wav allosphere_layout.json 0.5 1.5 512 --scan_audio")
+        # print("")
         print("  # From LUSID package (skips preprocessing entirely):")
         print("  python runRealtime.py sourceData/lusid_package")
         print("")

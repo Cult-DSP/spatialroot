@@ -46,7 +46,10 @@ class RealtimeConfig:
     speaker_layout: str
     remap_csv:      Optional[str] = None
     buffer_size:    int   = 512
-    scan_audio:     bool  = False
+    # REMOVED (Phase 3 — 2026-03-04): scan_audio is no longer a parameter.
+    # cult-transcoder handles BW64 axml extraction internally; all channels
+    # are assumed active. The --scan_audio CLI flag in runRealtime.py is removed.
+    # scan_audio:     bool  = False   ← removed
     master_gain:    float = 0.5
     dbap_focus:     float = 1.5
     osc_port:       int   = 9009
@@ -271,8 +274,10 @@ class RealtimeRunner(QObject):
         ]
         if cfg.remap_csv:
             args += ["--remap", cfg.remap_csv]
-        if cfg.scan_audio:
-            args.append("--scan_audio")
+        # REMOVED (Phase 3 — 2026-03-04): --scan_audio flag removed from runRealtime.py.
+        # cult-transcoder owns BW64 extraction; scan_audio no longer exists.
+        # if cfg.scan_audio:
+        #     args.append("--scan_audio")
         return args
 
     def _set_state(self, new_state: RealtimeRunnerState) -> None:
