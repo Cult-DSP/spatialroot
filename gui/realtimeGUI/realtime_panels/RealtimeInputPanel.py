@@ -14,6 +14,7 @@ Phase 10 — GUI Agent.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -228,14 +229,25 @@ class RealtimeInputPanel(QWidget):
         self.config_changed.emit()
 
     def _browse_source(self) -> None:
-        # Try file first
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Select ADM WAV File", "sourceData", "WAV Files (*.wav);;All Files (*)"
-        )
-        if not path:
-            # Try directory
+        # On macOS the native open-file dialog may not allow selecting
+        # directories — prefer directory selection first there.
+        path = ""
+        if sys.platform == "darwin":
             path = QFileDialog.getExistingDirectory(self, "Select LUSID Package Directory", "sourceData")
+            if not path:
+                path, _ = QFileDialog.getOpenFileName(
+                    self, "Select ADM WAV File", "sourceData", "WAV Files (*.wav);;All Files (*)"
+                )
+        else:
+            # Default: try file first, then directory
+            path, _ = QFileDialog.getOpenFileName(
+                self, "Select ADM WAV File", "sourceData", "WAV Files (*.wav);;All Files (*)"
+            )
+            if not path:
+                path = QFileDialog.getExistingDirectory(self, "Select LUSID Package Directory", "sourceData")
+
         if path:
+            print(f"[DEBUG] _browse_source selected: {path}")
             self._source_edit.setText(path)
 
     def _browse_layout(self) -> None:
@@ -258,6 +270,7 @@ class RealtimeInputPanel(QWidget):
     def _on_source_changed(self, text: str) -> None:
         text = text.strip()
         hint, is_adm, is_lusid = self._detect_source(text)
+        print(f"[DEBUG] _on_source_changed: '{text}' -> hint='{hint}', is_adm={is_adm}, is_lusid={is_lusid}")
         self._source_hint.setText(hint)
         self._source_hint.setFont(QFont("Space Mono", 7))
         if is_adm or is_lusid:
@@ -271,11 +284,16 @@ class RealtimeInputPanel(QWidget):
         """Returns (hint_text, is_adm, is_lusid)."""
         if not path:
             return "", False, False
-        if not os.path.exists(path):
+        exists = os.path.exists(path)
+        is_file = os.path.isfile(path)
+        is_dir = os.path.isdir(path)
+        scene_exists = os.path.exists(os.path.join(path, "scene.lusid.json")) if is_dir else False
+        print(f"[DEBUG] _detect_source: path='{path}', exists={exists}, is_file={is_file}, is_dir={is_dir}, scene_exists={scene_exists}")
+        if not exists:
             return "⚠ Path does not exist", False, False
         if os.path.isfile(path) and path.lower().endswith(".wav"):
             return "Detected: ADM WAV", True, False
-        if os.path.isdir(path) and os.path.exists(os.path.join(path, "scene.lusid.json")):
+        if is_dir and scene_exists:
             return "Detected: LUSID package", False, True
         return "⚠ Unrecognized — select a .wav file or LUSID package directory", False, False
 
