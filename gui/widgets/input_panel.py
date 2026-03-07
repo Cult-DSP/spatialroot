@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QFont
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QPushButton, QWidget, QHBoxLayout, QFileDialog, QLineEdit
@@ -102,7 +104,7 @@ class InputPanel(QFrame):
         title.setObjectName("SectionTitle")
         lay.addWidget(title)
 
-        self.select_btn = QPushButton("SELECT ADM OR LUSID", self)
+        self.select_btn = QPushButton("SELECT INPUT FILE", self)
         self.select_btn.setObjectName("SecondaryButton")
         self.select_btn.clicked.connect(self._choose_file)
         self.select_btn.setMinimumHeight(44)
@@ -150,9 +152,30 @@ class InputPanel(QFrame):
             self.output_path_changed.emit(path)
 
     def _choose_file(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Select ADM WAV", "", "Audio/ADM (*.wav *.WAV);;All Files (*)"
-        )
+        """
+        Accept ADM WAV, ADM XML, LUSID JSON, or a LUSID package directory.
+        macOS: prefer directory picker first (native dialog blocks folder selection
+        when only file selection is active) — ported from RealtimeInputPanel.
+        """
+        if sys.platform == "darwin":
+            # On macOS, offer directory first for LUSID package folders
+            path = QFileDialog.getExistingDirectory(
+                self, "Select LUSID Package Directory or press Cancel for file", ""
+            )
+            if not path:
+                path, _ = QFileDialog.getOpenFileName(
+                    self, "Select Input File", "",
+                    "ADM / LUSID Files (*.wav *.xml *.json);;All Files (*)"
+                )
+        else:
+            path, _ = QFileDialog.getOpenFileName(
+                self, "Select Input File", "",
+                "ADM / LUSID Files (*.wav *.xml *.json);;All Files (*)"
+            )
+            if not path:
+                path = QFileDialog.getExistingDirectory(
+                    self, "Select LUSID Package Directory", ""
+                )
         if path:
             self.file_selected.emit(path)
             self.row_adm.set_state('ready')

@@ -26,17 +26,20 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QScrollArea,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from .realtime_runner import RealtimeConfig, RealtimeRunner, RealtimeRunnerState
+from .realtime_transcoder_runner import RealtimeTranscoderRunner
 from .realtime_panels.theme import DARK, LIGHT, make_qss
 from .realtime_panels.brand_widgets import SacredGeometryBackground
 from .realtime_panels.RealtimeInputPanel import RealtimeInputPanel
 from .realtime_panels.RealtimeTransportPanel import RealtimeTransportPanel
 from .realtime_panels.RealtimeControlsPanel import RealtimeControlsPanel
 from .realtime_panels.RealtimeLogPanel import RealtimeLogPanel
+from .realtime_panels.RealtimeTranscodePanel import RealtimeTranscodePanel
 
 
 class RealtimeWindow(QMainWindow):
@@ -60,6 +63,7 @@ class RealtimeWindow(QMainWindow):
         self._theme = DARK if theme == "dark" else LIGHT
         self._repo_root = repo_root
         self._runner = RealtimeRunner(repo_root=repo_root, parent=self)
+        self._tc_runner = RealtimeTranscoderRunner(repo_root=repo_root, parent=self)
         self._load_fonts()
         self._build_ui()
         self._connect_runner()
@@ -143,7 +147,7 @@ class RealtimeWindow(QMainWindow):
 
         root_layout.addWidget(header)
 
-        # ── Scrollable content area ───────────────────────────────────
+        # ── Scrollable content area — "Engine" tab ────────────────────
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -167,7 +171,31 @@ class RealtimeWindow(QMainWindow):
         content_layout.addStretch()
 
         scroll.setWidget(content)
-        root_layout.addWidget(scroll)
+
+        # ── Transcode tab ─────────────────────────────────────────────
+        transcode_scroll = QScrollArea()
+        transcode_scroll.setWidgetResizable(True)
+        transcode_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        transcode_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        transcode_content = QWidget()
+        transcode_layout = QVBoxLayout(transcode_content)
+        transcode_layout.setContentsMargins(20, 16, 20, 20)
+        transcode_layout.setSpacing(10)
+
+        self._transcode_panel = RealtimeTranscodePanel(theme=self._theme, parent=transcode_content)
+        transcode_layout.addWidget(self._transcode_panel)
+        transcode_layout.addStretch()
+
+        transcode_scroll.setWidget(transcode_content)
+
+        # ── QTabWidget wrapping both tabs ─────────────────────────────
+        self._tabs = QTabWidget()
+        self._tabs.setFont(QFont("Space Mono", 7))
+        self._tabs.addTab(scroll, "ENGINE")
+        self._tabs.addTab(transcode_scroll, "TRANSCODE")
+
+        root_layout.addWidget(self._tabs)
 
         # Sacred geometry background
         self._bg_geo = SacredGeometryBackground(
@@ -205,6 +233,15 @@ class RealtimeWindow(QMainWindow):
         c = self._controls_panel
         c.osc_scheduled.connect(self._runner.schedule_osc)
         c.osc_immediate.connect(self._runner.send_osc)
+
+        # ── Transcoder runner ────────────────────────────────────────
+        tc = self._tc_runner
+        tc.output.connect(self._transcode_panel.append_line)
+        tc.started.connect(lambda: self._transcode_panel.set_running(True))
+        tc.finished.connect(self._on_transcode_finished)
+
+        # Transcode panel → runner
+        self._transcode_panel.run_requested.connect(self._on_run_transcode)
 
     # ── Transport handlers ───────────────────────────────────────────────
 
@@ -275,6 +312,25 @@ class RealtimeWindow(QMainWindow):
         c = colours.get(state_name, self._theme["muted2"])
         self._header_dot.setStyleSheet(f"color: {c};")
         self._header_state_lbl.setStyleSheet(f"color: {c};")
+
+    # ── Transcoder handlers ──────────────────────────────────────────────
+
+    def _on_run_transcode(
+        self, in_path: str, in_format: str, out_path: str, lfe_mode: str
+    ) -> None:
+        self._transcode_panel.append_line(
+            f"[GUI] Starting transcode — {in_path}"
+        )
+        self._tc_runner.run(
+            in_path=in_path,
+            in_format=in_format,
+            out_path=out_path,
+            lfe_mode=lfe_mode,
+        )
+
+    def _on_transcode_finished(self, exit_code: int, report_path: str) -> None:
+        success = exit_code == 0
+        self._transcode_panel.set_finished(success, report_path or None)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

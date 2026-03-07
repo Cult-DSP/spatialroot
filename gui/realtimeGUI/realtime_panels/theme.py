@@ -397,4 +397,31 @@ def make_qss(t: Dict[str, str]) -> str:
     QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
         background: none;
     }}
+
+    /* ── Tab widget ── */
+    QTabWidget::pane {{
+        border: none;
+        background: {t["bg"]};
+    }}
+    QTabBar {{
+        background: {t["surface"]};
+        border-bottom: 1px solid {t["border_light"]};
+    }}
+    QTabBar::tab {{
+        background: transparent;
+        color: {t["muted2"]};
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 8px 20px;
+        font-size: 7pt;
+        letter-spacing: 2px;
+    }}
+    QTabBar::tab:selected {{
+        color: {t["text"]};
+        border-bottom: 2px solid {t["text"]};
+    }}
+    QTabBar::tab:hover:!selected {{
+        color: {t["muted"]};
+        background: {t["border"]};
+    }}
     """
