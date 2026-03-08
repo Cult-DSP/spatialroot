@@ -1246,3 +1246,117 @@ answered by observation before declaring the audio quality issues fully resolved
 > `[-4.0f, +4.0f]` (~+12 dBFS). The clamp pass in `renderBlock()` is the
 > enforcement point. `EngineState::nanGuardCount` is the observable indicator.
 > A count of zero means the clamp never fired — the system is operating cleanly.
+
+---
+
+## Phase 12 — DBAP Proximity Bug-Fix (March 8, 2026)
+
+### Background and Diagnosis
+
+After Phase 11 shipped, two residual audio artifact classes were identified
+during playback of `fileWithClicks.lusid.json` (TransLab, 16-speaker layout):
+
+1. **Brief clicks correlated with object movement** — scattered throughout
+   playback, particularly near trajectory extremes.
+2. **Extended high-amplitude noise during "Eden"** — initially suspected to be
+   a buffer or sample-rate issue; subsequently re-attributed to DBAP proximity
+   pathology (see below).
+
+Python analysis of the scene's 13,685 keyframes against the TransLab speaker
+layout revealed the following minimum source-to-speaker distances at the closest
+approach points in DBAP position space:
+
+| Source | Min dist (m) | Max DBAP gain | Speaker | Time (s) |
+|--------|-------------|---------------|---------|----------|
+| 21.1   | **0.049**   | 0.988         | ch15    | 47.79    |
+| 27.1   | 0.133       | 0.948         | ch15    | 68.90    |
+| 28.1   | 0.220       | 0.883         | ch10    | 31.03    |
+| 33.1   | 0.321       | 0.839         | ch1     | 19.15    |
+
+Source 21.1 passes **through** the Phase 11 exclusion zone (4.9 cm < 5 cm
+`kMinSourceDist`) — but the Phase 11 guard never fired because it checked
+`pose.position.mag()` (distance from the origin), which always equals
+`mLayoutRadius` (~5.21 m) since all source positions are normalized direction
+vectors scaled to the speaker ring radius. The guard was geometrically inert.
+
+The Eden extended noise was re-attributed to the same root cause: source 21.1's
+0.049 m approach is sufficient to produce near-unity DBAP gain on a single
+speaker for an extended trajectory segment, resulting in a loud tonal artifact
+that persists for as long as the source remains near that speaker. This is
+**finite but pathological gain behavior**, not a streaming underrun or sample-rate
+mismatch (underrun and NaN counters were clean throughout playback).
+
+### Fix 1 — Replace Broken Origin Guard with Per-Speaker Proximity Guard
+
+**File:** `Spatializer.hpp`
+
+**What changed:**
+
+- Removed: `kMinSourceDist = 0.05f` and the origin-distance guard block in
+  `renderBlock()`.
+- Added: `kMinSpeakerDist = 0.15f` — minimum allowed source-to-speaker distance
+  in DBAP position space.
+- Added: `std::vector<al::Vec3f> mSpeakerPositions` — speaker positions
+  pre-cached at `init()` in DBAP coordinate space using the same
+  `(x,y,z) → (x,z,−y) × r` transform as `Pose::directionToDBAPPosition()`.
+- Added: per-speaker loop in `renderBlock()` before `mDBap->renderBuffer()`:
+  for each speaker, if `dist(safePos, spkPos) < kMinSpeakerDist`, push the
+  source outward along the source→speaker axis to exactly `kMinSpeakerDist`.
+  The push is a continuous linear displacement — no step discontinuity.
+
+**Threshold rationale:** 0.15 m is a conservative first-pass value. The worst
+observed case (0.049 m) is well inside this radius. Can be reduced toward
+0.05–0.10 m if near-speaker localization sounds artificially constrained. Do
+not increase toward 0.35 m or higher without testing — that range starts to
+flatten legitimate close-speaker trajectory segments.
+
+**Real-time safety:** The per-speaker loop is O(numSpeakers) comparisons per
+source per block — 16 iterations for the TransLab layout. No allocation, no
+branching beyond the distance compare. Fully safe in the audio callback.
+
+### Fix 2 — Add `speakerProximityCount` Diagnostic Counter
+
+**Files:** `RealtimeTypes.hpp`, `Spatializer.hpp`, `main.cpp`
+
+- `EngineState::speakerProximityCount` (`std::atomic<uint64_t>`) — incremented
+  by the audio thread each time the proximity guard fires (one increment per
+  source-speaker pair that triggers, per block).
+- `Spatializer::renderBlock()` increments via
+  `mState.speakerProximityCount.fetch_add(1, std::memory_order_relaxed)`.
+- Monitoring loop in `main.cpp` displays `SpeakerGuard: N` alongside the
+  existing `Underruns` and `NaN` counters.
+
+A non-zero `SpeakerGuard` count during playback confirms that proximity
+paths are being hit and the guard is active. The count accumulates across
+the session; its rate of change (how fast it climbs during specific scene
+segments) helps correlate guard activity with known problematic trajectories.
+
+### Deferred Items
+
+The following were analyzed but deliberately deferred from this pass:
+
+| Item | Reason deferred |
+|------|----------------|
+| Block-to-block position smoothing (`Pose.hpp`, alpha ≈ 0.5–0.7) | Second priority; adds lag and may obscure remaining spatial math issues. Revisit only if clicks persist after proximity fix. |
+| Scene loop / `resetForLoop()` (`Streaming.hpp` + `main.cpp`) | Separate lifecycle feature; introduces moving parts while audio artifact diagnosis is ongoing. Implement in a dedicated pass. |
+
+### Phase 12 Invariants
+
+**Invariant 11 — Speaker exclusion zone:**
+
+> No source position passed to `mDBap->renderBuffer()` shall be within
+> `kMinSpeakerDist` (0.15 m) of any speaker's DBAP position. The per-speaker
+> loop in `renderBlock()` is the enforcement point. `EngineState::speakerProximityCount`
+> counts enforcement events; zero means no source entered any speaker's exclusion
+> zone during that session.
+
+### Phase 12 Agent Implementation Order Table Update
+
+| Phase | Agent(s)                        | Status          |
+|-------|---------------------------------|-----------------|
+| 1–11  | _(as above)_                    | ✅ Complete     |
+| 12    | **DBAP Proximity Bug-Fix Pass** | ✅ Complete     |
+|       | Fix 1: Per-speaker proximity guard | ✅ `Spatializer.hpp` |
+|       | Fix 2: `speakerProximityCount` diagnostic | ✅ `RealtimeTypes.hpp` + `Spatializer.hpp` + `main.cpp` |
+|       | Position smoothing | ⏸ Deferred |
+|       | Scene loop / `resetForLoop()` | ⏸ Deferred |

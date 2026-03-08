@@ -236,6 +236,31 @@ public:
         std::cout << "[Spatializer] DBAP initialized (focus="
                   << mConfig.dbapFocus.load() << ")." << std::endl;
 
+        // ── Pre-cache speaker DBAP positions for proximity guard ─────────
+        // The DBAP coord transform is (x, y, z) → (x, z, -y) × radius.
+        // We reproduce the same transform here so that the source positions
+        // computed by Pose::directionToDBAPPosition() and the speaker
+        // positions used for distance testing are in the same space.
+        mSpeakerPositions.clear();
+        mSpeakerPositions.reserve(mNumSpeakers);
+        for (const auto& spk : layout.speakers) {
+            // Convert spherical (az,el,r) to Cartesian in our coord system,
+            // then apply the DBAP transform: our (x,y,z) → DBAP (x,z,-y).
+            float az = spk.azimuth;   // radians, measured from +y (front) toward +x
+            float el = spk.elevation; // radians, +up
+            float r  = (spk.radius > 0.0f) ? spk.radius : mLayoutRadius;
+            float cosEl = std::cos(el);
+            // Our convention (y-forward, x-right, z-up):
+            float sx = std::sin(az) * cosEl * r;
+            float sy = std::cos(az) * cosEl * r;
+            float sz = std::sin(el) * r;
+            // DBAP transform matches Pose::directionToDBAPPosition:
+            // (x, y, z) → (x, z, -y)
+            mSpeakerPositions.emplace_back(sx, sz, -sy);
+        }
+        std::cout << "[Spatializer] Pre-cached " << mSpeakerPositions.size()
+                  << " speaker positions for proximity guard." << std::endl;
+
         // ── Pre-allocate per-source mono buffer ──────────────────────────
         mSourceBuffer.resize(mConfig.bufferSize, 0.0f);
 
@@ -347,18 +372,45 @@ public:
                 mSourceBuffer[f] *= masterGain;
             }
 
-            // Phase 11 Fix 3: minimum-distance guard.
-            // If the source position is closer to the origin than kMinSourceDist
-            // (5 cm), nudge it outward along the same direction. This prevents
-            // DBAP's inverse-distance weighting from producing Inf/NaN when a
-            // source accidentally coincides with a speaker position.
+            // Phase 12 Fix 1: per-speaker proximity guard.
+            //
+            // The original Phase 11 guard checked pose.position.mag() (distance
+            // from the origin). This was geometrically inert: positions are always
+            // normalized direction × mLayoutRadius (~5.2 m for TransLab), so the
+            // origin-distance test never fires in practice.
+            //
+            // The real hazard is a source passing close to an individual speaker
+            // in DBAP position space. At near-zero source-to-speaker distance,
+            // DBAP's inverse-distance weighting concentrates essentially all
+            // energy into that one speaker, producing a hard gain spike and an
+            // audible click or broadband transient.
+            //
+            // Fix: for each speaker, if the source falls within kMinSpeakerDist,
+            // push it outward along the source→speaker axis so the minimum
+            // clearance is maintained. The push is smooth (linear along the
+            // connecting vector) — it does not introduce a step discontinuity.
+            // speakerProximityCount is incremented each time the guard fires so
+            // the monitoring loop can report how often this path is active.
+            //
+            // kMinSpeakerDist = 0.15 m: conservative first-pass value.
+            // The worst observed case (source 21.1 at t=47.79 s) passes 0.049 m
+            // from speaker ch15 — well inside this radius. Testing at 0.15 m
+            // first; can be reduced toward 0.05–0.10 m if localization sounds
+            // artificially constrained near speakers.
             al::Vec3f safePos = pose.position;
-            float posMag = safePos.mag();
-            if (posMag < kMinSourceDist) {
-                // Keep direction; push to minimum distance
-                safePos = (posMag > 1e-7f)
-                    ? (safePos / posMag) * kMinSourceDist
-                    : al::Vec3f(0.0f, kMinSourceDist, 0.0f);  // degenerate → front
+            for (const auto& spkPos : mSpeakerPositions) {
+                al::Vec3f delta = safePos - spkPos;
+                float dist = delta.mag();
+                if (dist < kMinSpeakerDist) {
+                    // Push source outward along source→speaker axis.
+                    // If source is degenerate (exactly on speaker), displace
+                    // along +Y (front) in DBAP space as a safe fallback.
+                    safePos = spkPos + ((dist > 1e-7f)
+                        ? (delta / dist) * kMinSpeakerDist
+                        : al::Vec3f(0.0f, kMinSpeakerDist, 0.0f));
+                    mState.speakerProximityCount.fetch_add(1,
+                        std::memory_order_relaxed);
+                }
             }
 
             // Spatialize into the internal render buffer (sized for all
@@ -622,13 +674,18 @@ private:
 
     // Phase 11: maximum output sample magnitude before hardware write.
     // 4.0f ≈ +12 dBFS — allows headroom above 0 dBFS while still bounding
-    // runaway DBAP gain spikes. See Fix 3 clamp pass in renderBlock().
+    // runaway DBAP gain spikes. See clamp pass in renderBlock().
     static constexpr float kMaxSample = 4.0f;
 
-    // Phase 11: minimum source distance from origin passed to DBAP.
-    // Prevents division-by-near-zero in DBAP's distance weighting when a
-    // source position is accidentally placed at or near a speaker position.
-    static constexpr float kMinSourceDist = 0.05f;  // 5 cm
+    // Phase 12: minimum source-to-speaker distance in DBAP position space.
+    // Sources within this radius of any speaker are pushed outward along the
+    // source→speaker axis before calling renderBuffer(). This replaces the
+    // Phase 11 origin-distance guard (kMinSourceDist) which was geometrically
+    // inert (positions always sit at ~mLayoutRadius from the origin).
+    // Start value: 0.15 m — conservative first pass.
+    // Can be reduced toward 0.05–0.10 m if near-speaker localization sounds
+    // artificially constrained after testing.
+    static constexpr float kMinSpeakerDist = 0.15f;
 
     // ── References ───────────────────────────────────────────────────────
     RealtimeConfig& mConfig;
@@ -643,6 +700,12 @@ private:
     std::vector<int>            mSubwooferChannels; // Subwoofer channel indices (from layout)
     float                       mLayoutRadius = 1.0f; // Median speaker radius (for focus compensation ref position)
     bool                        mInitialized = false;
+
+    // Phase 12: speaker positions in DBAP coordinate space, cached at init().
+    // Used by the per-speaker proximity guard in renderBlock().
+    // Populated once in init() using the same (x,y,z)→(x,z,−y)×r transform
+    // as Pose::directionToDBAPPosition(). READ-ONLY after init().
+    std::vector<al::Vec3f>      mSpeakerPositions;
 
     // ── Internal render buffer (sized for layout-derived outputChannels) ──
     // AUDIO-THREAD-OWNED: only accessed inside renderBlock() and

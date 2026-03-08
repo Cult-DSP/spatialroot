@@ -527,6 +527,7 @@ int main(int argc, char* argv[]) {
                   << "  |  Frames: " << state.frameCounter.load(std::memory_order_relaxed)
                   << "  |  Underruns: " << streaming.totalUnderruns()
                   << "  |  NaN: " << state.nanGuardCount.load(std::memory_order_relaxed)
+                  << "  |  SpeakerGuard: " << state.speakerProximityCount.load(std::memory_order_relaxed)
                   << "  |  " << (paused ? "PAUSED " : "PLAYING")
                   << "     " << std::flush;
 

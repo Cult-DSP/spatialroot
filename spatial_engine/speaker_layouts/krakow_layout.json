@@ -1,0 +1,60 @@
+{
+  "speakers": [
+    {
+      "channel": 1,
+      "az": 0.7853981633974483,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 2,
+      "az": 1.5707963267948966,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 3,
+      "az": 2.356194490192345,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 4,
+      "az": 3.141592653589793,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 5,
+      "az": 3.9269908169872414,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 6,
+      "az": 4.71238898038469,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    },
+    {
+      "channel": 7,
+      "az": 5.497787143782138,
+      "el": 0.7994817392203085,
+      "radius": 6.276195105316596
+    }
+  ],
+  "subwoofers": [
+    {
+      "channel": 48
+    },
+    {
+      "channel": 49
+    }
+  ],
+  "notes": [
+    "Rough Krakow proposal based on 8-position ring with 1 missing speaker.",
+    "Screen diameter 9.75m; speaker ring diameter 8.75m; speaker height 4.5m.",
+    "Azimuths are a proposed order only and should be adapted to the actual Max patch/output order.",
+    "Two center subs included: one flown and one on ground."
+  ]
+}

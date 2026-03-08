@@ -233,6 +233,14 @@ struct EngineState {
     //   Written by the audio thread (sole writer); read by main thread for display.
     std::atomic<uint64_t> nanGuardCount{0};
 
+    // speakerProximityCount: incremented each time the per-speaker minimum-
+    //   distance guard in Spatializer::renderBlock() fires — i.e. a source
+    //   position was within kMinSpeakerDist of a speaker and was pushed away.
+    //   Non-zero values indicate trajectory segments that would otherwise
+    //   produce DBAP gain spikes and audible clicks.
+    //   Written by the audio thread (sole writer); read by main thread for display.
+    std::atomic<uint64_t> speakerProximityCount{0};
+
     // ── Scene info (set once at load time) ───────────────────────────────
     std::atomic<int>      numSources{0};    // Number of active audio sources
     std::atomic<int>      numSpeakers{0};   // Number of speakers in layout
