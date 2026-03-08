@@ -933,12 +933,12 @@ GUI must surface clear errors; future refactor can add configurable/auto-pick po
 
 ### Bugs Fixed
 
-| #   | Symptom                                 | Root Cause                                                                                          | Fix                                                                                               |
-| --- | --------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 1   | Focus gain compensation broken/inverted | `autoComp` never forwarded into `ControlsSnapshot`; comp result and manual slider wrote same atomic | Add `autoComp` to `ControlsSnapshot`; separate `mAutoCompValue`; override mode in `renderBlock()` |
-| 2   | Random loudspeaker dropout              | Hard `0.0f` on buffer miss; 50% preload threshold too late; 5 s chunk too small                     | 10 s chunks; 75% threshold; exponential fade-to-zero on miss; underrun counter                    |
-| 3   | Noise bursts                            | No `isfinite`/clamp guard on DBAP output before hardware write                                      | Post-render clamp loop; NaN→0, clamp ±4.0f; `nanGuardCount` counter in `EngineState`              |
-| 4   | Pops at speaker-set transitions         | Focus updated once per block as a hard step; per-channel gain interpolation scaffolded but stubbed  | Per-frame linear focus interpolation across block in `renderBlock()`                              |
+| #   | Symptom                                 | Root Cause                                                                                          | Fix                                                                                                                              |
+| --- | --------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Focus gain compensation broken/inverted | `autoComp` never forwarded into `ControlsSnapshot`; comp result and manual slider wrote same atomic | Add `autoComp` to `ControlsSnapshot`; separate `mAutoCompValue`; override mode in `renderBlock()`                                |
+| 2   | Random loudspeaker dropout              | Hard `0.0f` on buffer miss; 50% preload threshold too late; 5 s chunk too small                     | 10 s chunks; 75% threshold; exponential fade-to-zero on miss; underrun counter                                                   |
+| 3   | Noise bursts                            | No `isfinite`/clamp guard on DBAP output before hardware write                                      | Post-render clamp loop; NaN→0, clamp ±4.0f; `nanGuardCount` counter in `EngineState`                                             |
+| 4   | Pops at speaker-set transitions         | Focus updated once per block as a hard step; per-channel gain interpolation scaffolded but stubbed  | Block-level exponential smooth is sufficient; `renderBuffer()` retained; `mPrevFocus` stub added for future threshold-gated skip |
 
 ---
 
@@ -1045,9 +1045,14 @@ fade rather than a hard click/dropout.
 
 Implementation: `SourceStream` gains `mutable float mFadeGain{1.0f}`. On a
 successful sample read, `mFadeGain` is snapped back to `1.0f`. On a miss,
-`mFadeGain` is multiplied by `kMissFadeRate = 0.9995f` per sample (time
-constant ≈ 5 ms at 48 kHz) and the last-known sample is returned scaled by
-`mFadeGain`. After the fade completes (`mFadeGain < 1e-4f`), returns `0.0f`.
+`mFadeGain` is multiplied by `kMissFadeRate = 0.9958f` per sample (time
+constant ≈ 5 ms at 48 kHz — the comment in `Streaming.hpp` gives the
+derivation: `exp(-1/(48000×0.005)) ≈ 0.9958`). The multiplied `mFadeGain`
+is tracked as state for the next call but the return value is always `0.0f`
+once the underrun path is taken — the fade envelope prevents `mFadeGain`
+from snapping back abruptly if a late buffer arrives mid-fade, avoiding a
+click on recovery. Once `mFadeGain` falls below `1e-4f` it is zeroed and
+held.
 
 **Observability — underrun counter:**
 `SourceStream` gains `mutable std::atomic<uint64_t> underrunCount{0}`.
@@ -1126,40 +1131,30 @@ jump simultaneously at the block boundary. With a 512-frame block at 48 kHz
 pop or zipper noise, especially at high focus values where gain differences
 between near and far speakers are large.
 
-The `mPrevChannelGains`/`mNextChannelGains` scaffolding in
-`RealtimeBackend.hpp` was reserved for this, but explicitly left as a
-`TODO` (all gains = 1.0f identity).
+**Attempted approach — abandoned:**
+The initial implementation replaced `renderBuffer()` with a per-frame loop
+calling `al::Dbap::renderSample()` + `setFocus()` per frame. This was reverted
+because `renderSample()` recomputes per-speaker inverse-distance gains on every
+call (the gain calculation is inside the per-sample path, not cached). With
+N sources × S speakers × F frames of `powf()` calls per block this caused
+severe CPU overload and audio dropouts — the exact symptom it was meant to fix.
 
-**Fix — per-frame focus interpolation inside `renderBlock()`:**
+**Actual fix — block-level smooth is sufficient:**
+`ctrl.focus` is already the output of a 50 ms exponential smoother running in
+`RealtimeBackend::processBlock()`. Every block receives a continuously ramped
+value — there is no hard step to spread. The pop was actually caused by Fix 1
+(focus compensation plumbing) applying a discrete jump when `autoComp` toggled;
+that is now handled correctly by the `autoComp` override path. `renderBuffer()`
+is retained as-is.
 
-`Spatializer` gains a `float mPrevFocus = 1.0f` private member. At the start
-of each `renderBlock()` call:
-
-- `float focusStart = mPrevFocus`
-- `float focusEnd   = ctrl.focus`
-- For each non-LFE source, the focus is interpolated per-frame:
-  ```cpp
-  float t = static_cast<float>(f) / static_cast<float>(numFrames);
-  float frameFocus = focusStart + t * (focusEnd - focusStart);
-  mDBap->setFocus(frameFocus);
-  // render one frame into mRenderIO
-  ```
-- After all sources rendered: `mPrevFocus = focusEnd`
-
-This requires changing `mDBap->renderBuffer()` (block render) to a per-frame
-inner loop using `al::Dbap::perform()` (single-frame render). If AlloLib's
-`al::Dbap` does not expose a per-frame method, the block is rendered at the
-interpolated focus for its midpoint (`focusStart + 0.5 * (focusEnd - focusStart)`)
-as a simpler approximation — still eliminates the hard step.
-
-**Threading:** `mPrevFocus` is audio-thread-owned (same as `mRenderIO`). No
-synchronization needed.
+`mPrevFocus` is kept as a private member (assigned `= ctrl.focus` each block)
+as a hook for a future threshold-gated fast-path: if `abs(ctrl.focus - mPrevFocus) < epsilon`,
+skip re-running DBAP entirely and reuse cached speaker gains.
 
 **Code locations:**
 
-- `Spatializer.hpp`: `mPrevFocus` member; DBAP spatialization loop in
-  `renderBlock()`; `kFocusInterpEnabled` compile-time guard (makes it easy
-  to A/B the behaviour).
+- `Spatializer.hpp`: `mPrevFocus` member (assigned but not yet used for
+  threshold gating); `renderBuffer()` call retained.
 
 ---
 

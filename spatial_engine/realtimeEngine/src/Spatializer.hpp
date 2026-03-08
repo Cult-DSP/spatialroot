@@ -293,28 +293,14 @@ public:
         const float masterGain = ctrl.masterGain;
         const unsigned int renderChannels = mRenderIO.channelsOut();
 
-        // ── Phase 11 Fix 4: per-frame focus interpolation ────────────────
-        // Focus is smoothed per-block in RealtimeBackend (50 ms tau), but even
-        // a smoothed step can produce a pop at the block boundary when many
-        // speaker gains change simultaneously. By interpolating focus linearly
-        // across the block (mPrevFocus → ctrl.focus), we spread any remaining
-        // delta across numFrames samples, making it inaudible.
-        //
-        // This requires rendering one sample at a time using renderSample()
-        // instead of the full-block renderBuffer(). The per-sample overhead
-        // is a handful of multiply-adds per source per frame — negligible at
-        // current source counts. If profiling reveals pressure, the fast path
-        // (renderBuffer for the whole block) can be restored when the focus
-        // delta is below a threshold epsilon.
-        //
-        // mPrevFocus is audio-thread-owned. Updated at the end of renderBlock().
-        const float focusStart = mPrevFocus;
-        const float focusEnd   = ctrl.focus;
-        const float focusDelta = focusEnd - focusStart;
-
         // ── Apply live focus update to DBAP panner ───────────────────────
-        // Initial focus set to block start value; updated per-frame below.
-        mDBap->setFocus(focusStart);
+        // ctrl.focus is already smoothed by RealtimeBackend (50 ms tau).
+        // The exponential smoother continuously ramps the value, so each block
+        // receives a slightly-updated focus that is already interpolated — no
+        // within-block per-frame lerp needed. mPrevFocus is kept so a future
+        // fast-path (skip renderBuffer when focus is static) can be added.
+        mPrevFocus = ctrl.focus;
+        mDBap->setFocus(ctrl.focus);
 
         // Zero the internal render buffer (DBAP accumulates into it)
         mRenderIO.zeroOut();
@@ -375,26 +361,14 @@ public:
                     : al::Vec3f(0.0f, kMinSourceDist, 0.0f);  // degenerate → front
             }
 
-            // Phase 11 Fix 4: per-frame focus interpolation.
-            // Render one sample at a time so we can call setFocus() each frame,
-            // linearly sweeping focus from focusStart → focusEnd across the
-            // block. This eliminates the pop that occurred when a smoothed-but-
-            // still-stepped focus value was applied once per block via the old
-            // renderBuffer() path.
-            //
-            // renderSample(io, pos, sampleValue, frameIndex) accumulates into
-            // io.outBuffer(ch)[frameIndex] for all channels, exactly like
-            // renderBuffer does — but frame by frame.
-            for (unsigned int f = 0; f < numFrames; ++f) {
-                float t = static_cast<float>(f) / static_cast<float>(numFrames);
-                mDBap->setFocus(focusStart + t * focusDelta);
-                mDBap->renderSample(mRenderIO, safePos, mSourceBuffer[f], f);
-            }
+            // Spatialize into the internal render buffer (sized for all
+            // layout channels). renderBuffer() computes per-speaker gains once
+            // then streams all frames — O(speakers) gain math, not O(speakers×frames).
+            mDBap->renderBuffer(mRenderIO, safePos,
+                                mSourceBuffer.data(), numFrames);
         }
 
-        // After all sources rendered: advance the interpolation base so the
-        // next block starts from where this one ended.
-        mPrevFocus = focusEnd;
+        // mPrevFocus already updated above (= ctrl.focus set each block).
 
         // ── Phase 6: Apply mix trims to mRenderIO ────────────────────
         // Applied AFTER all DBAP + LFE rendering, BEFORE the clamp pass and
