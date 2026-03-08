@@ -120,8 +120,11 @@
 struct ControlsSnapshot {
     float masterGain     = 1.0f;
     float focus          = 1.0f;
-    float loudspeakerMix = 1.0f;
+    float loudspeakerMix = 1.0f;  // manual slider value — used only when autoComp is false
     float subMix         = 1.0f;
+    bool  autoComp       = false;  // Phase 11: forwarded from RealtimeBackend smoothed state
+                                   // When true, renderBlock() uses mAutoCompValue instead of
+                                   // loudspeakerMix (override mode — the two paths never collide)
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,10 +293,28 @@ public:
         const float masterGain = ctrl.masterGain;
         const unsigned int renderChannels = mRenderIO.channelsOut();
 
+        // ── Phase 11 Fix 4: per-frame focus interpolation ────────────────
+        // Focus is smoothed per-block in RealtimeBackend (50 ms tau), but even
+        // a smoothed step can produce a pop at the block boundary when many
+        // speaker gains change simultaneously. By interpolating focus linearly
+        // across the block (mPrevFocus → ctrl.focus), we spread any remaining
+        // delta across numFrames samples, making it inaudible.
+        //
+        // This requires rendering one sample at a time using renderSample()
+        // instead of the full-block renderBuffer(). The per-sample overhead
+        // is a handful of multiply-adds per source per frame — negligible at
+        // current source counts. If profiling reveals pressure, the fast path
+        // (renderBuffer for the whole block) can be restored when the focus
+        // delta is below a threshold epsilon.
+        //
+        // mPrevFocus is audio-thread-owned. Updated at the end of renderBlock().
+        const float focusStart = mPrevFocus;
+        const float focusEnd   = ctrl.focus;
+        const float focusDelta = focusEnd - focusStart;
+
         // ── Apply live focus update to DBAP panner ───────────────────────
-        // ctrl.focus is the smoothed value from RealtimeBackend::processBlock().
-        // setFocus() just assigns mFocus — no allocation, RT-safe.
-        mDBap->setFocus(ctrl.focus);
+        // Initial focus set to block start value; updated per-frame below.
+        mDBap->setFocus(focusStart);
 
         // Zero the internal render buffer (DBAP accumulates into it)
         mRenderIO.zeroOut();
@@ -340,21 +361,57 @@ public:
                 mSourceBuffer[f] *= masterGain;
             }
 
-            // Spatialize into the internal render buffer (sized for all
-            // layout channels). renderBuffer() accumulates (+=) into
-            // mRenderIO output buffers.
-            mDBap->renderBuffer(mRenderIO, pose.position,
-                                mSourceBuffer.data(), numFrames);
+            // Phase 11 Fix 3: minimum-distance guard.
+            // If the source position is closer to the origin than kMinSourceDist
+            // (5 cm), nudge it outward along the same direction. This prevents
+            // DBAP's inverse-distance weighting from producing Inf/NaN when a
+            // source accidentally coincides with a speaker position.
+            al::Vec3f safePos = pose.position;
+            float posMag = safePos.mag();
+            if (posMag < kMinSourceDist) {
+                // Keep direction; push to minimum distance
+                safePos = (posMag > 1e-7f)
+                    ? (safePos / posMag) * kMinSourceDist
+                    : al::Vec3f(0.0f, kMinSourceDist, 0.0f);  // degenerate → front
+            }
+
+            // Phase 11 Fix 4: per-frame focus interpolation.
+            // Render one sample at a time so we can call setFocus() each frame,
+            // linearly sweeping focus from focusStart → focusEnd across the
+            // block. This eliminates the pop that occurred when a smoothed-but-
+            // still-stepped focus value was applied once per block via the old
+            // renderBuffer() path.
+            //
+            // renderSample(io, pos, sampleValue, frameIndex) accumulates into
+            // io.outBuffer(ch)[frameIndex] for all channels, exactly like
+            // renderBuffer does — but frame by frame.
+            for (unsigned int f = 0; f < numFrames; ++f) {
+                float t = static_cast<float>(f) / static_cast<float>(numFrames);
+                mDBap->setFocus(focusStart + t * focusDelta);
+                mDBap->renderSample(mRenderIO, safePos, mSourceBuffer[f], f);
+            }
         }
 
-        // ── Phase 6: Apply mix trims to mRenderIO ────────────────────────
-        // Applied AFTER all DBAP + LFE rendering, BEFORE the copy to real
-        // AudioIO output. This matches the design doc specification:
+        // After all sources rendered: advance the interpolation base so the
+        // next block starts from where this one ended.
+        mPrevFocus = focusEnd;
+
+        // ── Phase 6: Apply mix trims to mRenderIO ────────────────────
+        // Applied AFTER all DBAP + LFE rendering, BEFORE the clamp pass and
+        // copy to real AudioIO output. This matches the design doc specification:
         //   - loudspeakerMix → all non-subwoofer channels (main speakers)
         //   - subMix         → subwoofer channels only
         // Values come from the ControlsSnapshot (smoothed, never from atomics).
+        //
+        // Phase 11 — autoComp override (Invariant 8):
+        //   When ctrl.autoComp is true, mAutoCompValue (written by
+        //   computeFocusCompensation() on the main thread) overrides the manual
+        //   loudspeakerMix slider entirely. This prevents the two paths from
+        //   writing the same atomic and silently clobbering each other.
+        //   When ctrl.autoComp is false, the manual slider is used as before.
+        //
         // Unity-guard (== 1.0f) makes the no-op case zero cost.
-        const float spkMix = ctrl.loudspeakerMix;
+        const float spkMix = ctrl.autoComp ? mAutoCompValue : ctrl.loudspeakerMix;
         const float lfeMix = ctrl.subMix;
 
         if (spkMix != 1.0f) {
@@ -375,6 +432,38 @@ public:
                         buf[f] *= lfeMix;
                     }
                 }
+            }
+        }
+
+        // ── Phase 11 Fix 3: NaN / Inf / extreme-gain clamp pass ──────────
+        // Applied AFTER Phase 6 mix-trims, BEFORE the Phase 7 copy to output.
+        // Guarantees that no value outside [-kMaxSample, +kMaxSample] and no
+        // non-finite value ever reaches io.outBuffer() → hardware (Invariant 10).
+        //
+        // This is a last-resort guard, not a normal operating path. The
+        // minimum-distance guard above (kMinSourceDist) is the primary defence
+        // against DBAP gain spikes. If nanGuardCount is non-zero in the log,
+        // there is a source-position or DBAP-distance bug to investigate.
+        {
+            bool guardFired = false;
+            for (unsigned int ch = 0; ch < renderChannels; ++ch) {
+                float* buf = mRenderIO.outBuffer(ch);
+                for (unsigned int f = 0; f < numFrames; ++f) {
+                    float s = buf[f];
+                    if (!std::isfinite(s)) {
+                        buf[f] = 0.0f;
+                        guardFired = true;
+                    } else if (s > kMaxSample) {
+                        buf[f] = kMaxSample;
+                        guardFired = true;
+                    } else if (s < -kMaxSample) {
+                        buf[f] = -kMaxSample;
+                        guardFired = true;
+                    }
+                }
+            }
+            if (guardFired) {
+                mState.nanGuardCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
 
@@ -528,10 +617,15 @@ public:
 
         std::cout << "[Spatializer] Focus auto-compensation: focus="
                   << mConfig.dbapFocus.load()
-                  << " → loudspeakerMix=" << compensation
+                  << " → autoCompValue=" << compensation
                   << " (" << (20.0f * std::log10(compensation)) << " dB)" << std::endl;
 
-        mConfig.loudspeakerMix.store(compensation, std::memory_order_relaxed);
+        // Phase 11: write into mAutoCompValue, NOT mConfig.loudspeakerMix.
+        // mConfig.loudspeakerMix is reserved exclusively for the manual slider
+        // (written by the OSC spkMixDbParam callback). Keeping them separate
+        // enforces Invariant 8: the two paths can never clobber each other.
+        // renderBlock() reads mAutoCompValue only when ctrl.autoComp is true.
+        mAutoCompValue = compensation;
         return compensation;
     }
 
@@ -551,6 +645,16 @@ private:
     // LFE/subwoofer compensation factor (same as offline renderer).
     // TODO: Make configurable or derive from DBAP focus setting.
     static constexpr float kSubCompensation = 0.95f;
+
+    // Phase 11: maximum output sample magnitude before hardware write.
+    // 4.0f ≈ +12 dBFS — allows headroom above 0 dBFS while still bounding
+    // runaway DBAP gain spikes. See Fix 3 clamp pass in renderBlock().
+    static constexpr float kMaxSample = 4.0f;
+
+    // Phase 11: minimum source distance from origin passed to DBAP.
+    // Prevents division-by-near-zero in DBAP's distance weighting when a
+    // source position is accidentally placed at or near a speaker position.
+    static constexpr float kMinSourceDist = 0.05f;  // 5 cm
 
     // ── References ───────────────────────────────────────────────────────
     RealtimeConfig& mConfig;
@@ -581,4 +685,20 @@ private:
     // Set once before start() (main thread), then read-only on audio thread.
     // The pointed-to OutputRemap object is also immutable after load().
     const OutputRemap*          mRemap = nullptr;
+
+    // ── Phase 11: Focus auto-compensation value ───────────────────────────
+    // Written ONLY by computeFocusCompensation() (main thread, audio stopped).
+    // Read ONLY by renderBlock() when ctrl.autoComp is true.
+    // Separate from mConfig.loudspeakerMix (the manual slider) — the two
+    // paths never write the same variable. See Invariant 8.
+    // Not atomic: written pre-start or via pendingAutoComp main-loop pattern
+    // (audio is effectively synchronised out before the write reaches it).
+    float                       mAutoCompValue = 1.0f;
+
+    // ── Phase 11: Previous block focus (for per-frame interpolation) ──────
+    // Holds the focus value used at the END of the last renderBlock() call.
+    // Used as the interpolation start point for the next block so that a
+    // focus change produces a smooth ramp rather than a step at the boundary.
+    // Audio-thread-owned. See Fix 4.
+    float                       mPrevFocus = 1.0f;
 };

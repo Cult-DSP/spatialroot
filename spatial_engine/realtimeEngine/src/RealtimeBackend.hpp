@@ -340,6 +340,7 @@ private:
             ctrl.focus          = mSmooth.smoothed.focus;
             ctrl.loudspeakerMix = mSmooth.smoothed.loudspeakerMix;
             ctrl.subMix         = mSmooth.smoothed.subMix;
+            ctrl.autoComp       = mSmooth.smoothed.autoComp;  // Phase 11: Fix 1
 
             const uint64_t currentFrame = mState.frameCounter.load(std::memory_order_relaxed);
             mSpatializer->renderBlock(io, *mStreamer, mPose->getPoses(),

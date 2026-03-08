@@ -340,8 +340,11 @@ int main(int argc, char* argv[]) {
     // audio starts). This sets mConfig.loudspeakerMix to the right value
     // so the very first audio block already has the compensation applied.
     if (config.focusAutoCompensation.load()) {
-        std::cout << "[Main] Focus auto-compensation ON — computing initial loudspeakerMix..." << std::endl;
-        spatializer.computeFocusCompensation();
+        std::cout << "[Main] Focus auto-compensation ON — computing initial autoCompValue..." << std::endl;
+        float comp = spatializer.computeFocusCompensation();
+        std::cout << "[Main] Initial auto-compensation: " << comp
+                  << " (" << (20.0f * std::log10(comp)) << " dB)"
+                  << " — stored in mAutoCompValue, mConfig.loudspeakerMix unchanged." << std::endl;
     }
     std::cout << "[Main] Phase 6 gains: loudspeakerMix=" << config.loudspeakerMix.load()
               << " (" << (20.0f * std::log10(config.loudspeakerMix.load())) << " dB)"
@@ -503,9 +506,10 @@ int main(int argc, char* argv[]) {
         // callback sets pendingAutoComp; we pick it up here.
         if (pendingAutoComp.load(std::memory_order_relaxed)) {
             pendingAutoComp.store(false, std::memory_order_relaxed);
-            spatializer.computeFocusCompensation();
-            std::cout << "\n[Main] Focus compensation recomputed: loudspeakerMix="
-                      << config.loudspeakerMix.load() << std::flush;
+            float comp = spatializer.computeFocusCompensation();
+            std::cout << "\n[Main] Focus compensation recomputed: autoCompValue="
+                      << comp
+                      << " (" << (20.0f * std::log10(comp)) << " dB)" << std::flush;
         }
 
         // Print status every ~500 ms
@@ -521,6 +525,8 @@ int main(int argc, char* argv[]) {
         std::cout << (cpu * 100.0f) << "%"
                   << "  |  Sources: " << state.numSources.load(std::memory_order_relaxed)
                   << "  |  Frames: " << state.frameCounter.load(std::memory_order_relaxed)
+                  << "  |  Underruns: " << streaming.totalUnderruns()
+                  << "  |  NaN: " << state.nanGuardCount.load(std::memory_order_relaxed)
                   << "  |  " << (paused ? "PAUSED " : "PLAYING")
                   << "     " << std::flush;
 

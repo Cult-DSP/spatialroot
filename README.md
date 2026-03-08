@@ -121,6 +121,10 @@ The GUI provides file pickers, render settings, progress tracking, and log viewi
 
 ---
 
+## Usage in other projects
+
+See internalDocsMD/AGENTS.md for help implementing in other projects.
+
 ## Spatial Rendering
 
 The project supports three spatializers from AlloLib:

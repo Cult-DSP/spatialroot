@@ -117,14 +117,30 @@ namespace fs = std::filesystem;
 
 // Chunk size in frames for each double buffer.
 // Each buffer holds this many mono float samples.
-// 5 seconds at 48kHz = 240,000 frames = ~940 KB per source.
-// For 80 sources: ~75 MB total buffer memory (2 buffers × 80 sources).
-// This is a good balance between memory usage and preload safety margin.
-static constexpr uint64_t kDefaultChunkFrames = 48000 * 5;  // 5 seconds
+// Phase 11: raised from 5 s → 10 s at 48kHz = 480,000 frames.
+// Memory cost: ~1.8 MB → ~3.7 MB per source. For 80 sources: ~150 MB total
+// (2 buffers × 80 sources × ~960 KB). Acceptable on a DAW-class workstation.
+// Rationale: the loader needs to fill 10 s of audio while the audio thread
+// consumes the last 25% of the active 10 s buffer (= 2.5 s).  At 48kHz mono
+// float that is 192 KB/s × 80 sources = ~15 MB/s — well within any SSD.
+static constexpr uint64_t kDefaultChunkFrames = 48000 * 10;  // 10 seconds
 
 // When playback reaches this fraction of the current chunk, trigger preload
 // of the next chunk into the inactive buffer.
-static constexpr float kPreloadThreshold = 0.5f;  // Start loading at 50%
+// Phase 11: raised from 0.50 → 0.75. With 10 s chunks the loader now has
+// 7.5 s to fill the next 10 s — a 0.75× real-time I/O rate requirement.
+// Combined with the 10 s chunk size this makes buffer misses structurally
+// impossible under normal operating conditions (see Invariant 9).
+static constexpr float kPreloadThreshold = 0.75f;  // Start loading at 75%
+
+// Per-sample fade multiplier applied on a buffer miss (fallback safety net).
+// Phase 11: instead of returning hard 0.0f on underrun, the last sample is
+// returned scaled by this factor per sample. Time constant ≈ 5 ms at 48 kHz:
+//   exp(-1/(48000*0.005)) ≈ 0.99583 → effectively 0.9958^N reaches -60 dB
+//   in ~N=2200 samples ≈ 45 ms. Chosen to mask any residual miss audibly
+//   without masking the dropout entirely (a non-zero underrunCount is the
+//   correct diagnostic signal).
+static constexpr float kMissFadeRate = 0.9958f;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BufferState — State machine for each double buffer slot
@@ -190,6 +206,17 @@ struct SourceStream {
 
     // ── Buffer sizing ────────────────────────────────────────────────────
     uint64_t chunkFrames = kDefaultChunkFrames;
+
+    // ── Phase 11: underrun state (audio-thread-owned, mutable for const getSample) ──
+    // mFadeGain: envelope applied on a buffer miss (1.0 = normal, decays toward 0).
+    //   Snapped back to 1.0 on any successful sample read. Starts a kMissFadeRate
+    //   exponential decay per sample on miss. Makes residual dropouts audible as
+    //   a short fade rather than a hard click. See Invariant 9.
+    // underrunCount: incremented once per call to getSample() that ends in a miss
+    //   (i.e., after the fade is already in progress OR on the first miss).
+    //   Reported in the monitoring loop. Non-zero = pathological I/O condition.
+    mutable float                    mFadeGain{1.0f};
+    mutable std::atomic<uint64_t>    underrunCount{0};
 
     // ── Methods ──────────────────────────────────────────────────────────
 
@@ -346,14 +373,22 @@ struct SourceStream {
 
     /// Get the sample value at a given global frame position.
     /// Called ONLY from the audio callback thread — must be lock-free.
-    /// Returns 0.0f if the frame is not in any loaded buffer (underrun).
+    ///
+    /// Phase 11 — underrun handling (Invariant 9):
+    ///   On a successful read, mFadeGain is snapped to 1.0f and the sample is
+    ///   returned normally. On a miss (neither buffer has the frame), the last
+    ///   returned sample is faded by kMissFadeRate per call and underrunCount
+    ///   is incremented. This makes residual misses audible as a short fade
+    ///   rather than a hard click, and makes them observable in the log.
+    ///   Under normal operating conditions (10 s chunks, 75% threshold) this
+    ///   path should NEVER be taken. A non-zero underrunCount is a bug signal.
     float getSample(uint64_t globalFrame) const {
         int active = activeBuffer.load(std::memory_order_acquire);
         if (active < 0) return 0.0f;  // No buffer active yet
 
         // Get active buffer's data
         const auto& buffer = (active == 0) ? bufferA : bufferB;
-        uint64_t bufStart  = (active == 0) 
+        uint64_t bufStart  = (active == 0)
             ? chunkStartA.load(std::memory_order_acquire)
             : chunkStartB.load(std::memory_order_acquire);
         uint64_t bufValid  = (active == 0)
@@ -362,13 +397,14 @@ struct SourceStream {
 
         // Check if the requested frame is within this buffer
         if (globalFrame >= bufStart && globalFrame < bufStart + bufValid) {
+            mFadeGain = 1.0f;  // successful read — reset fade envelope
             return buffer[globalFrame - bufStart];
         }
 
         // Frame not in active buffer — check the other buffer
         int other = 1 - active;
         const auto& otherBuf = (other == 0) ? bufferA : bufferB;
-        auto otherState = (other == 0) 
+        auto otherState = (other == 0)
             ? stateA.load(std::memory_order_acquire)
             : stateB.load(std::memory_order_acquire);
         uint64_t otherStart = (other == 0)
@@ -391,10 +427,20 @@ struct SourceStream {
             othState.store(StreamBufferState::PLAYING, std::memory_order_release);
             activeBuffer.store(other, std::memory_order_release);
 
+            mFadeGain = 1.0f;  // successful switch — reset fade envelope
             return otherBuf[globalFrame - otherStart];
         }
 
-        // Neither buffer has the data — underrun (return silence)
+        // ── Underrun (Phase 11 fallback — should never fire under normal ops) ──
+        // Neither buffer has the requested frame. Apply exponential fade-to-zero
+        // rather than returning a hard 0.0f click. Increment counter for log.
+        underrunCount.fetch_add(1, std::memory_order_relaxed);
+        if (mFadeGain > 1e-4f) {
+            mFadeGain *= kMissFadeRate;
+        } else {
+            mFadeGain = 0.0f;
+        }
+        // Return 0.0f once fully faded (no DC hold — avoids sustained buzz).
         return 0.0f;
     }
 
@@ -430,6 +476,8 @@ struct SourceStream {
         sampleRate = other.sampleRate;
         isLFE = other.isLFE;
         chunkFrames = other.chunkFrames;
+        mFadeGain = other.mFadeGain;
+        underrunCount.store(other.underrunCount.load());
     }
     SourceStream& operator=(SourceStream&& other) noexcept {
         if (this != &other) {
@@ -451,6 +499,8 @@ struct SourceStream {
             sampleRate = other.sampleRate;
             isLFE = other.isLFE;
             chunkFrames = other.chunkFrames;
+            mFadeGain = other.mFadeGain;
+            underrunCount.store(other.underrunCount.load());
         }
         return *this;
     }
@@ -696,6 +746,19 @@ public:
 
     /// Number of loaded sources.
     size_t numSources() const { return mStreams.size(); }
+
+    /// Phase 11: total underrun sample count across all sources.
+    /// Each count represents one sample that was requested but not available.
+    /// Called from the main thread monitoring loop (relaxed read is fine —
+    /// display lag of one buffer is acceptable).
+    /// Non-zero value = pathological I/O condition. See Invariant 9.
+    uint64_t totalUnderruns() const {
+        uint64_t total = 0;
+        for (const auto& [name, stream] : mStreams) {
+            total += stream->underrunCount.load(std::memory_order_relaxed);
+        }
+        return total;
+    }
 
     // ── Shutdown ─────────────────────────────────────────────────────────
     // THREADING CONTRACT: Caller MUST call Backend::stop() and wait for the

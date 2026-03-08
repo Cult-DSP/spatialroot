@@ -226,6 +226,13 @@ struct EngineState {
     std::atomic<float>    cpuLoad{0.0f};    // Audio thread CPU usage (0.0–1.0)
     std::atomic<uint64_t> xrunCount{0};     // Buffer underrun count
 
+    // ── Phase 11: diagnostic counters ────────────────────────────────────
+    // nanGuardCount: incremented once per audio block in which the post-render
+    //   clamp pass in Spatializer::renderBlock() found a NaN, Inf, or sample
+    //   outside [-4.0f, +4.0f]. Non-zero = DBAP distance/position bug.
+    //   Written by the audio thread (sole writer); read by main thread for display.
+    std::atomic<uint64_t> nanGuardCount{0};
+
     // ── Scene info (set once at load time) ───────────────────────────────
     std::atomic<int>      numSources{0};    // Number of active audio sources
     std::atomic<int>      numSpeakers{0};   // Number of speakers in layout

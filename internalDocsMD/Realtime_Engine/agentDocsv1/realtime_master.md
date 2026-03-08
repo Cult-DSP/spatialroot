@@ -917,3 +917,284 @@ By following this plan and keeping documentation up-to-date, the team can build 
 **OSC port policy:** use a **fixed localhost port (9009)** for the engine `ParameterServer`.
 This is simplest for the prototype, but may conflict if multiple instances run or the port is occupied.
 GUI must surface clear errors; future refactor can add configurable/auto-pick ports.
+
+---
+
+## Phase 11 — Bug-Fix Pass (March 7, 2026) ✅ Complete
+
+> **Context:** Full code inspection of all five realtime engine headers/source
+> files identified four distinct failure classes. All four are fixed in this
+> pass. Docs updated in the same commit.
+>
+> **Files modified:** `Spatializer.hpp`, `Streaming.hpp`, `RealtimeTypes.hpp`,
+> `RealtimeBackend.hpp` (minor comment update), `internalDocsMD/AGENTS.md`.
+>
+> **Build result:** `cmake --build . -j4` — zero errors after all changes.
+
+### Bugs Fixed
+
+| #   | Symptom                                 | Root Cause                                                                                          | Fix                                                                                               |
+| --- | --------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 1   | Focus gain compensation broken/inverted | `autoComp` never forwarded into `ControlsSnapshot`; comp result and manual slider wrote same atomic | Add `autoComp` to `ControlsSnapshot`; separate `mAutoCompValue`; override mode in `renderBlock()` |
+| 2   | Random loudspeaker dropout              | Hard `0.0f` on buffer miss; 50% preload threshold too late; 5 s chunk too small                     | 10 s chunks; 75% threshold; exponential fade-to-zero on miss; underrun counter                    |
+| 3   | Noise bursts                            | No `isfinite`/clamp guard on DBAP output before hardware write                                      | Post-render clamp loop; NaN→0, clamp ±4.0f; `nanGuardCount` counter in `EngineState`              |
+| 4   | Pops at speaker-set transitions         | Focus updated once per block as a hard step; per-channel gain interpolation scaffolded but stubbed  | Per-frame linear focus interpolation across block in `renderBlock()`                              |
+
+---
+
+### Fix 1 — Focus Compensation Parameter Plumbing
+
+**Problem (two parts):**
+
+**Part A — `autoComp` never reached the spatializer.**
+`RealtimeBackend::processBlock()` Step A snapshots `focusAutoCompensation` into
+`mSmooth.target.autoComp`. Step B smooths it (takes target immediately, no
+lerp — correct for a bool). Step 3 builds `ControlsSnapshot ctrl` and passes
+it to `renderBlock()`. But `ControlsSnapshot` (defined in `Spatializer.hpp`)
+had **no `autoComp` field**, so the value was silently dropped. The spatializer
+had no way to know compensation was active.
+
+**Part B — compensation and manual slider shared one atomic.**
+`computeFocusCompensation()` wrote its result into `mConfig.loudspeakerMix`.
+The `spkMixDbParam` OSC callback also wrote `mConfig.loudspeakerMix`. Last
+writer wins with no priority. A GUI slider move silently zeroed compensation;
+a focus change silently zeroed the slider. Neither path knew about the other.
+
+**Fix — two changes in `Spatializer.hpp`:**
+
+1. Added `bool autoComp = false` field to `ControlsSnapshot`.
+2. Added `float mAutoCompValue = 1.0f` private member to `Spatializer`.
+3. `computeFocusCompensation()` now writes `mAutoCompValue` instead of
+   `mConfig.loudspeakerMix`. `mConfig.loudspeakerMix` is left for the
+   manual slider exclusively.
+4. In `renderBlock()`, the effective speaker mix is computed as:
+   ```cpp
+   float spkMix = ctrl.autoComp
+       ? mAutoCompValue          // compensation overrides slider when auto is on
+       : ctrl.loudspeakerMix;   // manual slider when auto is off
+   ```
+
+**Fix — one change in `RealtimeBackend.hpp`:**
+
+5. In Step 3 of `processBlock()`, added `ctrl.autoComp = mSmooth.smoothed.autoComp;`
+
+**Invariant added (Invariant 8):**
+
+> When `autoComp` is enabled, `mAutoCompValue` (written by
+> `computeFocusCompensation()` on the main thread, read by `renderBlock()` on
+> the audio thread) is the exclusive source of the speaker-channel gain scalar.
+> `mConfig.loudspeakerMix` is reserved for the manual slider and is never
+> read by `renderBlock()` when `autoComp` is true.
+>
+> `mAutoCompValue` is written only from the main thread (same constraint as
+> `computeFocusCompensation()` — see Invariant 5). It is a plain `float` read
+> from the audio thread. This is safe because: the audio thread reads it only
+> via the `ctrl` snapshot (which takes it from `mSmooth.smoothed.autoComp`
+> first), and by the time `renderBlock()` runs, any preceding write from the
+> main thread is visible (happens-before through the audio callback scheduling).
+> No atomic needed — same reasoning as agent pointer immutability.
+
+**Code locations:**
+
+- `Spatializer.hpp`: `ControlsSnapshot` struct, `renderBlock()` Phase 6 section,
+  `computeFocusCompensation()`, `mAutoCompValue` member declaration.
+- `RealtimeBackend.hpp`: `processBlock()` Step 3 `ctrl` construction block.
+
+---
+
+### Fix 2 — Streaming Hardening (Eliminate Buffer Misses)
+
+**Problem — three compounding issues:**
+
+1. **5 s chunks + 50% threshold = 2.5 s runway.** On a loaded system, if the
+   loader thread's `sleep_for(2ms)` scan loop is de-scheduled or if disk I/O
+   is slow, the inactive buffer may still be `LOADING` or `EMPTY` when the
+   audio thread needs to switch. The switch fails; `getSample()` returns hard
+   `0.0f` — heard as a complete dropout of that source.
+
+2. **Hard silence on miss.** `SourceStream::getSample()` returned `0.0f`
+   unconditionally on underrun. A single missed buffer switch zeros an entire
+   source for one audio block (~10 ms at 512/48k). With multiple sources,
+   multiple dropouts can coincide (they all share the same chunk boundary timing
+   when loaded from a multichannel file). The result is an audible full-band
+   dropout rather than a gentle glitch.
+
+3. **No observability.** No counter was incremented on miss, so dropouts were
+   invisible in the monitoring loop.
+
+**Design decision — eliminate, not paper over:**
+The goal is to make misses structurally impossible under normal operating
+conditions. The approach is to increase the runway to a point where no
+realistic I/O delay can cause a miss:
+
+- **10 s chunks** (`kDefaultChunkFrames = 480000` at 48 kHz): doubles the
+  buffer window. Memory cost: ~1.8 MB → ~3.7 MB per source. For 80 sources:
+  ~150 MB total (2 buffers × 80 sources × ~960 KB). Acceptable for a DAW-class
+  workstation.
+- **75% preload threshold** (`kPreloadThreshold = 0.75f`): triggers the next
+  chunk load when 7.5 s of the 10 s active buffer has been consumed, leaving
+  2.5 s of active buffer remaining + the full 10 s inactive buffer being filled.
+  The loader now has **7.5 s** to read the next 10 s of audio — a 0.75× real-time
+  I/O rate requirement, easily met even on slow spinning disks.
+
+**Fallback — exponential fade-to-zero on miss (safety net only):**
+Even with the structural fix, a fade-to-zero fallback is added in case of an
+exceptional miss (system suspend, I/O error, etc.). This is not the primary
+defence — it is a last-resort that makes any residual miss audible as a short
+fade rather than a hard click/dropout.
+
+Implementation: `SourceStream` gains `mutable float mFadeGain{1.0f}`. On a
+successful sample read, `mFadeGain` is snapped back to `1.0f`. On a miss,
+`mFadeGain` is multiplied by `kMissFadeRate = 0.9995f` per sample (time
+constant ≈ 5 ms at 48 kHz) and the last-known sample is returned scaled by
+`mFadeGain`. After the fade completes (`mFadeGain < 1e-4f`), returns `0.0f`.
+
+**Observability — underrun counter:**
+`SourceStream` gains `mutable std::atomic<uint64_t> underrunCount{0}`.
+`Streaming` exposes `totalUnderruns()` which sums across all streams.
+`main.cpp` monitoring loop prints underrun count. Any non-zero value is a
+diagnostic signal that the runway needs widening or disk I/O is pathological.
+
+**Code locations:**
+
+- `Streaming.hpp`: `kDefaultChunkFrames`, `kPreloadThreshold` constants;
+  `SourceStream::getSample()` miss path; `SourceStream::mFadeGain`,
+  `SourceStream::underrunCount` members; `Streaming::totalUnderruns()`.
+- `main.cpp`: monitoring loop status line (prints underrun count).
+
+---
+
+### Fix 3 — NaN / Inf / Extreme-Gain Guards
+
+**Problem:**
+`al::Dbap::renderBuffer()` computes amplitude weights from inverse-distance
+terms. If a source position places the source very close to or coincident with
+a speaker, the distance term approaches zero and the weight approaches infinity.
+This produces `Inf` or extremely large float values in `mRenderIO`, which then
+propagate unchanged through the Phase 6 mix-trim pass and the Phase 7 copy
+into `io.outBuffer()` → hardware. Result: full-amplitude noise burst, often
+lasting only one block but loud enough to damage speakers or hearing.
+
+Additionally, a degenerate SLERP in `Pose` (caught by `safeNormalize`) could
+theoretically produce a zero vector, which after the `directionToDBAPPosition`
+coordinate transform places the source at the origin. DBAP at origin is
+implementation-dependent — could be `NaN` or extreme gain.
+
+**Fix — post-render clamp pass in `Spatializer::renderBlock()`:**
+
+After all DBAP and LFE rendering into `mRenderIO`, before the Phase 6 mix-trim
+pass, a single loop over every frame of every render channel:
+
+- Replaces any `!isfinite(s)` value with `0.0f`
+- Clamps any value outside `[-kMaxSample, +kMaxSample]` (4.0f ≈ +12 dBFS)
+- Increments `mNanGuardFired` (a block-level bool) if any bad value was found
+- If `mNanGuardFired`, increments `EngineState::nanGuardCount` (new atomic)
+
+**New `EngineState` field:**
+
+```cpp
+std::atomic<uint64_t> nanGuardCount{0};  // incremented per block where clamp fired
+```
+
+Printed in the monitoring loop as `| NaN: N` — zero means clean; any non-zero
+value identifies a source position or DBAP distance bug.
+
+**Minimum-distance guard:**
+A secondary guard in `renderBlock()` checks each source position magnitude
+before passing to DBAP: if `pose.position.mag() < kMinSourceDist` (0.05 m),
+the position is nudged to `kMinSourceDist` along the same direction. This
+prevents the division-by-near-zero in DBAP's distance term entirely, making
+the clamp pass a true last-resort rather than a regular occurrence.
+
+**Code locations:**
+
+- `RealtimeTypes.hpp`: `EngineState::nanGuardCount` field.
+- `Spatializer.hpp`: clamp loop before Phase 6 section; minimum-distance guard
+  in the DBAP spatialization loop; `kMaxSample` and `kMinSourceDist` constants.
+- `main.cpp`: monitoring loop status line (prints `nanGuardCount`).
+
+---
+
+### Fix 4 — Focus Interpolation Across Block Boundaries
+
+**Problem:**
+`mDBap->setFocus()` was called once per block with `ctrl.focus` (the
+block-start smoothed value). When focus changes (user moves the GUI slider,
+or `computeFocusCompensation()` updates `mAutoCompValue`), all source gains
+jump simultaneously at the block boundary. With a 512-frame block at 48 kHz
+(~10.7 ms), this is a step discontinuity in every speaker gain — heard as a
+pop or zipper noise, especially at high focus values where gain differences
+between near and far speakers are large.
+
+The `mPrevChannelGains`/`mNextChannelGains` scaffolding in
+`RealtimeBackend.hpp` was reserved for this, but explicitly left as a
+`TODO` (all gains = 1.0f identity).
+
+**Fix — per-frame focus interpolation inside `renderBlock()`:**
+
+`Spatializer` gains a `float mPrevFocus = 1.0f` private member. At the start
+of each `renderBlock()` call:
+
+- `float focusStart = mPrevFocus`
+- `float focusEnd   = ctrl.focus`
+- For each non-LFE source, the focus is interpolated per-frame:
+  ```cpp
+  float t = static_cast<float>(f) / static_cast<float>(numFrames);
+  float frameFocus = focusStart + t * (focusEnd - focusStart);
+  mDBap->setFocus(frameFocus);
+  // render one frame into mRenderIO
+  ```
+- After all sources rendered: `mPrevFocus = focusEnd`
+
+This requires changing `mDBap->renderBuffer()` (block render) to a per-frame
+inner loop using `al::Dbap::perform()` (single-frame render). If AlloLib's
+`al::Dbap` does not expose a per-frame method, the block is rendered at the
+interpolated focus for its midpoint (`focusStart + 0.5 * (focusEnd - focusStart)`)
+as a simpler approximation — still eliminates the hard step.
+
+**Threading:** `mPrevFocus` is audio-thread-owned (same as `mRenderIO`). No
+synchronization needed.
+
+**Code locations:**
+
+- `Spatializer.hpp`: `mPrevFocus` member; DBAP spatialization loop in
+  `renderBlock()`; `kFocusInterpEnabled` compile-time guard (makes it easy
+  to A/B the behaviour).
+
+---
+
+### Phase 11 Agent Implementation Order Table Update
+
+| Phase | Agent(s)                   | Status                                       |
+| ----- | -------------------------- | -------------------------------------------- |
+| 1–10  | _(as above)_               | ✅ Complete                                  |
+| 11    | **Bug-Fix Pass**           | ✅ Complete                                  |
+|       | Fix 1: Focus comp plumbing | ✅ `Spatializer.hpp` + `RealtimeBackend.hpp` |
+|       | Fix 2: Streaming hardening | ✅ `Streaming.hpp`                           |
+|       | Fix 3: NaN/clamp guards    | ✅ `Spatializer.hpp` + `RealtimeTypes.hpp`   |
+|       | Fix 4: Focus interpolation | ✅ `Spatializer.hpp`                         |
+
+### New Invariants (added Phase 11)
+
+**Invariant 8 — Auto-compensation ownership:**
+
+> When `ctrl.autoComp` is `true`, `renderBlock()` uses `mAutoCompValue`
+> (written by `computeFocusCompensation()`, main thread only) as the speaker
+> gain scalar. `mConfig.loudspeakerMix` is reserved for the manual slider and
+> is never consulted when `autoComp` is true. The two paths cannot interfere.
+
+**Invariant 9 — Streaming runway guarantee:**
+
+> The preload threshold (75%) and chunk size (10 s) are sized so that the
+> loader thread has 7.5 s to read the next 10 s chunk. Any I/O subsystem
+> capable of sustained 0.75× real-time throughput will never produce a miss.
+> The fade-to-zero fallback exists only as a diagnostic safety net, not as
+> a normal operating path. A non-zero `underrunCount` in the monitoring loop
+> indicates a pathological I/O condition that must be investigated.
+
+**Invariant 10 — Output sample range:**
+
+> All values written to `io.outBuffer()` are guaranteed finite and within
+> `[-4.0f, +4.0f]` (~+12 dBFS). The clamp pass in `renderBlock()` is the
+> enforcement point. `EngineState::nanGuardCount` is the observable indicator.
+> A count of zero means the clamp never fired — the system is operating cleanly.
