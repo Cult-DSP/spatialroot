@@ -199,6 +199,8 @@ class RealtimeRunner(QObject):
         self._proc.setWorkingDirectory(self._repo_root)
         # Ensure processedData directory exists, similar to offline pipeline
         os.makedirs(os.path.join(self._repo_root, "processedData"), exist_ok=True)
+        # Ensure processedData/stageForRender directory exists for transcoder output
+        os.makedirs(os.path.join(self._repo_root, "processedData", "stageForRender"), exist_ok=True)
         self._proc.readyReadStandardOutput.connect(self._on_stdout)
         self._proc.readyReadStandardError.connect(self._on_stderr)
         self._proc.finished.connect(self._on_finished)

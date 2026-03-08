@@ -127,6 +127,9 @@ class RealtimeTranscoderRunner(QObject):
 
         proc = QProcess(self)
         proc.setWorkingDirectory(self._repo_root)
+        # Ensure output directories exist for transcoder output
+        os.makedirs(os.path.join(self._repo_root, "processedData"), exist_ok=True)
+        os.makedirs(os.path.join(self._repo_root, "processedData", "stageForRender"), exist_ok=True)
         proc.readyReadStandardOutput.connect(self._on_stdout)
         proc.readyReadStandardError.connect(self._on_stderr)
         proc.finished.connect(self._on_finished)

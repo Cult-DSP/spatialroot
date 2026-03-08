@@ -355,6 +355,10 @@ def run_realtime_from_ADM(
         print("\nPlease run: ./init.sh")
         return False
 
+    # Ensure output directories exist
+    os.makedirs(project_root / "processedData", exist_ok=True)
+    os.makedirs(project_root / "processedData" / "stageForRender", exist_ok=True)
+
     # Step 1: Setup C++ tools (idempotent — only builds if needed)
     print("\n" + "=" * 80)
     print("STEP 1: Verifying C++ tools and dependencies")
