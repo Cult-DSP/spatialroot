@@ -1127,8 +1127,8 @@ the clamp pass a true last-resort rather than a regular occurrence.
 block-start smoothed value). When focus changes (user moves the GUI slider,
 or `computeFocusCompensation()` updates `mAutoCompValue`), all source gains
 jump simultaneously at the block boundary. With a 512-frame block at 48 kHz
-(~10.7 ms), this is a step discontinuity in every speaker gain — heard as a
-pop or zipper noise, especially at high focus values where gain differences
+(~10.7 ms), this is a step discontinuity in every speaker gain — potentially
+audible as a pop, especially at high focus values where gain differences
 between near and far speakers are large.
 
 **Attempted approach — abandoned:**
@@ -1139,17 +1139,36 @@ call (the gain calculation is inside the per-sample path, not cached). With
 N sources × S speakers × F frames of `powf()` calls per block this caused
 severe CPU overload and audio dropouts — the exact symptom it was meant to fix.
 
-**Actual fix — block-level smooth is sufficient:**
-`ctrl.focus` is already the output of a 50 ms exponential smoother running in
-`RealtimeBackend::processBlock()`. Every block receives a continuously ramped
-value — there is no hard step to spread. The pop was actually caused by Fix 1
-(focus compensation plumbing) applying a discrete jump when `autoComp` toggled;
-that is now handled correctly by the `autoComp` override path. `renderBuffer()`
-is retained as-is.
+**Current state — `renderBuffer()` retained, problem not fully resolved:**
+`ctrl.focus` is the output of a 50 ms exponential smoother in
+`RealtimeBackend::processBlock()`, so each block gets a continuously ramped
+value rather than a hard step. This reduces the severity of any boundary
+discontinuity, but does not eliminate it — the smoother output is constant
+within a block, not interpolated across it.
+
+The broken `autoComp` plumbing (Fix 1) was a confirmed real bug that would
+have caused audible gain jumps when auto-compensation toggled or recomputed.
+That is now fixed. However, **it would be overconfident to say this was the
+sole cause of all pops**. Other remaining candidates include:
+
+- Stream underruns coinciding with buffer switches (see Fix 2 / Invariant 9)
+- Gain spikes from near-zero source positions (see Fix 3 / Invariant 10)
+- Speaker-set gain handoffs when a moving source crosses between speaker
+  influence zones — inherent to DBAP block rendering, unrelated to focus
 
 `mPrevFocus` is kept as a private member (assigned `= ctrl.focus` each block)
-as a hook for a future threshold-gated fast-path: if `abs(ctrl.focus - mPrevFocus) < epsilon`,
-skip re-running DBAP entirely and reuse cached speaker gains.
+as a hook for a future threshold-gated fast-path: if the focus delta between
+blocks is below an epsilon, skip re-running DBAP entirely and reuse cached
+speaker gains. This is a valid future optimization but should only be
+implemented once the above remaining candidates are confirmed resolved.
+
+**What needs testing (before declaring this symptom closed):**
+Run the engine for several minutes under typical scene content and observe:
+
+- `Underruns:` counter in the monitoring loop (any non-zero → Fix 2 not
+  sufficient for that I/O path, or chunk size still too small)
+- `NaN:` counter (any non-zero → source position issue, investigate Pose output)
+- Subjective pops when moving the focus slider slowly vs. quickly
 
 **Code locations:**
 
@@ -1158,16 +1177,50 @@ skip re-running DBAP entirely and reuse cached speaker gains.
 
 ---
 
+### Phase 11 — Outstanding Diagnostics
+
+Phase 11 fixed the four identified structural bugs and restored build stability.
+The original symptoms (occasional pops, dropout after a few minutes, noise bursts,
+broken compensation) had multiple contributing causes. The fixes address all
+**confirmed** root causes, but the following questions remain open and should be
+answered by observation before declaring the audio quality issues fully resolved:
+
+| Question                                       | How to observe                                        | Expected if fixed                                                                |
+| ---------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Are stream misses still occurring?             | `Underruns: N` in monitoring loop                     | `0` throughout a 10 min run                                                      |
+| Are NaN/gain spikes still occurring?           | `NaN: N` in monitoring loop                           | `0` throughout a 10 min run                                                      |
+| Do pops correlate with focus changes?          | Move focus slider slowly vs. quickly; listen for pops | No pop with slow movement (smoother handles it); rare or none with fast movement |
+| Does autoComp toggle cleanly?                  | Toggle auto-comp on/off via OSC while audio plays     | Smooth gain transition, no click                                                 |
+| Do dropouts still occur after several minutes? | Leave running, observe monitoring loop                | No dropouts; all sources continuous                                              |
+
+**Conservative next steps (diagnostic-first, no architectural changes):**
+
+1. Run end-to-end with the monitoring loop visible and capture `Underruns` and
+   `NaN` counts over a 10-minute session. This confirms whether Fixes 2 and 3
+   are operating as intended.
+2. Verify the three gain paths (`mAutoCompValue`, `ctrl.loudspeakerMix`,
+   `ctrl.masterGain`) compose predictably: with `autoComp` on, the manual
+   slider should have no effect on speaker output; with `autoComp` off,
+   `mAutoCompValue` should be ignored.
+3. If pops still occur on focus changes after observation confirms stream/NaN
+   counters are clean, then revisit within-block focus interpolation — but via
+   a different approach than `renderSample()`. The correct approach would be
+   to compute per-speaker gain vectors for both `focusStart` and `focusEnd`
+   once each (not per-frame), then lerp those gain vectors across the block
+   samples directly, bypassing `setFocus()`/`renderBuffer()` entirely.
+
+---
+
 ### Phase 11 Agent Implementation Order Table Update
 
-| Phase | Agent(s)                   | Status                                       |
-| ----- | -------------------------- | -------------------------------------------- |
-| 1–10  | _(as above)_               | ✅ Complete                                  |
-| 11    | **Bug-Fix Pass**           | ✅ Complete                                  |
-|       | Fix 1: Focus comp plumbing | ✅ `Spatializer.hpp` + `RealtimeBackend.hpp` |
-|       | Fix 2: Streaming hardening | ✅ `Streaming.hpp`                           |
-|       | Fix 3: NaN/clamp guards    | ✅ `Spatializer.hpp` + `RealtimeTypes.hpp`   |
-|       | Fix 4: Focus interpolation | ✅ `Spatializer.hpp`                         |
+| Phase | Agent(s)                   | Status                                                |
+| ----- | -------------------------- | ----------------------------------------------------- |
+| 1–10  | _(as above)_               | ✅ Complete                                           |
+| 11    | **Bug-Fix Pass**           | ✅ Complete                                           |
+|       | Fix 1: Focus comp plumbing | ✅ `Spatializer.hpp` + `RealtimeBackend.hpp`          |
+|       | Fix 2: Streaming hardening | ✅ `Streaming.hpp`                                    |
+|       | Fix 3: NaN/clamp guards    | ✅ `Spatializer.hpp` + `RealtimeTypes.hpp`            |
+|       | Fix 4: Focus interpolation | ⚠️ `Spatializer.hpp` — partial; see diagnostics above |
 
 ### New Invariants (added Phase 11)
 
