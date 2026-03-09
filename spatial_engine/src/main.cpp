@@ -38,8 +38,11 @@ void printUsage() {
     std::cout << "Required:\n"
               << "  --layout FILE       Speaker layout JSON file\n"
               << "  --positions FILE    Spatial trajectory JSON file\n"
-              << "  --sources FOLDER    Folder containing mono source WAVs\n"
               << "  --out FILE          Output multichannel WAV file\n\n";
+    std::cout << "Source input (one of the following is required):\n"
+              << "  --sources FOLDER    Folder containing mono source WAV files\n"
+              << "  --adm FILE          Multichannel ADM WAV file (direct streaming,\n"
+              << "                      skips stem splitting)\n\n";
     std::cout << "Spatializer Options:\n"
               << "  --spatializer TYPE    Spatializer: vbap, dbap, or lbap (default: dbap)\n"
               << "  --dbap_focus FLOAT    DBAP focus/rolloff exponent (default: 1.0, range: 0.2-5.0)\n"
@@ -92,12 +95,12 @@ int main(int argc, char *argv[]) {
     // parse command line args
     // old version used positional args which was error prone
     // switched to flagged args for clarity
-    if (argc < 9) {
+    if (argc < 2) {
         printUsage();
         return 1;
     }
 
-    fs::path layoutFile, positionsFile, sourcesFolder, outFile;
+    fs::path layoutFile, positionsFile, sourcesFolder, admFile, outFile;
     RenderConfig config;  // Uses sensible defaults: masterGain=0.25f, pannerType=DBAP, etc.
 
     for (int i = 1; i < argc; i++) {
@@ -112,6 +115,8 @@ int main(int argc, char *argv[]) {
             positionsFile = argv[++i];
         } else if (arg == "--sources") {
             sourcesFolder = argv[++i];
+        } else if (arg == "--adm") {
+            admFile = argv[++i];
         } else if (arg == "--out") {
             outFile = argv[++i];
         } else if (arg == "--spatializer") {
@@ -198,6 +203,30 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Validate required arguments
+    if (layoutFile.empty()) {
+        std::cerr << "Error: --layout is required\n";
+        return 1;
+    }
+    if (positionsFile.empty()) {
+        std::cerr << "Error: --positions is required\n";
+        return 1;
+    }
+    if (outFile.empty()) {
+        std::cerr << "Error: --out is required\n";
+        return 1;
+    }
+    if (sourcesFolder.empty() && admFile.empty()) {
+        std::cerr << "Error: Either --sources or --adm is required\n";
+        return 1;
+    }
+    if (!sourcesFolder.empty() && !admFile.empty()) {
+        std::cerr << "Error: --sources and --adm are mutually exclusive\n";
+        return 1;
+    }
+
+    bool useADM = !admFile.empty();
+
     // layout JSON has speaker positions in radians
     // these get converted to degrees when creating al::Speaker objects in SpatialRenderer
     std::cout << "Loading layout...\n";
@@ -209,8 +238,13 @@ int main(int argc, char *argv[]) {
 
     // load all mono source files
     std::cout << "Loading source WAVs...\n";
-    std::map<std::string, MonoWavData> sources =
-        WavUtils::loadSources(sourcesFolder, spatial.sources, spatial.sampleRate);
+    std::map<std::string, MonoWavData> sources;
+    if (useADM) {
+        std::cout << "  ADM file: " << admFile << " (direct channel extraction)\n";
+        sources = WavUtils::loadSourcesFromADM(admFile, spatial.sources, spatial.sampleRate);
+    } else {
+        sources = WavUtils::loadSources(sourcesFolder, spatial.sources, spatial.sampleRate);
+    }
 
     // main rendering happens here
     // this is where the degrees conversion and channel mapping fixes are critical

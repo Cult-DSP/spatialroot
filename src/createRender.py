@@ -36,6 +36,7 @@ def deleteRenderOutput(output_file="processedData/spatial_render.wav"):
 
 def runSpatialRender(
     source_folder="processedData/stageForRender",
+    adm_file=None,
     render_instructions="processedData/stageForRender/scene.lusid.json",
     speaker_layout="spatial_engine/speaker_layouts/allosphere_layout.json",
     output_file="processedData/spatial_render.wav",
@@ -56,6 +57,8 @@ def runSpatialRender(
     -----------
     source_folder : str
         Directory containing mono source WAV files (X.1.wav, LFE.wav)
+    adm_file : str, optional
+        Multichannel ADM WAV file (direct streaming, skips stem splitting)
     render_instructions : str
         LUSID scene JSON file with spatial position data (scene.lusid.json)
     speaker_layout : str
@@ -75,13 +78,6 @@ def runSpatialRender(
     --------
     bool
         True if render succeeded, False otherwise
-    
-    DEV NOTE (2026-01-27): Future enhancement could add spatializer='auto' mode
-    that auto-detects the best spatializer based on layout type:
-    - Single ring (2D): DBAP
-    - Multi-ring with elevation layers: LBAP  
-    - Dense 3D coverage: VBAP
-    For now, DBAP is the safest default as it works with any layout.
     """
     # Get absolute paths
     project_root = Path(__file__).parent.parent.resolve()
@@ -95,8 +91,24 @@ def runSpatialRender(
         print("Run setupCppTools() from src.config.configCPP to build the renderer")
         return False
     
+    # Validate input mode
+    useADM = adm_file is not None
+    if useADM:
+        if not Path(adm_file).exists():
+            print(f"Error: ADM file not found: {adm_file}")
+            return False
+        source_desc = f"ADM file: {adm_file} (direct streaming)"
+    else:
+        if not Path(source_folder).exists():
+            print(f"Error: Source folder not found: {source_folder}")
+            return False
+        source_desc = f"Source folder: {source_folder}"
+    
     # Make paths absolute
-    source_folder = str((project_root / source_folder).resolve())
+    if not useADM:
+        source_folder = str((project_root / source_folder).resolve())
+    else:
+        adm_file = str((project_root / adm_file).resolve())
     render_instructions = str((project_root / render_instructions).resolve())
     speaker_layout = str((project_root / speaker_layout).resolve())
     output_file = str((project_root / output_file).resolve())
@@ -104,10 +116,7 @@ def runSpatialRender(
     output_dir = Path(output_file).parent
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Check if inputs exist
-    if not Path(source_folder).exists():
-        print(f"Error: Source folder not found: {source_folder}")
-        return False
+    # Check common inputs
     if not Path(render_instructions).exists():
         print(f"Error: Render instructions not found: {render_instructions}")
         return False
@@ -129,7 +138,7 @@ def runSpatialRender(
     # Run the renderer
     print(f"\nRunning Spatial Renderer...")
     print(f"  Spatializer: {spatializer.upper()}")
-    print(f"  Source folder: {source_folder}")
+    print(f"  {source_desc}")
     print(f"  Instructions: {render_instructions}")
     print(f"  Speaker layout: {speaker_layout}")
     print(f"  Output: {output_file}\n")
@@ -139,10 +148,15 @@ def runSpatialRender(
         str(executable),
         "--layout", speaker_layout,
         "--positions", render_instructions,
-        "--sources", source_folder,
         "--out", output_file,
         "--spatializer", spatializer
     ]
+    
+    # Add input source
+    if useADM:
+        cmd.extend(["--adm", adm_file])
+    else:
+        cmd.extend(["--sources", source_folder])
     
     # Add spatializer-specific parameters
     if spatializer == 'dbap':

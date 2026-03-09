@@ -1,8 +1,5 @@
 from src.config.configCPP import setupCppTools
-from src.analyzeADM.extractMetadata import extractMetaData
-from src.analyzeADM.checkAudioChannels import channelHasAudio, exportAudioActivity
-from src.packageADM.packageForRender import packageForRender
-from src.createRender import runVBAPRender
+from src.createRender import runSpatialRender
 from src.analyzeRender import analyzeRenderOutput
 from src.createFromLUSID import run_pipeline_from_LUSID
 from pathlib import Path
@@ -86,36 +83,45 @@ def run_pipeline_from_ADM(sourceADMFile, sourceSpeakerLayout, renderMode="dbap",
     finalOutputRenderFile = outputRenderPath
     finalOutputRenderAnalysisPDF = outputRenderPath.replace(".wav", ".pdf")
 
-    # -- Audio channel analysis (still writes containsAudio.json for splitStems) --
-    print("\nChecking audio channels for content...")
-    exportAudioActivity(sourceADMFile, output_path="processedData/containsAudio.json", threshold_db=-100)
-    # Also get the result dict in memory for passing to LUSID
-    contains_audio_data = channelHasAudio(sourceADMFile, threshold_db=-100, printChannelUpdate=False)
+    # -- Extract ADM metadata and produce scene.lusid.json via cult-transcoder --
+    print("\n" + "="*80)
+    print("STEP 2: ADM extraction + LUSID generation (cult-transcoder)")
+    print("="*80)
 
-    # -- Extract ADM XML metadata from WAV --
-    print("Extracting ADM metadata from WAV file...")
-    extractedMetadata = extractMetaData(sourceADMFile, "processedData/currentMetaData.xml")
+    cult_binary = "cult_transcoder/build/cult-transcoder"
+    scene_json_path = "processedData/stageForRender/scene.lusid.json"
 
-    if extractedMetadata:
-        xmlPath = extractedMetadata
-        print(f"Using extracted XML metadata at {xmlPath}")
-    else:
-        print("Using default XML metadata file")
-        xmlPath = "data/POE-ATMOS-FINAL-metadata.xml"
+    if not os.path.exists(cult_binary):
+        print(f"✗ Error: cult-transcoder binary not found at {cult_binary}")
+        print("  Build it with:")
+        print("    cd cult_transcoder/build && cmake .. && make -j4")
+        return False
 
-    # -- Parse ADM XML directly to LUSID scene (single-step, no intermediate JSONs) --
-    print("Parsing ADM metadata to LUSID scene...")
-    from LUSID.src.xml_etree_parser import parse_adm_xml_to_lusid_scene
-    lusid_scene = parse_adm_xml_to_lusid_scene(xmlPath, contains_audio=contains_audio_data)
-    lusid_scene.summary()
+    print(f"  Input:  {sourceADMFile}")
+    print(f"  Output: {scene_json_path}")
 
-    # -- Package for render: LUSID scene flows directly to stem splitter --
-    print("\nPackaging audio for render...")
-    packageForRender(sourceADMFile, lusid_scene, contains_audio_data, processedDataDir)
+    transcode_result = subprocess.run(
+        [
+            cult_binary, "transcode",
+            "--in",         sourceADMFile,
+            "--in-format",  "adm_wav",
+            "--out",        scene_json_path,
+            "--out-format", "lusid_json",
+        ],
+        check=False,
+    )
 
-    print(f"\nRunning {renderMode.upper()} spatial renderer...")
-    # Call runSpatialRender with appropriate parameters based on renderMode
-    from src.createRender import runSpatialRender
+    if transcode_result.returncode != 0:
+        print(f"\n✗ Error: cult-transcoder exited with code {transcode_result.returncode}")
+        print("  Check above output for details.")
+        return False
+
+    print(f"✓ scene.lusid.json written to: {scene_json_path}")
+
+    # -- Run spatial renderer with ADM direct input --
+    print("\n" + "="*80)
+    print("STEP 3: Running spatial renderer (ADM direct input)")
+    print("="*80)
     spatializer = renderMode
     extra_kwargs = {}
     if renderMode == 'dbap':  # Include default "dbap" mode
@@ -123,8 +129,8 @@ def run_pipeline_from_ADM(sourceADMFile, sourceSpeakerLayout, renderMode="dbap",
     elif renderMode == "lbap":
         extra_kwargs['lbap_dispersion'] = resolution
     runSpatialRender(
-        source_folder="processedData/stageForRender",
-        render_instructions="processedData/stageForRender/scene.lusid.json",
+        adm_file=sourceADMFile,
+        render_instructions=scene_json_path,
         speaker_layout=sourceSpeakerLayout,
         output_file=finalOutputRenderFile,
         spatializer=spatializer,
@@ -163,8 +169,8 @@ if __name__ == "__main__":
     # CLI mode - parse arguments
 
     if len(sys.argv) >= 2:
-        sourceADMFile = sys.argv[1]
-        sourceType = checkSourceType(sourceADMFile)
+        sourceFile = sys.argv[1]
+        sourceType = checkSourceType(sourceFile)
         sourceSpeakerLayout = sys.argv[2] if len(sys.argv) >= 3 else "spatial_engine/speaker_layouts/allosphere_layout.json"
         renderMode = sys.argv[3] if len(sys.argv) >= 4 else "dbap"
         resolution = float(sys.argv[4]) if len(sys.argv) >= 5 else 1.5
@@ -173,15 +179,16 @@ if __name__ == "__main__":
 
         if sourceType == "ADM":
             print("Running pipeline from ADM source...")
-            run_pipeline_from_ADM(sourceADMFile, sourceSpeakerLayout, renderMode, resolution, createRenderAnalysis, master_gain)
+            run_pipeline_from_ADM(sourceFile, sourceSpeakerLayout, renderMode, resolution, createRenderAnalysis, master_gain)
         elif sourceType == "LUSID":
             print("Running pipeline from LUSID source...")
             # Pass outputRenderPath explicitly to run_pipeline_from_LUSID
-            run_pipeline_from_LUSID(sourceADMFile, sourceSpeakerLayout, renderMode, createRenderAnalysis, outputRenderPath)
+            run_pipeline_from_LUSID(sourceFile, sourceSpeakerLayout, renderMode, createRenderAnalysis, outputRenderPath)
 
     else:
         # default mode
-        print("Usage: python runPipeline.py <sourceADMFile> [sourceSpeakerLayout] [renderMode] [resolution] [master_gain] [createAnalysis]")
+        print("Usage: python runPipeline.py <sourceFile> [sourceSpeakerLayout] [renderMode] [resolution] [master_gain] [createAnalysis]")
+        print("  sourceFile: ADM WAV file or LUSID package directory")
         print("\nRunning with default configuration...")
 
         sourceADMFile = "sourceData/driveExampleSpruce.wav"

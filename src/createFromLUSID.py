@@ -21,7 +21,7 @@ def check_initialization():
     bool
         True if initialized, False otherwise
     """
-    project_root = Path(__file__).parent.resolve()
+    project_root = Path(__file__).parent.parent.resolve()  # Go up two levels: src/ -> project_root/
     init_flag = project_root / ".init_complete"
     
     if init_flag.exists():
