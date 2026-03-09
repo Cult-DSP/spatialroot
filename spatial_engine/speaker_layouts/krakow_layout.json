@@ -43,14 +43,7 @@
       "radius": 6.276195105316596
     }
   ],
-  "subwoofers": [
-    {
-      "channel": 48
-    },
-    {
-      "channel": 49
-    }
-  ],
+  "subwoofers": [],
   "notes": [
     "Rough Krakow proposal based on 8-position ring with 1 missing speaker.",
     "Screen diameter 9.75m; speaker ring diameter 8.75m; speaker height 4.5m.",

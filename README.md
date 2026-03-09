@@ -3,7 +3,7 @@ Lead Developer: Lucian Parisi
 
 # spatialroot
 
-This repository contains a comprehensive **real-time spatial audio engine** for decoding Audio Definition Model Broadcast WAV (ADM BWF) files — Atmos masters — with mapping to speaker arrays using multiple spatializers (DBAP, VBAP, LBAP). The system includes both live performance capabilities and legacy offline rendering pipeline.
+This repository contains a comprehensive **spatial audio infrastructure** for decoding Audio Definition Model Broadcast WAV (ADM BWF) files — Atmos masters — with mapping to speaker arrays using multiple spatializers (DBAP, VBAP, LBAP). The system includes both real-time performance capabilities and modern offline batch rendering pipeline.
 
 ## Quick Start
 
@@ -311,34 +311,59 @@ Example ADM files: https://zenodo.org/records/15268471
 
 ---
 
-## Offline Pipeline - outdated
+## Offline Rendering Pipeline
 
-**Note:** The offline rendering pipeline is a legacy component maintained for batch processing workflows. For new projects, use the realtime engine for superior performance and features.
+The offline rendering pipeline provides batch processing capabilities for spatial audio rendering, now fully modernized to match the realtime engine's architecture and performance.
 
 ### Run the Pipeline
 
 ```bash
+# ADM direct input (recommended - no intermediate files)
 python runPipeline.py sourceData/driveExampleSpruce.wav
+
+# LUSID package input (legacy mono WAV stems)
+python runPipeline.py sourceData/lusid_package
 ```
 
 **Command options:**
 
 ```bash
-# Default mode (uses example file)
+# Default mode (uses example ADM file)
 python runPipeline.py
 
-# With custom ADM file
-python runPipeline.py path/to/your_file.wav
+# With custom ADM file (direct streaming)
+python runPipeline.py path/to/your_adm.wav
 
-# Full options
-python runPipeline.py <adm_wav_file> <speaker_layout.json> <true|false>
+# With LUSID package (mono WAV folder)
+python runPipeline.py path/to/lusid_package_folder
+
+# Full options with custom layout
+python runPipeline.py <input> <speaker_layout.json> <spatializer> <resolution> <master_gain> <analysis>
 ```
 
 **Arguments:**
 
-- `adm_wav_file` - Path to ADM BWF WAV file (Atmos master)
-- `speaker_layout.json` - Speaker layout JSON (default: `spatialRender/allosphere_layout.json`)
-- `true|false` - Create PDF analysis of render (default: `true`)
+- `input` - ADM WAV file or LUSID package directory
+- `speaker_layout.json` - Speaker layout JSON (default: `spatial_engine/speaker_layouts/allosphere_layout.json`)
+- `spatializer` - Spatialization mode: `dbap`, `vbap`, or `lbap` (default: `dbap`)
+- `resolution` - Spatial resolution parameter (default: `1.5`)
+- `master_gain` - Master gain in dB (default: `0.5`)
+- `analysis` - Create PDF analysis: `true` or `false` (default: `true`)
+
+### Input Modes
+
+**ADM Direct Input (Recommended):**
+
+- Streams multichannel ADM WAV directly to spatial renderer
+- No intermediate stem splitting required
+- Uses `cult-transcoder` for ADM→LUSID conversion
+- Fastest and most efficient workflow
+
+**LUSID Package Input (Legacy):**
+
+- Uses existing mono WAV stems with LUSID scene
+- Maintains backward compatibility
+- Requires pre-split audio stems
 
 ### Run the Desktop GUI
 
@@ -358,15 +383,18 @@ The project supports three spatializers from AlloLib:
 - **VBAP** - Vector Base Amplitude Panning, best for layouts with good 3D coverage
 - **LBAP** - Layer-Based Amplitude Panning, designed for multi-ring layouts
 
-See [`internalDocsMD/Spatialization/RENDERING.md`](internalDocsMD/Spatialization/RENDERING.md) for full documentation.
+See [`internalDocsMD/Offline_Rendering/offline_pipeline.md`](internalDocsMD/Offline_Rendering/offline_pipeline.md) for complete offline rendering documentation.
 
 ### Offline Pipeline Overview
 
-1. **Check Initialization** - Verify all dependencies are installed
-2. **Setup C++ Tools** - Initialize AlloLib, libbw64, libadm submodules; build embedded ADM extractor and spatial renderer
-3. **Extract Metadata** - Use embedded `spatialroot_adm_extract` to extract ADM XML from WAV
-4. **Parse ADM** - Convert ADM XML to internal data structure
-5. **Analyze Audio** - Detect which channels contain audio content
-6. **Package for Render** - Split audio stems (X.1.wav naming) and build LUSID scene (scene.lusid.json)
-7. **Spatial Render** - Generate multichannel spatial audio (renderer reads LUSID scene directly)
-8. **Analyze Render** - Create PDF with dB analysis of each output channel
+**ADM Input Workflow:**
+
+1. **ADM Preprocessing** - `cult-transcoder` extracts LUSID scene from ADM WAV
+2. **Spatial Render** - Direct ADM streaming to spatial renderer
+3. **Analysis** - Optional PDF analysis of spatial audio output
+
+**LUSID Package Workflow:**
+
+1. **Package Validation** - Verify LUSID scene and mono WAV stems
+2. **Spatial Render** - Render mono stems using LUSID scene positions
+3. **Analysis** - Optional PDF analysis of spatial audio output

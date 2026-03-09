@@ -123,13 +123,11 @@ int main(int argc, char *argv[]) {
             std::string panner = argv[++i];
             if (panner == "dbap") {
                 config.pannerType = PannerType::DBAP;
-            } else if (panner == "vbap") {
-                config.pannerType = PannerType::VBAP;
             } else if (panner == "lbap") {
                 config.pannerType = PannerType::LBAP;
             } else {
                 std::cerr << "Error: unknown spatializer '" << panner << "'\n";
-                std::cerr << "Valid spatializers: vbap, dbap, lbap\n";
+                std::cerr << "Valid spatializers: dbap, lbap (VBAP removed - requires 3D layouts)\n";
                 return 1;
             }
         } else if (arg == "--dbap_focus") {
