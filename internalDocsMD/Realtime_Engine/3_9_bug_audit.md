@@ -64,23 +64,26 @@ The proximity guard comment says the 0.049 m worst case is "source 21.1 at t=47.
 ### Fix 1: Onset fade — PATCHED (2026-03-09)
 
 #### Problem
+
 When a source first becomes active (previous block was silence / EOF zero-fill,
-current block has real signal), the transition is an instantaneous amplitude step 
-from zero to the full-amplitude first sample. DBAP multiplies that step by speaker 
+current block has real signal), the transition is an instantaneous amplitude step
+from zero to the full-amplitude first sample. DBAP multiplies that step by speaker
 gains, producing a wideband click heard as a low-end thump/pop.
 
 #### Design decisions
-| Decision | Reason |
-|---|---|
-| Fixed per-source index (`si`) into `mSourceWasSilent[]` | No string-keyed map. `mPoses` / `mSourceOrder` are stable from `loadScene()` — same slot every block. |
+
+| Decision                                                             | Reason                                                                                                                                       |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fixed per-source index (`si`) into `mSourceWasSilent[]`              | No string-keyed map. `mPoses` / `mSourceOrder` are stable from `loadScene()` — same slot every block.                                        |
 | `prepareForSources(size_t n)` called on main thread before `start()` | Single allocation point. Audio thread never allocates. Guard `si < mSourceWasSilent.size()` keeps path safe if hook is accidentally skipped. |
-| Fade only on first active block after silence | Subsequent blocks need no ramp; the discontinuity only exists at the 0→signal transition. |
-| Energy gate (`kOnsetEnergyThreshold = 1e-10f`) | `getBlock()` writes exact `0.0f` for silence/EOF. Any real signal exceeds 1e-10f. |
-| Fade length `kOnsetFadeSamples = 128` (~2.7 ms at 48 kHz) | Short enough not to audibly smear attacks. Long enough to suppress a step-from-zero pop. Adjustable later. |
-| Ramp placed **before** master-gain multiply (DBAP path) | Gain is applied once, not twice. Proximity guard operates on post-ramp samples. |
-| Same ramp applied in both LFE and DBAP paths | LFE onset can also pop. Logic is identical in both branches. |
+| Fade only on first active block after silence                        | Subsequent blocks need no ramp; the discontinuity only exists at the 0→signal transition.                                                    |
+| Energy gate (`kOnsetEnergyThreshold = 1e-10f`)                       | `getBlock()` writes exact `0.0f` for silence/EOF. Any real signal exceeds 1e-10f.                                                            |
+| Fade length `kOnsetFadeSamples = 128` (~2.7 ms at 48 kHz)            | Short enough not to audibly smear attacks. Long enough to suppress a step-from-zero pop. Adjustable later.                                   |
+| Ramp placed **before** master-gain multiply (DBAP path)              | Gain is applied once, not twice. Proximity guard operates on post-ramp samples.                                                              |
+| Same ramp applied in both LFE and DBAP paths                         | LFE onset can also pop. Logic is identical in both branches.                                                                                 |
 
 #### Files changed
+
 - `spatial_engine/realtimeEngine/src/Spatializer.hpp`
   - Added `kOnsetEnergyThreshold` and `kOnsetFadeSamples` constants
   - Added `mSourceWasSilent` member (preallocated `std::vector<uint8_t>`)
@@ -93,6 +96,7 @@ gains, producing a wideband click heard as a low-end thump/pop.
     before `backend.start()`
 
 #### RT-safety
+
 - Zero allocation in audio callback.
 - `mSourceWasSilent[si]` is a plain `uint8_t` array read/write — no atomics needed
   (audio thread is sole owner after `start()`).
@@ -106,21 +110,24 @@ gains, producing a wideband click heard as a low-end thump/pop.
 ### Fix 2: Fast-mover sub-stepping — PLAN (not yet patched)
 
 #### Problem
+
 When a source moves a large angular distance between consecutive audio blocks (~10 ms
 at 48 kHz / 512 frames), DBAP speaker gains jump from the old-block values to the
 new-block values without any within-block interpolation. At fast-moving segments this
 produces a perceivable click at the block boundary.
 
 #### Why the previous "prev-center interpolation" approach was rejected
+
 Interpolating from `mPrevPositions[si]` (last block's center position) to the current
-block's center position introduces **temporal lag**: the sub-step positions span 
-*last-block-center → current-block-center*, which is the time window of the *previous* 
-block, not the current one. This blurs localization — the current block's audio is 
+block's center position introduces **temporal lag**: the sub-step positions span
+_last-block-center → current-block-center_, which is the time window of the _previous_
+block, not the current one. This blurs localization — the current block's audio is
 rendered with a position trajectory that lags one block behind reality.
 
 #### Revised approach: current-block samples only
 
 **Extend `SourcePose` with two new fields:**
+
 ```cpp
 struct SourcePose {
     std::string name;
@@ -135,20 +142,25 @@ struct SourcePose {
 **Extend `Pose::computePositions()` signature:**
 
 Change from:
+
 ```cpp
 void computePositions(double blockCenterTimeSec)
 ```
+
 To:
+
 ```cpp
 void computePositions(double blockStartTimeSec, double blockEndTimeSec)
 ```
+
 `blockCenterTimeSec = (blockStartTimeSec + blockEndTimeSec) / 2.0` is derived
 internally. The existing `position` field continues to be computed at the midpoint.
-`positionStart` and `positionEnd` are computed via the *identical* pipeline
+`positionStart` and `positionEnd` are computed via the _identical_ pipeline
 (interpolateDirRaw → safeDirForSource → sanitizeDirForLayout → directionToDBAPPosition)
 at `blockStartTimeSec` and `blockEndTimeSec` respectively.
 
 **Caller change in `RealtimeBackend::processBlock()` (Step 2):**
+
 ```cpp
 // Currently:
 const double blockCtrSec = static_cast<double>(curFrame + numFrames / 2) / sampleRate;
@@ -166,6 +178,7 @@ Use `positionStart` and `positionEnd` for the angular-change test, matching the
 offline renderer's Q1/Q3 approach conceptually (start→end captures the total
 angular span of the block; conservative, may trigger slightly more than the offline
 test — acceptable):
+
 ```cpp
 // Normalize positions to unit sphere for angular comparison
 al::Vec3f d0 = pose.positionStart.normalized();
@@ -174,6 +187,7 @@ float dotVal = std::clamp(d0.dot(d1), -1.0f, 1.0f);
 float angleDelta = std::acos(dotVal);
 bool isFastMover = (angleDelta > kFastMoverAngleRad);
 ```
+
 `acos` is called once per source per block, only for non-LFE, non-skipped sources.
 Not in an inner loop — cost is acceptable.
 
@@ -197,6 +211,7 @@ the proximity threshold `kMinSpeakerDist`. The proximity guard is re-run on each
 sub-chunk position (same flip → guard → un-flip pattern as the main path).
 
 **New members needed in `Spatializer`:**
+
 ```cpp
 static constexpr float kFastMoverAngleRad = 0.25f;  // ~14.3°, matches offline renderer
 static constexpr int   kNumSubSteps       = 4;       // 512 / 4 = 128-frame sub-chunks
@@ -206,6 +221,7 @@ al::AudioIOData mFastMoverScratch;
 ```
 
 **`mFastMoverScratch` sizing (in `init()`, after `mRenderIO` sizing):**
+
 ```cpp
 {
     int subFrames = std::max(1, mConfig.bufferSize / kNumSubSteps);
@@ -220,17 +236,18 @@ al::AudioIOData mFastMoverScratch;
 
 #### RT-safety concerns for Fix 2
 
-| Concern | Status |
-|---|---|
-| `acos()` per non-LFE source per block | Called once per source per block — not inside a sample loop. ~80 trig ops per block. Acceptable. |
-| `mFastMoverScratch.zeroOut()` per sub-chunk | 4 × 128 × outputChannels float-zeroes per fast-mover source. One per source that triggers, not per sample. |
-| Proximity guard runs 4× per fast-mover | 4 × numSpeakers vector ops. At 50 speakers: 200 vector ops per fast-mover source per block. Fine. |
-| `numFrames % kNumSubSteps == 0` guard | Required. Prevents under-read from `mSourceBuffer`. With `bufferSize=512, kNumSubSteps=4` always true. Guard makes it robust to other sizes. |
-| `positionStart.normalized()` | `al::Vec3f::normalized()` is a magnitude + divide. Called twice per source per block for the angular test. No allocation. |
-| `positionStart`/`positionEnd` fields in `SourcePose` | Two extra `al::Vec3f` per source. For 80 sources: 80 × 2 × 12 bytes = 1.9 KB extra per block traversal. Negligible. |
-| Caller signature change in `computePositions()` | One additional `double` parameter to compute per call site. Only one call site: `RealtimeBackend::processBlock()`. |
+| Concern                                              | Status                                                                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `acos()` per non-LFE source per block                | Called once per source per block — not inside a sample loop. ~80 trig ops per block. Acceptable.                                             |
+| `mFastMoverScratch.zeroOut()` per sub-chunk          | 4 × 128 × outputChannels float-zeroes per fast-mover source. One per source that triggers, not per sample.                                   |
+| Proximity guard runs 4× per fast-mover               | 4 × numSpeakers vector ops. At 50 speakers: 200 vector ops per fast-mover source per block. Fine.                                            |
+| `numFrames % kNumSubSteps == 0` guard                | Required. Prevents under-read from `mSourceBuffer`. With `bufferSize=512, kNumSubSteps=4` always true. Guard makes it robust to other sizes. |
+| `positionStart.normalized()`                         | `al::Vec3f::normalized()` is a magnitude + divide. Called twice per source per block for the angular test. No allocation.                    |
+| `positionStart`/`positionEnd` fields in `SourcePose` | Two extra `al::Vec3f` per source. For 80 sources: 80 × 2 × 12 bytes = 1.9 KB extra per block traversal. Negligible.                          |
+| Caller signature change in `computePositions()`      | One additional `double` parameter to compute per call site. Only one call site: `RealtimeBackend::processBlock()`.                           |
 
 #### Files that will be touched (Fix 2, when implemented)
+
 1. `RealtimeTypes.hpp` or `Pose.hpp` — extend `SourcePose` with `positionStart`, `positionEnd`
 2. `Pose.hpp` — change `computePositions()` signature; add 2 extra position computations per source
 3. `RealtimeBackend.hpp` — update `computePositions()` call in Step 2 of `processBlock()`
@@ -241,7 +258,181 @@ LFE sources are excluded from fast-mover detection (they have no spatial positio
 ---
 
 ### Recommended patch order
+
 1. ✅ Fix 1 (onset fade) — patched in this session. Verify pop is gone first.
 2. Fix 2 (fast-mover sub-stepping) — implement after Fix 1 is confirmed audibly clean.
    The remaining clicks after Fix 1 will be more precisely attributable to block-boundary
    motion, making Fix 2 easier to evaluate in isolation.
+
+---
+
+## 2026-03-09 — Device/Output Channel Coupling: Audit and Fix 3
+
+### Context
+
+The engine now sounds good in some runs but produces non-deterministic output failures:
+- Eden run 1: audio shifted to channels 15+ upward, skipping 1–14
+- Canyon/Swale mid-playback: loudspeakers disappeared while subs remained
+- MOTU channels 1 and 2 extremely quiet or skipped
+- First-run / second-run behavior differs for the same content
+
+Focus shifted from DSP/click polishing to routing/output-state correctness.
+
+---
+
+### Investigation: render-to-device copy path audit
+
+#### Internal bus (render buffer)
+
+`Spatializer::init()` computes `computedOutputChannels` from the layout:
+```
+maxChannel = max(numSpeakers - 1, max(subwooferDeviceChannels))
+outputChannels = maxChannel + 1
+```
+This value is written into `mConfig.outputChannels` and `mRenderIO` is sized to it.
+The render buffer is layout-sized and never changes after init.
+
+#### Device open path (`RealtimeBackend::init()`)
+
+`mAudioIO.init(...)` is called with `mConfig.outputChannels` as the requested channel
+count. AlloLib passes this to PortAudio, which **negotiates with the OS default audio
+device** — not the MOTU or any specific device. The returned `mAudioIO.channelsOut()`
+is the **actual negotiated count**, which PortAudio may reduce silently if the
+selected device does not support the requested count.
+
+**Critical problem:** after `mAudioIO.open()` the code logs the actual channel count
+but does not compare it to the requested count. There is no check, no warning, and no
+refusal. `mInitialized = true` proceeds unconditionally.
+
+```
+// (RealtimeBackend.hpp, in init(), after mAudioIO.open())
+mInitialized = true;
+std::cout << "[Backend] Audio device opened successfully." << std::endl;
+// Report actual device parameters (may differ from requested)
+std::cout << "  Actual output channels: " << mAudioIO.channelsOut() << std::endl;
+std::cout << "  Actual buffer size:     " << mAudioIO.framesPerBuffer() << std::endl;
+return true;          // ← no mismatch check
+```
+
+#### Identity copy path (`Spatializer::renderBlock()`)
+
+```cpp
+const unsigned int numOutputChannels = io.channelsOut();    // actual device
+const unsigned int copyChannels = std::min(renderChannels, numOutputChannels);
+for (unsigned int ch = 0; ch < copyChannels; ++ch) {
+    const float* src = mRenderIO.outBuffer(ch);
+    float* dst = io.outBuffer(ch);
+    for (unsigned int f = 0; f < numFrames; ++f)
+        dst[f] += src[f];
+}
+```
+
+Verdict: **no invalid write**. `std::min` prevents OOB. BUT: if `numOutputChannels
+< renderChannels` (e.g., device opened at 2 ch, layout needs 18), channels
+`numOutputChannels…renderChannels-1` are silently dropped — never reaching hardware.
+The LFE subwoofer channels (e.g., Translab sub at index 16, 17) may still be within
+the truncated range if they happen to be ≤ `numOutputChannels-1`, which is why subs
+can survive while mains above the cutpoint disappear.
+
+#### Remap load order bug (secondary, only affects `--remap` path)
+
+In `main.cpp`, `outputRemap.load()` is called at line 371, but `backend.init()` is
+at line 477. At remap load time, `config.outputChannels` exists (layout-derived) but
+the actual device channel count is not yet known. Both `renderChannels` and
+`deviceChannels` arguments to `load()` are passed as `config.outputChannels`:
+```cpp
+bool remapOk = outputRemap.load(remapPath,
+                                config.outputChannels,   // renderChannels ← correct
+                                config.outputChannels);  // deviceChannels ← WRONG:
+                                                         // should be actual hw count
+```
+Any remap entry targeting a device channel ≥ `config.outputChannels` would be dropped
+even if supported by the device. Not triggering current symptoms (no `--remap` in
+failing tests) but is a latent correctness bug.
+
+---
+
+### Root cause of non-deterministic channel routing
+
+**AlloLib/PortAudio selects the macOS default audio device when no device ID is
+specified.** If that device has fewer output channels than the layout requires
+(e.g., MacBook built-in = 2, MOTU = 18+, layout = 18), the device opens with 2
+channels. The identity copy truncates to 2 channels silently. On a run where the
+MOTU is the default, 18 channels open correctly. This explains:
+
+- Eden run 1 wrong / run 2 right: different runs hit different macOS default states
+- "channels 15+ upward, skipping 1–14": consistent with a truncation at a low
+  channel count that happens to allow only the upper sub/LFE channels through
+  (actually this is inconsistent — see tentative note below)
+- MOTU channels 1 and 2 quiet: if only 2 channels negotiated, only render channels
+  0 and 1 reach the device, which may be mapped to MOTU outputs 1 and 2
+
+**The "loudspeakers disappeared, subs remained" pattern fits this exactly if the
+subwoofer deviceChannel indices (Translab: 16, 17) are ABOVE the negotiated device
+channel cutpoint.** In that case subs are in the silently-dropped render channels
+and should also disappear — meaning if subs remain while mains go, the exact channel
+cutpoint must be above the main-speaker range and below or at the sub channel indices,
+which seems unlikely unless the sub indices happen to be 0 or 1.
+
+**Therefore:** "subs remain, mains disappear" is NOT cleanly explained by a simple
+channel count truncation alone. The truncation bug explains the non-deterministic
+first-run/second-run failure and the channel-skip observations. The mains-disappear
+symptom may have additional contributors (guard mass-fire remains tentative).
+
+---
+
+### Fix 3: Post-open device channel validation — PATCHED (2026-03-09)
+
+#### Problem
+
+After `mAudioIO.open()`, the actual negotiated channel count is logged but never
+validated. If the OS-selected device has fewer channels than the layout requires,
+the engine starts and silently drops speaker channels.
+
+#### Decision: refuse to start on channel count mismatch
+
+Continuing with fewer channels than the layout requires will always produce incorrect
+spatial output. Silent truncation is never acceptable in a spatial audio engine.
+The correct behavior is a clear error + refusal to start, forcing the user to
+verify/set the correct audio device before running.
+
+On over-provisioned device (actual > requested): accepted. Extra hardware channels
+are unused and cause no harm.
+
+#### Files changed
+
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+  - After `mAudioIO.open()` succeeds and actual params are logged:
+  - Added comparison of `mAudioIO.channelsOut()` against `mConfig.outputChannels`
+  - On under-provision (`actual < required`): clear error, `mInitialized = false`,
+    return false — engine refuses to start
+  - On over-provision (`actual > required`): info log only, proceed normally
+
+#### Relation to remap load order bug
+
+Not fixed in this pass. The `--remap` path's `deviceChannels` argument remains
+incorrectly set to `config.outputChannels` instead of the post-open actual count.
+This is a latent bug. It will be fixed in a future pass by moving remap load to
+after `backend.init()` returns, or by adding a `setDeviceChannels(int n)` method
+on `OutputRemap` for post-open validation.
+
+---
+
+### SpeakerGuard spike / mains-disappear — status: TENTATIVE
+
+The Canyon/Swale "loudspeakers disappeared, subs remained" behavior COULD be:
+(a) the channel truncation bug on a run where the device opened under-provisioned
+(b) proximity guard mass-fire concentrating 101 sources on the DBAP equidistant
+    shell → per-speaker gain below audibility threshold for mains only
+(c) both, with the channel bug as the primary event and guard as amplifier
+
+Current code evidence for (b): guard fires per-source per block (not per-channel),
+and the LFE path bypasses both guard and DBAP, writing directly to subwoofer channel
+slots in mRenderIO. So even if all DBAP sources are pushed to the equidistant shell,
+subs still get full signal. This does support (b) structurally, but no actual
+`speakerProximityCount` data from a Canyon run has been collected.
+
+**Do not conclude (b) is root cause until `speakerProximityCount` data from a
+Canyon/Swale run is compared against the disappearance events.**
+The channel validation fix should be applied first; if the second run (post-fix)
+still shows mains disappearing despite correct channel counts, escalate (b).

@@ -100,13 +100,43 @@ public:
             return false;
         }
 
-        mInitialized = true;
         std::cout << "[Backend] Audio device opened successfully." << std::endl;
 
-        // Report actual device parameters (may differ from requested)
-        std::cout << "  Actual output channels: " << mAudioIO.channelsOut() << std::endl;
+        // Report actual device parameters (may differ from requested).
+        // AlloLib/PortAudio negotiates with the OS default device; the actual
+        // channel count may be lower than requested if the wrong device is
+        // selected (e.g., MacBook built-in instead of MOTU).
+        const int actualOutChannels = static_cast<int>(mAudioIO.channelsOut());
+        std::cout << "  Actual output channels: " << actualOutChannels << std::endl;
         std::cout << "  Actual buffer size:     " << mAudioIO.framesPerBuffer() << std::endl;
 
+        // ── Post-open channel count validation ────────────────────────────
+        // The layout requires exactly mConfig.outputChannels output channels.
+        // If the device opened with fewer, any render channel ≥ actualOutChannels
+        // would be silently dropped by the Spatializer copy step, producing
+        // missing speakers / wrong-channel output. This is never acceptable.
+        // Refuse to start rather than run with an incorrect channel mapping.
+        if (actualOutChannels < mConfig.outputChannels) {
+            std::cerr << "[Backend] FATAL: Audio device opened with only "
+                      << actualOutChannels << " output channel(s), but the "
+                      << "speaker layout requires " << mConfig.outputChannels
+                      << " channel(s).\n"
+                      << "  → Check macOS System Settings > Sound: is the correct "
+                      << "output device (e.g., MOTU) set as default?\n"
+                      << "  → Aborting — refusing to start with incorrect channel "
+                      << "count (silent speaker drops are not acceptable)."
+                      << std::endl;
+            mAudioIO.close();
+            return false;
+        }
+
+        if (actualOutChannels > mConfig.outputChannels) {
+            std::cout << "  [Backend] INFO: Device provides " << actualOutChannels
+                      << " channels; layout uses " << mConfig.outputChannels
+                      << ". Extra hardware channels will be unused." << std::endl;
+        }
+
+        mInitialized = true;
         return true;
     }
 
