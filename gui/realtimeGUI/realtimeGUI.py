@@ -224,7 +224,12 @@ class RealtimeWindow(QMainWindow):
         t.start_requested.connect(self._on_start)
         t.stop_requested.connect(self._runner.stop_graceful)
         t.kill_requested.connect(self._runner.kill)
-        t.restart_requested.connect(self._runner.restart)
+        # IMPORTANT: restart goes through _on_restart, NOT runner.restart() directly.
+        # runner.restart() bypasses _on_start() and therefore skips
+        # reset_to_defaults(), leaving slider state from the previous run intact.
+        # flush_to_osc() then pushes that stale state (e.g. gain=1.5) into the
+        # new engine instance, deterministically reproducing above-unity gain bugs.
+        t.restart_requested.connect(self._on_restart)
         t.pause_requested.connect(self._runner.pause)
         t.play_requested.connect(self._runner.play)
         t.copy_command_requested.connect(self._copy_command)
@@ -244,6 +249,21 @@ class RealtimeWindow(QMainWindow):
         self._transcode_panel.run_requested.connect(self._on_run_transcode)
 
     # ── Transport handlers ───────────────────────────────────────────────
+
+    def _on_restart(self) -> None:
+        """
+        Restart the engine with a clean control state.
+
+        Resets all sliders to defaults before re-launching so that
+        flush_to_osc() on engine_ready sends safe baseline values (gain=0.5,
+        focus=1.5, mixes=0 dB) rather than whatever was left over from the
+        previous run. Without this reset, stale GUI state (e.g. gain=1.5
+        moved during the prior run) is forwarded into the new engine instance
+        immediately after the ParameterServer comes up, reproducing above-unity
+        gain failures deterministically on every restart.
+        """
+        self._controls_panel.reset_to_defaults()
+        self._runner.restart()
 
     def _on_start(self) -> None:
         err = self._input_panel.validate()

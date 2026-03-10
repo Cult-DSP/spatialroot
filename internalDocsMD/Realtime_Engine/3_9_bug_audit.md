@@ -17,7 +17,7 @@ If a Swale source at ~130 s is in slow motion (within its trajectory window, not
 
 Category D — Steady-state smoother seeding offset (LOW confidence for steady-state symptoms)
 
-ControlSmooth::smoothed initialises at hardcoded focus=1.0 regardless of the --focus CLI flag (1.5 default). It ramps to 1.5 in ~200 ms. At 130 s this has been irrelevant for ~129 s. Does not explain steady-state artifacts. Documented but not yet shown as fixed in the code I read.
+ControlSmooth::smoothed initialises at hardcoded focus=1.0 regardless of the --focus CLI flag (1.5 default). It ramps to 1.5 in ~200 ms. At 130 s this has been irrelevant for ~129 s. Does not explain steady-state artifacts. **FIXED — see Fix 4 below.**
 
 Test First
 Category A — it is the only candidate that:
@@ -441,3 +441,228 @@ subs still get full signal. This does support (b) structurally, but no actual
 Canyon/Swale run is compared against the disappearance events.**
 The channel validation fix should be applied first; if the second run (post-fix)
 still shows mains disappearing despite correct channel counts, escalate (b).
+
+---
+
+## 2026-03-09 — Session 3: Reset/gain path investigation and GUI restart fix
+
+### Context entering this session
+
+New behavioral data from listener tests:
+
+- Playback is sometimes **worse in the same app instance** on a second run;
+  restarting the app fixes it. Strong indicator of state not being reset.
+- In Swale, the issue is **deterministic and gain-gated**: behavior was
+  described as "totally perfect" below gain=1, then the failure appeared
+  when gain was moved above 1. This is a reliable trigger.
+- SpeakerProximityCount is present in the monitoring output but observed
+  values during failures had not yet been correlated to the audio events.
+
+---
+
+### Investigation 1: GUI / OSC reset path
+
+#### Finding: primary reset bug is in `RealtimeRunner.restart()` bypassing control reset
+
+**Full call chain for normal Start (`RealtimeWindow._on_start()`):**
+
+1. `self._controls_panel.reset_to_defaults()` — sliders snap to safe defaults
+   with `emit=False` (no OSC sent, visual reset only)
+2. `self._runner.start(cfg)` — launches engine with `--gain 0.5` from `RealtimeConfig`
+3. C++ ParameterServer comes up → sentinel line detected in stdout
+4. `engine_ready` signal fires → `flush_to_osc()` sends all slider values to engine
+5. Engine receives gain=0.5, focus=1.5, mixes=0 dB — matching the defaults
+
+**Full call chain for Restart (`RealtimeTransportPanel` restart button):**
+
+1. `t.restart_requested` → was wired directly to `self._runner.restart()`
+2. `RealtimeRunner.restart()` calls `self.stop_graceful()` then
+   `QTimer.singleShot(200, lambda: self.start(self._config))`
+3. `runner.start()` launches the engine — **`_on_start()` is never called**
+4. `reset_to_defaults()` is **never called**
+5. C++ ParameterServer comes up → `flush_to_osc()` fires
+6. `flush_to_osc()` reads **whatever the sliders currently show** — e.g. gain=1.5
+   left from a slider move during the previous run
+7. Engine receives gain=1.5 from the very first OSC message after startup
+
+**Key structural point:** slider moves only update the Qt widget and send OSC.
+They do NOT write back to `RealtimeConfig.master_gain`. The `RealtimeConfig`
+dataclass field stays at its construction-time value (0.5). So every restart
+always passes `--gain 0.5` via CLI — but the OSC flush immediately overrides
+this with whatever the slider is showing, which can be anything up to 3.0.
+
+This is the confirmed primary reset bug. It is GUI-layer only; it requires no
+C++ changes and no audio-path changes.
+
+#### Fix 4 (primary): reset controls on restart — PATCHED (2026-03-09)
+
+**File changed:** `gui/realtimeGUI/realtimeGUI.py`
+
+- Changed `t.restart_requested.connect(self._runner.restart)` to
+  `t.restart_requested.connect(self._on_restart)`
+- Added `_on_restart()` method:
+  ```python
+  def _on_restart(self) -> None:
+      self._controls_panel.reset_to_defaults()
+      self._runner.restart()
+  ```
+
+`reset_to_defaults()` uses `emit=False` on all set_value calls, so no OSC is
+sent during the reset — it is a silent visual snap. The flush happens later,
+after `engine_ready` fires, at which point all sliders are at safe defaults.
+
+#### Fix 5 (secondary): smoother pre-seeding — PATCHED (2026-03-09)
+
+**File changed:** `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+
+`RealtimeBackend` constructor now pre-seeds `mSmooth.smoothed` and `mSmooth.target`
+from the actual `config` atomics instead of leaving them at struct defaults (1.0f).
+
+Without this, even on a normal first run (no stale GUI state), the very first ~200 ms
+of playback runs at `masterGain=1.0` and `focus=1.0` instead of the CLI-specified
+values (e.g. 0.5 / 1.5), because the smoother is converging from wrong initial values.
+This is a real startup transient bug, but minor compared to Fix 4. Fix 4 addresses the
+deterministic same-session failure; Fix 5 cleans up a transient on every run.
+
+Both fixes should be kept.
+
+---
+
+### Investigation 2: Main-channel collapse location (mRenderIO vs output copy)
+
+#### Code-derived conclusion: if channel validation is passing, collapse is in mRenderIO
+
+The device copy path (identity fast-path in `Spatializer::renderBlock()`):
+
+```cpp
+const unsigned int copyChannels = std::min(renderChannels, numOutputChannels);
+for (unsigned int ch = 0; ch < copyChannels; ++ch) {
+    dst[f] += src[f];   // additive copy from mRenderIO → io.outBuffer
+}
+```
+
+Since Fix 3 (post-open channel validation) was applied, the engine now refuses
+to start if `actualOutChannels < mConfig.outputChannels`. If the engine is
+running at all, `numOutputChannels >= renderChannels`, so `copyChannels ==
+renderChannels` and no render channel is dropped at the copy step.
+
+Therefore: if mains are absent at the hardware output during a running session,
+they are already absent in `mRenderIO` at the time of the copy.
+
+#### What can cause mains to collapse in mRenderIO while subs remain
+
+The render paths diverge completely inside `renderBlock()`:
+
+- **DBAP path (mains):** `mSourceBuffer[f] *= masterGain` → proximity guard →
+  `mDBap->renderBuffer(mRenderIO, safePos, mSourceBuffer, numFrames)` → Phase 6
+  `spkMix` multiply → `kMaxSample` clamp
+- **LFE path (subs):** `mSourceBuffer[f] * (masterGain * 0.95 / numSubs)` written
+  directly to `mRenderIO.outBuffer(subCh)` — no DBAP, no guard
+
+Any mechanism that collapses DBAP output while leaving LFE untouched is confined
+to the DBAP path inside `renderBlock()`. The sub path has no guard, no position
+dependency, and a gain divisor that keeps it well below 1.0 for `masterGain ≤ 2.0`.
+
+#### Diagnostic already instrumented: nanGuardCount
+
+The monitoring loop already prints `nanGuardCount` every 500 ms. `nanGuardCount`
+is incremented once per block in which any sample in `mRenderIO` exceeds
+`kMaxSample = 4.0f` or is non-finite, **before** the device copy.
+
+- **If nanGuardCount climbs during the failure:** mains are being clamped to ±4.0
+  inside `mRenderIO`. The clamp is suppressing them but they remain audible as
+  loud distortion, not silence — so if mains are actually silent, this is not
+  the mechanism.
+- **If nanGuardCount stays 0 during the failure:** main channel samples in
+  `mRenderIO` are near zero, not near 4.0. DBAP is producing near-zero output.
+  This points to a gain structure producing near-zero accumulation across all
+  sources, not an overrange/clamp event.
+
+**This monitoring data is the key discriminator. It is collected automatically —
+no code changes needed. The next Swale gain-above-1 test should note whether
+nanGuardCount is climbing as mains disappear.**
+
+---
+
+### Investigation 3: Gain trigger path — where gain > 1 is applied
+
+`/realtime/gain` OSC → `config.masterGain` atomic → snapshotted once per block
+into `ctrl.masterGain` → applied here, before DBAP:
+
+```cpp
+// Spatializer::renderBlock(), DBAP path
+for (unsigned int f = 0; f < numFrames; ++f) {
+    mSourceBuffer[f] *= masterGain;   // ← gain applied per-source, pre-DBAP
+}
+mDBap->renderBuffer(mRenderIO, safePos, mSourceBuffer.data(), numFrames);
+```
+
+For the LFE path, `subGain = masterGain * 0.95 / numSubs`. At `numSubs=2` and
+`masterGain=1.5`, `subGain ≈ 0.71`. Subs stay below 1.0 per channel until
+`masterGain > 2.1`.
+
+**The gain > 1 failure is mains-only because:**
+
+- Mains accumulate DBAP output from all N non-LFE sources, each pre-multiplied
+  by `masterGain`. Speaker channel amplitudes scale as O(N × masterGain).
+- Subs accumulate from only the single LFE source, with a gain divisor that keeps
+  them in safe range across the full slider range.
+
+**Why gain > 1 is deterministic but geometry/guard should not depend on gain:**
+The user correctly notes that guard firing is determined by position, not gain.
+The guard fires on sources within `kMinSpeakerDist = 0.15 m` regardless of `masterGain`.
+Therefore a gain-gated failure cannot be primarily caused by the proximity guard.
+The guard is a correlate at best (sources near speakers also produce high per-speaker
+DBAP gains, and guard firing would be noted in `speakerProximityCount`, but the
+guard does not reduce output amplitude — it pushes sources slightly away and the
+DBAP output actually decreases).
+
+**Current status: gain-path failure mechanism is not yet confirmed.**
+The smoothing pre-seed fix removes one compounding factor (startup gain transient).
+The restart reset fix removes the primary source of stale gain state between runs.
+After those two fixes, a controlled re-test (run → set gain > 1 → observe failure →
+check `nanGuardCount` and `speakerProximityCount` at that moment) will determine
+whether the remaining failure is:
+
+- (a) amplitude overrange clamped + distorted in mRenderIO (nanGuardCount high)
+- (b) near-zero DBAP accumulation from some geometry condition (nanGuardCount 0,
+  speakerProximityCount high)
+- (c) hardware driver protection firing on over-range that the current clamp
+  (`kMaxSample=4.0`) does not prevent (no existing in-engine counter; would require
+  a softer clamp ceiling, e.g. 1.0–2.0, to observe)
+
+Do not assume cause until this test data is available.
+
+---
+
+### SpeakerGuard — revised status after this session
+
+**SpeakerGuard is a correlate, not the confirmed primary cause of gain-gated failures.**
+
+Evidence:
+
+- Guard firing is determined by position geometry, not by `masterGain` value.
+  A gain-deterministic failure cannot be primarily caused by position-dependent guard.
+- Guard fires per-source per block, incrementing `speakerProximityCount`. If the guard
+  were causing mains to collapse, `speakerProximityCount` would be high and correlated
+  with the event. This data has not yet been collected for a Swale gain>1 failure.
+- Guard does not reduce DBAP output amplitude — it displaces sources slightly outward,
+  which if anything would reduce the per-speaker gain spike, not create silence.
+
+Guard may still be an **amplifier**: sources displaced to the guard shell contribute
+more evenly across all speakers, diffusing the image and reducing perceived loudness
+on any individual speaker. This is a plausible secondary effect but does not produce
+the "mains disappeared completely" pattern.
+
+**Next step:** collect `speakerProximityCount` and `nanGuardCount` from a Swale run
+during a gain>1 failure. These two counters together narrow the failure to one of the
+three mechanisms listed above.
+
+---
+
+### Patches applied this session
+
+| Fix                   | File                                                    | Description                                                                                                                                        |
+| --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fix 4 (primary reset) | `gui/realtimeGUI/realtimeGUI.py`                        | Restart now calls `reset_to_defaults()` before re-launching; stale slider state no longer flushed into new engine instance                         |
+| Fix 5 (smoother seed) | `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Constructor pre-seeds `mSmooth.smoothed` and `mSmooth.target` from actual config atomics; eliminates ~200 ms startup transient at wrong gain/focus |

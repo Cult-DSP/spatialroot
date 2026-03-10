@@ -161,6 +161,12 @@ source init.sh
 
 After making changes to C++ source files (`spatial_engine/src/` or `spatial_engine/realtimeEngine/src/`), rebuild the renderers:
 
+**QUICK DEBUGGING REBUILD - for live engine**
+
+```bash
+cd spatial_engine/realtimeEngine/build && make -j$(sysctl -n hw.ncpu)
+```
+
 **Option 1: Force rebuild (recommended)**
 
 ```bash

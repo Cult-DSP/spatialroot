@@ -66,7 +66,36 @@ public:
     // ── Constructor / Destructor ─────────────────────────────────────────
 
     RealtimeBackend(RealtimeConfig& config, EngineState& state)
-        : mConfig(config), mState(state) {}
+        : mConfig(config), mState(state) {
+        // Pre-seed the exponential smoother from actual config values.
+        //
+        // Without this, mSmooth.smoothed defaults to all-1.0f regardless of
+        // what was passed via CLI (e.g. --gain 0.5 → masterGain=0.5, but
+        // smoother starts at 1.0 and decays toward 0.5 over ~200 ms).
+        //
+        // Two concrete failure modes this prevents:
+        //
+        //  STARTUP TRANSIENT: first ~200 ms always renders at ~1.0 gain
+        //  regardless of --gain. With masterGain=0.5 and focus=1.5, the
+        //  first blocks use gain≈1.0 and focus≈1.0 — both wrong.
+        //
+        //  SECOND-RUN STALE-OSC BUG: when the Python GUI re-launches the
+        //  engine and immediately flushes its last slider state (e.g. gain=1.5
+        //  left over from the previous run), the smoother was starting at 1.0
+        //  and receiving target 1.5 from OSC in the first block, rendering the
+        //  entire run at or above 1.0 gain from the very first audio callback.
+        //  After pre-seeding, the first block correctly starts at the CLI
+        //  value (e.g. 0.5) and only ramps toward 1.5 as OSC arrives.
+        //
+        // Both target and smoothed are set so the very first block sees zero
+        // smoothing error and no transient step.
+        mSmooth.smoothed.masterGain     = config.masterGain.load(std::memory_order_relaxed);
+        mSmooth.smoothed.focus          = config.dbapFocus.load(std::memory_order_relaxed);
+        mSmooth.smoothed.loudspeakerMix = config.loudspeakerMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.subMix         = config.subMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.autoComp       = config.focusAutoCompensation.load(std::memory_order_relaxed);
+        mSmooth.target = mSmooth.smoothed;
+    }
 
     ~RealtimeBackend() {
         shutdown();
