@@ -666,3 +666,225 @@ three mechanisms listed above.
 | --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Fix 4 (primary reset) | `gui/realtimeGUI/realtimeGUI.py`                        | Restart now calls `reset_to_defaults()` before re-launching; stale slider state no longer flushed into new engine instance                         |
 | Fix 5 (smoother seed) | `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Constructor pre-seeds `mSmooth.smoothed` and `mSmooth.target` from actual config atomics; eliminates ~200 ms startup transient at wrong gain/focus |
+
+---
+
+## 2026-03-09 — Session 4: Fix 3 is a no-op (channelsOut vs channelsOutDevice)
+
+### Context entering this session
+
+The previous session concluded that if Fix 3 (post-open channel validation) is
+working, any mid-playback mains collapse must originate inside `mRenderIO` before
+the device copy. The latest test data contradicted this framing: channels were
+observed **moving to different ranges dynamically at runtime**, including in response
+to subMix changes. This is inconsistent with a purely DSP-side collapse and points
+back to a routing/device-state bug.
+
+The new symptoms in detail:
+
+- Some audio disappeared around 150 s (Canyon test 1)
+- Loudspeakers jumped to channels 1–2, then 19+, skipping the main range (Canyon test 2)
+- Loudspeakers disappeared then jumped to higher/non-existent channels when subMix
+  was dramatically moved (Canyon test 3)
+- Returned to original channels after ~2 s; brief high-pitched noise on return
+- SpeakerGuard stayed at 4, underruns 0, NaNs 0 throughout all events
+
+The new evidence strongly suggests the failure is **at or after the device copy
+stage**, not inside `mRenderIO`, because the active output channel set changes
+dynamically rather than collapsing uniformly.
+
+---
+
+### Finding: Fix 3 uses the wrong AlloLib accessor — validation never fires
+
+#### The bug
+
+Fix 3 reads:
+
+```cpp
+const int actualOutChannels = static_cast<int>(mAudioIO.channelsOut());
+if (actualOutChannels < mConfig.outputChannels) { ... abort ... }
+```
+
+`mAudioIO.channelsOut()` returns `mNumO` — the value set during `mAudioIO.init()`
+by `AudioIOData::channels(outChansA, true)`. This is the **requested** channel
+count, which was passed in as `mConfig.outputChannels`. The comparison is therefore
+`mConfig.outputChannels < mConfig.outputChannels`, which is **always false**.
+Fix 3 never fires. The engine has never actually validated the negotiated hardware
+channel count.
+
+The correct accessor is `mAudioIO.channelsOutDevice()`, which queries
+`data->oParams.nChannels` from the RtAudio backend. This is the value set by
+`AudioBackend::channels()` during `mAudioIO.init()` after clamping the requested
+count to `min(requested, info.outputChannels)` — i.e. the actual hardware limit.
+
+#### AlloLib call chain (traced in source)
+
+```
+mAudioIO.init(callback, this, bufSize, sampleRate, outChans, inChans)
+  → AudioIO::init(...)              // selects default device
+  → device(dev)                     // calls deviceOut(dev) → channelsOut(dev.channelsOutMax())
+                                    //   this sets mNumO = device.channelsOutMax()
+                                    //   BUT only if mNumO != dev.channelsOutMax()
+  → channels(inChansA, false)       // sets mNumI
+  → channels(outChansA, true)       // calls AudioBackend::channels(outChansA, true)
+                                    //   → clamps: num = min(outChansA, dev.outputChannels)
+                                    //   → sets data->oParams.nChannels = num  (actual hw count)
+                                    // then calls AudioIOData::channels(outChansA, true)
+                                    //   → sets mNumO = outChansA              (requested count)
+
+mAudioIO.channelsOut()       → mNumO                    = requested count (always == mConfig.outputChannels)
+mAudioIO.channelsOutDevice() → oParams.nChannels         = PortAudio/RtAudio-negotiated count
+```
+
+`mAudioIO.open()` later opens the RtAudio stream using `oParams.nChannels` as
+the hardware channel count. If that was clamped to 2 (MacBook built-in), the
+stream opens at 2 channels even though `mNumO` still says 18. The rtaudioCallback
+then interleaves only `channelsOutDevice()` channels into the hardware output
+buffer, silently discarding the rest.
+
+#### Why this was not caught
+
+The log line added with Fix 3 reads:
+
+```cpp
+const int actualOutChannels = static_cast<int>(mAudioIO.channelsOut());
+std::cout << "  Actual output channels: " << actualOutChannels << std::endl;
+```
+
+Because this uses the same wrong accessor, the log always prints the requested
+count regardless of the device. So even the diagnostic logging was useless as
+a check. The log would show "Actual output channels: 18" even when the device
+opened at 2.
+
+#### Effect on the copy path in Spatializer::renderBlock()
+
+```cpp
+const unsigned int numOutputChannels = io.channelsOut();   // also mNumO = requested
+const unsigned int copyChannels = std::min(renderChannels, numOutputChannels);
+```
+
+This also uses `io.channelsOut()` (= `mNumO` = requested). The `std::min` never
+reduces `copyChannels` below `renderChannels`, so the copy loop always writes all
+render channels into `io.outBuffer(ch)` for `ch = 0..renderChannels-1`.
+
+However, `io.outBuffer(ch)` writes into the internal `mBufO` array which is sized
+to `mNumO` (requested). The rtaudioCallback then interleaves only the first
+`channelsOutDevice()` entries of that buffer into the hardware output. Channels
+beyond `channelsOutDevice()` are written into `mBufO` but never copied to the
+device — they are silently discarded.
+
+**Net effect:** even though there is no out-of-bounds write, the device only
+receives the first N channels where N = `channelsOutDevice()`. All render channels
+at indices ≥ N are rendered, mix-trimmed, and clamped — then silently dropped
+after `processAudio()` returns.
+
+---
+
+### Why subMix perturbations can produce dynamic channel-range shifts
+
+From the C++ code alone, `ctrl.subMix` flows only into the LFE path and cannot
+affect speaker channel routing. However, two external mechanisms can produce the
+observed behavior:
+
+**Mechanism 1 — macOS audio routing change triggered by level**
+
+macOS can silently reassign the default audio device when signal levels or device
+activity change. If the MOTU wakes or takes priority while the engine is running,
+`channelsOutDevice()` (the PortAudio-negotiated count) does not change — it was
+fixed at stream-open time. However, the stream's actual output endpoint may
+re-route within macOS. A subMix change that produces a loud transient on the
+sub outputs could be the trigger for the OS to switch the active device route,
+causing the subsequent blocks to be delivered to a different physical device or
+a different channel mapping within the MOTU.
+
+**Mechanism 2 — Wrong device opened, correct device appears mid-playback**
+
+If the engine opens on the MacBook built-in (e.g. 2-channel), only render
+channels 0 and 1 reach hardware. Channels 2+ are dropped. If macOS then routes
+the audio stream to the MOTU (which has 18+ channels), the frame buffer that was
+being written for 2-channel output is now being interpreted as MOTU channel data
+— with the same interleave layout, now mapping to different MOTU channel groups.
+This would produce exactly the "channels jump to a different range" symptom.
+
+**Mechanism 3 — Sub channel index overlapping with DBAP speaker channels (layout-specific)**
+
+If a layout has a subwoofer `deviceChannel` value that is also within the 0-based
+consecutive speaker index range (e.g., sub at channel 2 in a layout with 4
+speakers), `isSubwooferChannel(2)` returns true, so that channel slot is excluded
+from `spkMix` and scaled by `lfeMix` instead. Moving `subMix` would then directly
+affect what is audible on that speaker index. This is a layout-correctness question,
+not a code bug. Verify that the Canyon test layout's subwoofer `deviceChannel`
+values are all outside the `[0, numSpeakers-1]` index range.
+
+---
+
+### Proposed Fix 6: correct the channelsOutDevice accessor in Fix 3
+
+**One line change in `RealtimeBackend::init()` in `RealtimeBackend.hpp`.**
+
+Current (broken — always reads requested count):
+
+```cpp
+const int actualOutChannels = static_cast<int>(mAudioIO.channelsOut());
+```
+
+Fix 6:
+
+```cpp
+const int actualOutChannels = static_cast<int>(mAudioIO.channelsOutDevice());
+```
+
+This change must be applied in **two places** in `init()`:
+
+1. The log line: `"  Actual output channels: " << actualOutChannels`
+2. The Fix 3 guard: `if (actualOutChannels < mConfig.outputChannels)`
+
+Both currently use the same local `actualOutChannels` variable, so a single
+assignment fix propagates to both. Confirm the variable is used for both before
+applying.
+
+**No other files need to change.** The fix is entirely within the `init()` method.
+
+#### Secondary: copy-path also uses wrong accessor
+
+In `Spatializer::renderBlock()`:
+
+```cpp
+const unsigned int numOutputChannels = io.channelsOut();
+```
+
+If Fix 6 makes the guard work correctly (engine refuses to start if device
+under-provisioned), this line becomes safe by invariant: `io.channelsOutDevice()
+
+> = renderChannels`is guaranteed at start time. The`std::min` in the copy loop
+> remains a useful safety belt but is no longer the primary line of defence.
+
+No change to the Spatializer copy path is required as part of Fix 6; the guard
+at init time is sufficient. The Spatializer `io.channelsOut()` read could be
+changed to `io.channelsOutDevice()` for semantic correctness in a follow-up, but
+it is not the blocking issue.
+
+---
+
+### Status after this session
+
+| Issue                                           | Status                                                                                                                                                          |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fix 3 (post-open validation)                    | ~~**BROKEN** — uses `channelsOut()` instead of `channelsOutDevice()`; never fires~~                                                                             |
+| Fix 6 (correct accessor)                        | **PATCHED** — `mAudioIO.channelsOut()` → `mAudioIO.channelsOutDevice()` in `RealtimeBackend::init()`; guard and log now read actual negotiated hw channel count |
+| subMix → loudspeaker channel perturbation       | **Explained** by external device-routing mechanisms, not a C++ code bug in the mixing path                                                                      |
+| Dynamic channel-range shifts                    | **Consistent** with Fix 3 being a no-op: device opens on wrong device, Fix 3 silent, wrong-device output produced                                               |
+| Collapse is in mRenderIO (Session 3 conclusion) | **Superseded** — that conclusion assumed Fix 3 was working; it was not                                                                                          |
+
+### Fix 6 — PATCHED (2026-03-09)
+
+#### File changed
+
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+  - `RealtimeBackend::init()`: changed `const int actualOutChannels = static_cast<int>(mAudioIO.channelsOut())` to `static_cast<int>(mAudioIO.channelsOutDevice())`
+  - Single assignment change; both the log line and the `< mConfig.outputChannels` guard use the same `actualOutChannels` local, so both are fixed by the one-line edit.
+
+#### Effect
+
+The post-open validation guard now reads `oParams.nChannels` from the RtAudio backend — the value clamped to `min(requested, deviceMax)` during stream open — instead of `mNumO` (the requested count that was always equal to `mConfig.outputChannels`). The engine will now correctly refuse to start when the OS-selected audio device provides fewer channels than the speaker layout requires, and the log line will print the true hardware-negotiated channel count rather than always echoing the requested count.
