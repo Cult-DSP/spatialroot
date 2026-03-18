@@ -888,3 +888,156 @@ it is not the blocking issue.
 #### Effect
 
 The post-open validation guard now reads `oParams.nChannels` from the RtAudio backend — the value clamped to `min(requested, deviceMax)` during stream open — instead of `mNumO` (the requested count that was always equal to `mConfig.outputChannels`). The engine will now correctly refuse to start when the OS-selected audio device provides fewer channels than the speaker layout requires, and the log line will print the true hardware-negotiated channel count rather than always echoing the requested count.
+
+---
+
+## 2026-03-18 — Session 5: Fix 5 re-applied, Fix 2 implemented
+
+### Context entering this session
+
+Post-Fix-6 listener tests showed the broad routing/device instability is largely resolved. Remaining symptoms:
+
+1. Occasional large pop coinciding with a `speakerProximityCount` jump (guard-entry event)
+2. `speakerProximityCount` still rises during runs (guard is active for some content)
+3. Dramatic sub-mix slider jump can still perturb channel/output behavior (mechanism unconfirmed)
+4. Quieter minimum range for master gain / speaker mix — deferred UX issue
+
+---
+
+### Finding: Fix 5 was missing from the codebase
+
+**Expected:** `RealtimeBackend` constructor seeds `mSmooth.smoothed` and `mSmooth.target` from CLI config atomics before the first block runs.
+
+**Actual:** Constructor body was empty (`{}`). `mSmooth` struct defaults all float fields to 1.0f. Every session started with masterGain=1.0, focus=1.0 regardless of `--gain`/`--focus` CLI flags, producing a ~200 ms ramp from wrong initial values.
+
+The fix was recorded as patched in the Session 3 audit entry but was not present in `RealtimeBackend.hpp` — dropped during the Session 4 edit.
+
+---
+
+### Fix 5 — Re-applied (2026-03-18)
+
+#### File changed
+
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+  - Constructor body now seeds `mSmooth.smoothed` (masterGain, focus, loudspeakerMix, subMix, autoComp) from config atomics
+  - Sets `mSmooth.target = mSmooth.smoothed` so the smoother starts at the correct value with no initial ramp
+
+---
+
+### Root cause of guard-entry pop (confirmed)
+
+The proximity guard (`Spatializer.hpp`, DBAP branch) computes a single `safePos` for the entire block and passes it to `renderBuffer()`. When a source crosses the `kMinSpeakerDist = 0.15 m` threshold between two consecutive blocks, the DBAP gains step discontinuously at the block boundary — audible as a pop. The guard itself is not the bug; the block-level single-position snap is the bug. This is the same mechanism as the general fast-mover problem, triggered specifically at guard-entry.
+
+The `speakerProximityCount` jump visible in monitoring output identifies the exact block where the discontinuity occurs: the first block where the guard fires for a source.
+
+**Fix 2 (fast-mover sub-stepping) is the direct fix.** By rendering each fast-moving source as 4 sub-chunks with independently interpolated positions, the gain change that previously happened in one block now ramps smoothly across 128-frame steps.
+
+---
+
+### Fix 2 — Fast-mover sub-stepping — PATCHED (2026-03-18)
+
+#### Design decisions
+
+| Decision | Reason |
+|---|---|
+| `positionStart` / `positionEnd` added to `SourcePose` | Gives the spatializer the block boundary positions without re-running the interpolation pipeline inside the audio callback |
+| `computePositions(blockStartSec, blockEndSec)` — center derived as midpoint | Keeps the existing `position` field semantics unchanged; no caller changes beyond the one call site in `processBlock()` |
+| Center position computed first (mutating `mLastGoodDir`), start/end via `computePositionAtTimeReadOnly()` | Prevents start/end evaluations from overwriting the last-good-direction cache with off-center values. The read-only helper uses `map::find()` (no insert) for its fallback |
+| Chord lerp → renormalise to `mLayoutRadius` before guard | Chord midpoint falls slightly inside the sphere; `(subPose / mag) * mLayoutRadius` projects back to the speaker-ring surface. Prevents the guard from seeing artificially reduced source distances on fast-mover sub-chunks |
+| Guard re-run per sub-chunk | Each sub-chunk position is independently guarded using the same flip → guard → un-flip pattern. Ensures no sub-chunk reaches a near-zero speaker distance |
+| `kFastMoverAngleRad = 0.25f` (~14.3°) | Matches offline renderer threshold. Conservative enough to catch meaningful block-boundary jumps without triggering on slow-moving sources |
+| `kNumSubSteps = 4` (128-frame sub-chunks at 512/48k) | 4× overhead only for fast-mover sources, not all sources. Falls back to normal path when `numFrames % kNumSubSteps != 0` |
+| `mFastMoverScratch` pre-allocated in `init()` | Zero allocation in audio callback. Scratch is zeroed per sub-chunk, rendered into, then accumulated into `mRenderIO` at the correct frame offset |
+
+#### Files changed
+
+- `spatial_engine/realtimeEngine/src/Pose.hpp`
+  - `SourcePose`: added `positionStart` and `positionEnd` fields (`al::Vec3f`)
+  - `computePositions()`: signature changed from `(double blockCenterTimeSec)` to `(double blockStartTimeSec, double blockEndTimeSec)`; center derived internally as midpoint; center computed first (mutating), start/end via read-only helper
+  - Added private `const` method `computePositionAtTimeReadOnly()`: full interpolation pipeline without writing `mLastGoodDir`
+
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+  - `processBlock()` Step 2: computes `blockStartSec` and `blockEndSec`, passes both to `computePositions()`
+
+- `spatial_engine/realtimeEngine/src/Spatializer.hpp`
+  - Added constants `kFastMoverAngleRad = 0.25f` and `kNumSubSteps = 4`
+  - Added member `mFastMoverScratch` (audio-thread-owned `al::AudioIOData`)
+  - `init()`: sizes `mFastMoverScratch` to `(bufferSize / kNumSubSteps)` frames × `outputChannels`
+  - `renderBlock()` DBAP branch: single `renderBuffer()` call replaced with fast-mover detection block. Normal path (angle ≤ threshold) unchanged. Fast-mover path: 4 sub-chunks, each with chord lerp → renorm → guard → `renderBuffer` into scratch → accumulate into `mRenderIO`
+
+#### RT-safety
+
+| Concern | Status |
+|---|---|
+| `acos()` per non-LFE source per block | Once per source per block — not inside a sample loop. ~80 trig ops per block. Acceptable |
+| `mFastMoverScratch.zeroOut()` per sub-chunk | 4 × 128 × outputChannels float-zeroes per fast-mover source only, not per-sample |
+| Guard runs 4× per fast-mover | 4 × numSpeakers vector ops. At 50 speakers: 200 vector ops per fast-mover per block. Fine |
+| `positionStart.normalized()` | Two magnitude+divide ops per source per block for the angle test. No allocation |
+| Two extra `al::Vec3f` per `SourcePose` | 80 sources × 2 × 12 bytes = 1.9 KB extra per block traversal. Negligible |
+
+---
+
+### Remaining open items after Session 5
+
+| Item | Status |
+|---|---|
+| Fix 5 missing | ✅ Re-applied |
+| Fix 2 fast-mover sub-stepping | ✅ Patched |
+| Guard-entry pop | ✅ Addressed by Fix 2 — needs listener verification |
+| `speakerProximityCount` rising during runs | Still present — guard is working as designed for near-speaker content; acceptable unless it causes audible blur |
+| Sub-mix jump → channel perturbation | Still unconfirmed mechanism. macOS audio route reassignment remains the leading hypothesis; not a C++ code bug. Monitor after Fix 2 + Fix 5 are in place to see if it persists |
+| Remap load-order bug (`deviceChannels` arg) | Latent, `--remap` path only. Not blocking |
+| `kMinSpeakerDist` tuning for 360RA | Deferred — guard value at 0.15 m may be too large for 360RA DirectSpeaker content but guard redesign is out of scope for this pass |
+
+---
+
+## Agent context for new context windows
+
+> Copy this block into the opening message when starting a new session on this task.
+
+### State of the engine (as of 2026-03-18)
+
+All fixes below are **in the codebase**. Do not re-implement or re-analyse them.
+
+| Fix | Description | Status |
+|---|---|---|
+| Fix 1 | Onset fade — 128-sample ramp at source activation | ✅ in code |
+| Fix 2 | Fast-mover sub-stepping — 4 sub-chunks, lerp + renorm + guard per chunk | ✅ in code |
+| Fix 3 | Post-open channel validation (device channel count check) | ✅ in code (via Fix 6) |
+| Fix 4 | GUI restart resets controls before re-launching engine | ✅ in code |
+| Fix 5 | Smoother pre-seeding from CLI config atomics | ✅ in code |
+| Fix 6 | Correct `channelsOutDevice()` accessor in `RealtimeBackend::init()` | ✅ in code |
+
+### Key architectural facts
+
+- Block render is canonical (`renderBuffer()` path). Per-sample DBAP was tried and reverted.
+- Auto-compensation is disabled (returns 1.0f). The plumbing is intact but the math was wrong; not scheduled for this pass.
+- `mSmooth` (50 ms tau exponential smoother) is the sole source of gain/focus values in the audio thread. Config atomics are written by OSC/CLI only; never written back by the audio thread.
+- `ControlsSnapshot` is created on the stack in `processBlock()` and passed by const-ref into `renderBlock()`. The spatializer never reads config atomics directly.
+- `speakerProximityCount` and `nanGuardCount` are printed every 500 ms by the monitoring loop. They are the primary diagnostic counters for guard and clamp activity.
+
+### Files most likely to need changes
+
+| File | Role |
+|---|---|
+| `spatial_engine/realtimeEngine/src/Spatializer.hpp` | DBAP render loop, guard, Phase 6 mix trims, Phase 7 copy, Fix 2 sub-step path |
+| `spatial_engine/realtimeEngine/src/Pose.hpp` | Keyframe interpolation, `SourcePose` struct, `computePositions()` |
+| `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Audio callback, smoother, pause fade, `processBlock()` |
+| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp` | `RealtimeConfig` atomics, `EngineState` counters — read-only reference |
+| `spatial_engine/realtimeEngine/src/main.cpp` | CLI parsing, OSC parameter setup, monitoring loop |
+| `gui/realtimeGUI/realtimeGUI.py` | GUI window, restart/reset wiring |
+
+### Remaining open items (priority order)
+
+1. **Listener verification of Fix 2** — run Eden and Swale, check whether the guard-entry pop is gone. Observe `speakerProximityCount` during the problem sections.
+2. **Sub-mix jump** — after Fix 2 + Fix 5 are verified, re-test the dramatic sub-slider move. If the channel issue persists, collect more data (which device, which layout, `nanGuardCount` at the event). macOS route reassignment is the leading hypothesis but is not confirmed.
+3. **`kMinSpeakerDist` tuning** — 0.15 m is known to affect 360RA DirectSpeaker content (sources at 0.02–0.10 m from their target speakers). Consider reducing to ~0.05–0.06 m after guard-pop is confirmed fixed, so 360RA localization is restored. Eden 21.1 at 0.049 m would still be caught.
+4. **Remap load-order bug** — `outputRemap.load()` passes `config.outputChannels` for both `renderChannels` and `deviceChannels`. The `deviceChannels` arg should be the post-open actual count. Only affects `--remap` path; not currently blocking.
+
+### What not to do
+
+- Do not redesign auto-compensation yet.
+- Do not reopen the broad device/output mismatch analysis — Fix 6 resolved the structural issue.
+- Do not add per-sample logging in the audio callback.
+- Do not modify `runPipeline.py` — it is deprecated. Use `runRealtime.py`.
+- `realtime_master.md` has the full phase history; read it for architectural background but trust the audit file for current fix status.

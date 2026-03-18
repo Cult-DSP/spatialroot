@@ -290,6 +290,18 @@ public:
                   << computedOutputChannels << " channels × "
                   << mConfig.bufferSize << " frames." << std::endl;
 
+        // Fix 2 — size the fast-mover scratch buffer (sub-chunk render target).
+        {
+            int subFrames = std::max(1, mConfig.bufferSize / kNumSubSteps);
+            mFastMoverScratch.framesPerBuffer(subFrames);
+            mFastMoverScratch.framesPerSecond(mConfig.sampleRate);
+            mFastMoverScratch.channelsIn(0);
+            mFastMoverScratch.channelsOut(computedOutputChannels);
+            std::cout << "[Spatializer] Fast-mover scratch buffer: "
+                      << computedOutputChannels << " channels × "
+                      << subFrames << " frames (" << kNumSubSteps << " sub-steps)." << std::endl;
+        }
+
         mInitialized = true;
         return true;
     }
@@ -459,11 +471,87 @@ public:
             // recovering the guarded relpos we just computed.
             al::Vec3f safePos(relpos.x, relpos.z, -relpos.y);
 
-            // Spatialize into the internal render buffer (sized for all
-            // layout channels). renderBuffer() computes per-speaker gains once
-            // then streams all frames — O(speakers) gain math, not O(speakers×frames).
-            mDBap->renderBuffer(mRenderIO, safePos,
-                                mSourceBuffer.data(), numFrames);
+            // Fix 2 — Fast-mover sub-stepping.
+            //
+            // Detect whether this source moves more than kFastMoverAngleRad
+            // (~14.3°) between block start and block end. If so, split the
+            // block into kNumSubSteps equal sub-chunks and render each at an
+            // independently guarded, renormalised interpolated position.
+            // This converts a block-boundary DBAP gain step into a smooth
+            // within-block gain ramp, eliminating the pop at guard-entry and
+            // large-motion block boundaries.
+            //
+            // For static or slow-moving sources the normal single-position
+            // path is taken (zero overhead vs. pre-Fix-2 behaviour).
+            {
+                // Angular span of this block in DBAP position space.
+                // positionStart / positionEnd are at mLayoutRadius; normalising
+                // projects to unit sphere for the angle comparison.
+                al::Vec3f d0 = pose.positionStart.normalized();
+                al::Vec3f d1 = pose.positionEnd.normalized();
+                float dotVal     = std::clamp(d0.dot(d1), -1.0f, 1.0f);
+                float angleDelta = std::acos(dotVal);
+                bool  isFastMover = (angleDelta > kFastMoverAngleRad)
+                                    && (numFrames % static_cast<unsigned int>(kNumSubSteps) == 0);
+
+                if (!isFastMover) {
+                    // ── Normal path ───────────────────────────────────────
+                    // Single guarded position (safePos, computed above) for
+                    // the whole block. renderBuffer() accumulates into mRenderIO.
+                    mDBap->renderBuffer(mRenderIO, safePos,
+                                        mSourceBuffer.data(), numFrames);
+                } else {
+                    // ── Fast-mover path ───────────────────────────────────
+                    // Render 4 sub-chunks, each at a lerp'd position that is
+                    // renormalised to the layout-radius sphere, then guarded.
+                    const unsigned int subFrames =
+                        numFrames / static_cast<unsigned int>(kNumSubSteps);
+
+                    for (int j = 0; j < kNumSubSteps; ++j) {
+                        // Sub-chunk center interpolation weight (0.125, 0.375, 0.625, 0.875)
+                        float alpha = (static_cast<float>(j) + 0.5f)
+                                      / static_cast<float>(kNumSubSteps);
+
+                        // Lerp in pose space (chord interpolation)
+                        al::Vec3f subPose = pose.positionStart
+                                            + alpha * (pose.positionEnd - pose.positionStart);
+
+                        // Renormalise back to layout-radius sphere.
+                        // The chord midpoint falls slightly inside the sphere;
+                        // scaling by mLayoutRadius / mag restores the correct radius.
+                        {
+                            float mag = subPose.mag();
+                            if (mag > 1e-7f) subPose = (subPose / mag) * mLayoutRadius;
+                        }
+
+                        // Flip to DBAP-internal space, apply guard, un-flip
+                        al::Vec3f subRelpos(subPose.x, -subPose.z, subPose.y);
+                        for (const auto& spkVec : mSpeakerPositions) {
+                            al::Vec3f delta = subRelpos - spkVec;
+                            float dist = delta.mag();
+                            if (dist < kMinSpeakerDist) {
+                                subRelpos = spkVec + ((dist > 1e-7f)
+                                    ? (delta / dist) * kMinSpeakerDist
+                                    : al::Vec3f(0.0f, kMinSpeakerDist, 0.0f));
+                            }
+                        }
+                        al::Vec3f subSafePos(subRelpos.x, subRelpos.z, -subRelpos.y);
+
+                        // Render sub-chunk into scratch, then accumulate into
+                        // mRenderIO at the correct frame offset.
+                        mFastMoverScratch.zeroOut();
+                        mDBap->renderBuffer(mFastMoverScratch, subSafePos,
+                                            mSourceBuffer.data() + j * subFrames,
+                                            subFrames);
+                        for (unsigned int ch = 0; ch < renderChannels; ++ch) {
+                            const float* src = mFastMoverScratch.outBuffer(ch);
+                            float*       dst = mRenderIO.outBuffer(ch);
+                            for (unsigned int f = 0; f < subFrames; ++f)
+                                dst[j * subFrames + f] += src[f];
+                        }
+                    }
+                }
+            }
         }
 
         // mPrevFocus already updated above (= ctrl.focus set each block).
@@ -695,6 +783,18 @@ private:
     // artificially constrained after testing.
     static constexpr float kMinSpeakerDist = 0.15f;
 
+    // Fix 2 — Fast-mover sub-stepping constants.
+    // kFastMoverAngleRad: minimum angular change between positionStart and
+    //   positionEnd (block start → end) that triggers sub-stepping. ~14.3°
+    //   matches the offline renderer's Q1/Q3 threshold. Sources with smaller
+    //   angular motion use the normal single-position path.
+    // kNumSubSteps: number of equal sub-chunks per block when fast-mover is
+    //   detected. 4 × 128 = 512 frames at the default buffer size. Each
+    //   sub-chunk is rendered at the lerp'd + renormalised position for its
+    //   center time, then accumulated into mRenderIO.
+    static constexpr float kFastMoverAngleRad = 0.25f;  // ~14.3°
+    static constexpr int   kNumSubSteps       = 4;
+
     // Fix 1 — Onset fade constants.
     // kOnsetEnergyThreshold: sum-of-squares gate for the pre-allocated source
     //   buffer.  getBlock() writes exact 0.0f on silence / past-EOF, so any
@@ -731,6 +831,13 @@ private:
     // computeFocusCompensation(). The latter must only be called from the
     // main thread when audio is NOT running (see threading model above).
     al::AudioIOData             mRenderIO;
+
+    // Fix 2 — Sub-chunk scratch buffer for fast-mover rendering.
+    // Sized to (bufferSize / kNumSubSteps) frames × outputChannels at init().
+    // Each fast-mover sub-chunk is rendered into this buffer, then accumulated
+    // into mRenderIO at the correct frame offset. Zero-allocation in callback.
+    // AUDIO-THREAD-OWNED after init().
+    al::AudioIOData             mFastMoverScratch;
 
     // ── Pre-allocated audio buffer (one source at a time) ────────────────
     // AUDIO-THREAD-OWNED: filled from Streaming::getBlock() inside renderBlock().

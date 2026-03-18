@@ -66,7 +66,19 @@ public:
     // ── Constructor / Destructor ─────────────────────────────────────────
 
     RealtimeBackend(RealtimeConfig& config, EngineState& state)
-        : mConfig(config), mState(state) {}
+        : mConfig(config), mState(state)
+    {
+        // Fix 5: pre-seed smoother from actual config atomics so the very first
+        // audio block uses the CLI-specified values (gain, focus, mix trims)
+        // instead of the struct defaults (all 1.0f). Without this, the first
+        // ~200 ms ramps from wrong initial values regardless of --gain/--focus.
+        mSmooth.smoothed.masterGain     = config.masterGain.load(std::memory_order_relaxed);
+        mSmooth.smoothed.focus          = config.dbapFocus.load(std::memory_order_relaxed);
+        mSmooth.smoothed.loudspeakerMix = config.loudspeakerMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.subMix         = config.subMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.autoComp       = config.focusAutoCompensation.load(std::memory_order_relaxed);
+        mSmooth.target                  = mSmooth.smoothed;
+    }
 
     ~RealtimeBackend() {
         shutdown();
@@ -348,10 +360,13 @@ private:
             std::memset(io.outBuffer(ch), 0, numFrames * sizeof(float));
 
         // ── Step 2: Compute source positions for this block ───────────────────
+        // Fix 2: pass block start and end times so Pose can compute positionStart
+        // and positionEnd for the fast-mover sub-stepping path in the Spatializer.
         if (mPose) {
-            const uint64_t curFrame    = mState.frameCounter.load(std::memory_order_relaxed);
-            const double   blockCtrSec = static_cast<double>(curFrame + numFrames / 2) / sampleRate;
-            mPose->computePositions(blockCtrSec);
+            const uint64_t curFrame     = mState.frameCounter.load(std::memory_order_relaxed);
+            const double   blockStartSec = static_cast<double>(curFrame)             / sampleRate;
+            const double   blockEndSec   = static_cast<double>(curFrame + numFrames) / sampleRate;
+            mPose->computePositions(blockStartSec, blockEndSec);
         }
 
         // ── Step 3: Spatialize all sources via DBAP ───────────────────────────
