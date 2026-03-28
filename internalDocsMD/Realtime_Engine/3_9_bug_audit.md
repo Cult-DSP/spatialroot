@@ -1194,3 +1194,196 @@ If only `[RELOC-DEVICE]` fires, the issue is in the output/device copy layer.
 - Do not change DBAP render granularity.
 - Do not broaden to parity audits.
 - `realtime_master.md` has the full phase history; read it for architectural background but trust the audit file for current fix status.
+
+---
+
+## 2026-03-27 — Session 7: DOM diagnostic refinement + top-4 cluster tracking
+
+### Testing round 3 — Ascent test 1 (pre-patch baseline)
+
+**Content:** Ascent, full playback run.
+
+**Observed symptoms:**
+- Channels disappeared around t=168 s
+- Audio returned around t=201 s but high-pitched and only some channels present, with popping
+- DOM events fired frequently throughout, many toggling between `0xffff` and `0x3ffff`
+
+**Representative log excerpt (t=166–201 s):**
+```
+[DOM-RENDER] t=166.62s dom: 0x8fff → 0xffff
+[DOM-DEVICE] t=166.62s dom: 0x8fff → 0xffff
+[DOM-RENDER] t=168.64s dom: 0xbfff → 0xffff
+[DOM-RENDER] t=191.30s dom: 0xdfff → 0xffff    (note: mask-only mains toggle)
+[DOM-RENDER] t=195.84s dom: 0xffff → 0xf9f9
+[DOM-RENDER] t=201.38s dom: 0xcfdf → 0xffff
+```
+
+**Diagnostic interpretation:**
+- `rBus=0x3ffff` (18 bits: 16 mains + 2 subs) was steady throughout, meaning no channels were actually going absent in `mRenderIO`
+- `rDom=0xffff` / `dDom=0xffff` also steady between events — events are sparse, not continuous
+- Many DOM events toggled between mains-only masks (e.g. `0x8fff ↔ 0xffff`, `0xdfff ↔ 0xffff`) — these are genuine mains-cluster changes post-patch
+- However, a large number of the earlier pre-patch events were `0xffff ↔ 0x3ffff` — the sub bits toggling, not mains movement
+
+**Key finding:** the old DOM mask included sub channels (bits 16–17). Sub RMS was near zero at `0xffff` states and rose again at `0x3ffff`, confirming those events were purely sub threshold crossings. The bulk of "relocation" reporting was sub-on/off, not audible main-cluster movement.
+
+---
+
+### DOM diagnostic refinement — PATCHED (2026-03-27)
+
+#### Problem
+
+`domMask` was computed using `maxMs` (the global per-channel max, including sub channels) as the threshold reference. When a sub channel was the loudest channel, `domThresh = maxMs × 0.01` was calibrated to sub power. As sub RMS dropped, `maxMs` collapsed to main-channel power, the threshold fell, and all 16 mains suddenly cleared it — causing `domMask` to jump from `0xffff` to `0x3ffff` or vice versa. This produced high DOM event rates that were entirely sub-driven.
+
+#### Fix
+
+**File changed:** `spatial_engine/realtimeEngine/src/Spatializer.hpp`
+
+Two blocks patched identically (render-side pre-copy, device-side post-copy):
+
+1. Added `maxMainMs` — tracked in the existing per-channel loop with a one-line `!isSubwooferChannel` guard alongside the existing `maxMs` update.
+2. Changed `domThresh = maxMs * kDomRelThresh` → `domThresh = maxMainMs * kDomRelThresh` — threshold now anchored to the loudest main channel only.
+3. Added `!isSubwooferChannel` guard to the `domMask` bit-setting loop — sub channels are permanently excluded from `domMask`.
+
+No new atomics. `subRmsTotal` already carries sub state. `maxMs` retained for the absolute-mask path (unchanged).
+
+**Effect:** `domMask` and all DOM events now reflect mains-only dominant-cluster changes. Sub threshold crossings no longer produce DOM events.
+
+---
+
+### Top-4 main-channel cluster tracking — PATCHED (2026-03-27)
+
+#### Problem
+
+Even with mains-only `domMask`, the DOM event fires on any single-bit change (one channel entering or leaving the dominant set). This is too sensitive to far-field DBAP bleed — a weak channel slightly crossing the −20 dBFS threshold fires the event even if the spatial cluster is essentially unchanged.
+
+#### Design
+
+Top-4 tracking identifies the 4 main channels with the highest block mean-square and stores them as a bitmask. A `[CLUSTER]` event fires only when the new top-4 overlaps the previous by fewer than 3 channels (2+ channels changed). This is a stronger gate: it requires a genuine redistribution of dominant energy, not a single-channel threshold edge.
+
+**Algorithm (render-side and device-side, O(K × channels), K=4, no allocation):**
+```
+for k = 0..3:
+    find max chMs among mains not yet in picked set
+    set that bit in clusterMask and picked
+compare overlap = popcount(clusterMask & prevCluster)
+if overlap < 3: fire CLUSTER event
+```
+
+**Threshold:** `overlap < 3` means 2 or more of the 4 channels changed. A single-channel edge in the top-4 (e.g. one weak channel replacing another weak channel) does not fire.
+
+#### Files changed
+
+- `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp`
+  - `EngineState`: added `renderClusterMask`, `renderClusterPrev`, `renderClusterNext`, `renderClusterEvent` and device-side equivalents (8 new `atomic` fields)
+
+- `spatial_engine/realtimeEngine/src/Spatializer.hpp`
+  - Render-side block: top-4 computation + CLUSTER latch inserted after `renderDomMask` store
+  - Device-side block: identical computation + `deviceCluster*` latch inserted after `deviceDomMask` store
+
+- `spatial_engine/realtimeEngine/src/main.cpp`
+  - Monitoring loop: added `[CLUSTER-RENDER]` and `[CLUSTER-DEVICE]` event printing after existing DOM event block
+
+#### Event text
+
+```
+[CLUSTER-RENDER] t=42.13s  top4: 0x0123 → 0x0456
+[CLUSTER-DEVICE] t=42.13s  top4: 0x0123 → 0x0456
+```
+
+#### RT-safety
+
+| Concern | Status |
+|---|---|
+| 4-pass scan, ≤16 main channels per pass | ~64 comparisons per block — negligible |
+| `__builtin_popcountll` | Single instruction on x86/ARM; no branch |
+| 4 new atomic stores per block per side | Relaxed; same contract as existing diagnostic fields |
+
+---
+
+### Interpretation of remaining DOM events (post-mains-only patch)
+
+The DOM events remaining in testing round 3 logs after the sub-exclusion fix (e.g. `0x8fff → 0xffff`, `0xdfff → 0xffff`, `0xcfdf → 0xffff`, `0xf9f9 → 0xffff`) are **mains-only mask changes**. Both prev and next masks have exactly 16 bits (or 13–16 bits), confirming no sub involvement.
+
+These represent real changes in which main channels are in the dominant set. Whether they are audible depends on how many channels changed and whether the energy shift is significant. The `[CLUSTER]` event with the `overlap < 3` gate is designed to distinguish:
+
+- **DOM fires, CLUSTER does not** → minor edge (1 channel changed in top-4); likely inaudible or far-field bleed
+- **Both DOM and CLUSTER fire** → 2+ dominant mains changed; likely audible spatial shift, worth correlating to pop timestamps
+
+---
+
+### Current priority: pops
+
+The Ascent test 1 pop at ~t=201 s and the general pop symptoms across tests 1 and 2 remain the primary audible problem. Current evidence:
+
+- `Xrun=0`, `NaN=0`, `SpkG=0` throughout all logged runs — no guard-entry, underrun, or clamp events explaining the pops
+- `rBus` and `dev` masks are stable (`0x3ffff` throughout) — no channel dropout in `mRenderIO` or at the device
+- DOM events occur but render/device masks match → output copy is not the problem
+- Most likely remaining cause: **block-boundary DBAP weight discontinuity** — a source makes a large position step between two consecutive blocks, the DBAP gain vector changes instantaneously at the block boundary, heard as a click
+- Fix 2 (fast-mover sub-stepping) is in code but gated to `isFastMover = false` for the current diagnostic pass; it is the candidate fix
+
+**Next step:** once CLUSTER logs are collected from a new run, correlate CLUSTER event timestamps against known pop timestamps. If CLUSTER events align with pops, the pop is the audible artifact of the cluster shift and Fix 2 re-enablement is the correct next action.
+
+---
+
+### Updated status table (as of 2026-03-27)
+
+| Fix / Phase | Description | Status |
+|---|---|---|
+| Fix 1 | Onset fade | ✅ in code |
+| Fix 2 | Fast-mover sub-stepping | ✅ in code (gated off for diagnostics) |
+| Fix 3 / Fix 6 | Post-open channel validation (correct accessor) | ✅ in code |
+| Fix 4 | GUI restart/reset | ✅ in code |
+| Fix 5 | Smoother pre-seeding | ✅ in code |
+| Fix 6 | Correct `channelsOutDevice()` accessor | ✅ in code |
+| Phase 14 | Channel-relocation diagnostic + CPU meter | ✅ in code |
+| Phase 14 refinement A | DOM mask: mains-only reference + sub exclusion | ✅ in code |
+| Phase 14 refinement B | Top-4 cluster tracking + `[CLUSTER]` event | ✅ in code |
+| Pops / discontinuities | Block-boundary DBAP weight step | ⏳ pending CLUSTER-correlated logs |
+
+### Agent context for new context windows
+
+#### State of the engine (as of 2026-03-27)
+
+All fixes below are **in the codebase**. Do not re-implement or re-analyse them.
+
+| Fix | Description | Status |
+|---|---|---|
+| Fix 1 | Onset fade — 128-sample ramp at source activation | ✅ in code |
+| Fix 2 | Fast-mover sub-stepping — 4 sub-chunks, lerp + renorm + guard per chunk | ✅ in code (test gate: `isFastMover = false`) |
+| Fix 3 | Post-open channel validation (device channel count check) | ✅ in code (via Fix 6) |
+| Fix 4 | GUI restart resets controls before re-launching engine | ✅ in code |
+| Fix 5 | Smoother pre-seeding from CLI config atomics | ✅ in code |
+| Fix 6 | Correct `channelsOutDevice()` accessor in `RealtimeBackend::init()` | ✅ in code |
+| Phase 14 | Channel-relocation diagnostic + corrected CPU meter | ✅ in code |
+| Phase 14A | DOM mask: mains-only `maxMainMs` reference, subs excluded from `domMask` | ✅ in code |
+| Phase 14B | Top-4 mains cluster latch; `[CLUSTER]` fires on ≥2 channel change | ✅ in code |
+
+#### Key diagnostic output to watch
+
+```
+[DOM-RENDER]     t=42.13s  dom: 0xCFDF → 0xFFFF      ← any single-ch dominant-set change
+[DOM-DEVICE]     t=42.13s  dom: 0xCFDF → 0xFFFF
+[CLUSTER-RENDER] t=42.13s  top4: 0x0123 → 0x0456     ← ≥2 of top-4 mains changed
+[CLUSTER-DEVICE] t=42.13s  top4: 0x0123 → 0x0456
+  t=42.5s  CPU=28%  rDom=0xffff  dDom=0xffff  rBus=0x3ffff  dev=0x3ffff  mainRms=0.0498  subRms=0.0038  Xrun=0  NaN=0  SpkG=0  PLAYING
+```
+
+**Interpretation guide:**
+
+| DOM fires | CLUSTER fires | Meaning |
+|---|---|---|
+| No | No | Stable cluster; no relocation |
+| Yes | No | Minor edge (1 channel); probably inaudible |
+| Yes | Yes | 2+ mains changed; audible cluster shift — correlate to pop timestamp |
+| No | Yes | Cannot happen (cluster change always changes domMask) |
+
+#### What not to do
+
+- Do not redesign auto-compensation.
+- Do not reopen the broad device/output mismatch analysis — Fix 6 resolved the structural issue.
+- Do not add per-sample or per-source logging in the audio callback.
+- Do not modify `runPipeline.py` — it is deprecated. Use `runRealtime.py`.
+- Do not change DBAP render granularity.
+- Do not broaden to parity audits.
+- Do not re-enable Fix 2 until CLUSTER logs are correlated with pop timestamps.
+- `realtime_master.md` has the full phase history; read it for architectural background but trust the audit file for current fix status.

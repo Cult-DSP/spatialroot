@@ -706,6 +706,35 @@ public:
             }
             mState.renderDomMask.store(domMask, std::memory_order_relaxed);
 
+            // Top-4 mains cluster: find 4 highest-MS main channels via 4-pass linear
+            // scan (O(K × channels), K=4). No allocation; RT-safe.
+            // A CLUSTER event fires when the new top-4 overlaps the previous by fewer
+            // than 3 channels (2+ channels changed) — a meaningful spatial shift.
+            {
+                uint64_t clusterMask = 0;
+                uint64_t picked = 0;
+                for (int k = 0; k < 4; ++k) {
+                    float best = kRmsThresh;
+                    int   bestCh = -1;
+                    for (unsigned int ch = 0; ch < renderChannels && ch < 64u; ++ch) {
+                        if (isSubwooferChannel(static_cast<int>(ch))) continue;
+                        if (picked & (1ULL << ch)) continue;
+                        if (chMs[ch] > best) { best = chMs[ch]; bestCh = static_cast<int>(ch); }
+                    }
+                    if (bestCh >= 0) { clusterMask |= (1ULL << bestCh); picked = clusterMask; }
+                }
+                uint64_t prevCluster = mState.renderClusterMask.load(std::memory_order_relaxed);
+                if (prevCluster != 0) {
+                    int overlap = __builtin_popcountll(clusterMask & prevCluster);
+                    if (overlap < 3) {
+                        mState.renderClusterPrev.store(prevCluster,  std::memory_order_relaxed);
+                        mState.renderClusterNext.store(clusterMask,  std::memory_order_relaxed);
+                        mState.renderClusterEvent.store(true,        std::memory_order_relaxed);
+                    }
+                }
+                mState.renderClusterMask.store(clusterMask, std::memory_order_relaxed);
+            }
+
             mState.mainRmsTotal.store(std::sqrt(mainMs), std::memory_order_relaxed);
             mState.subRmsTotal.store(std::sqrt(subMs),   std::memory_order_relaxed);
         }
@@ -798,6 +827,32 @@ public:
                 mState.deviceDomRelocEvent.store(true,    std::memory_order_relaxed);
             }
             mState.deviceDomMask.store(domMask, std::memory_order_relaxed);
+
+            // Top-4 mains cluster — mirrors render-side logic above.
+            {
+                uint64_t clusterMask = 0;
+                uint64_t picked = 0;
+                for (int k = 0; k < 4; ++k) {
+                    float best = kRmsThresh;
+                    int   bestCh = -1;
+                    for (unsigned int ch = 0; ch < numOutputChannels && ch < 64u; ++ch) {
+                        if (isSubwooferChannel(static_cast<int>(ch))) continue;
+                        if (picked & (1ULL << ch)) continue;
+                        if (chMs[ch] > best) { best = chMs[ch]; bestCh = static_cast<int>(ch); }
+                    }
+                    if (bestCh >= 0) { clusterMask |= (1ULL << bestCh); picked = clusterMask; }
+                }
+                uint64_t prevCluster = mState.deviceClusterMask.load(std::memory_order_relaxed);
+                if (prevCluster != 0) {
+                    int overlap = __builtin_popcountll(clusterMask & prevCluster);
+                    if (overlap < 3) {
+                        mState.deviceClusterPrev.store(prevCluster,  std::memory_order_relaxed);
+                        mState.deviceClusterNext.store(clusterMask,  std::memory_order_relaxed);
+                        mState.deviceClusterEvent.store(true,        std::memory_order_relaxed);
+                    }
+                }
+                mState.deviceClusterMask.store(clusterMask, std::memory_order_relaxed);
+            }
         }
     }
 

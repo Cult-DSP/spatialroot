@@ -577,6 +577,28 @@ int main(int argc, char* argv[]) {
             std::cout << timeSec << "s  dom: 0x" << std::hex << prev
                       << " → 0x" << curr << std::dec << std::endl;
         }
+        // [CLUSTER-RENDER] / [CLUSTER-DEVICE] — top-4 main-channel cluster shift.
+        // Fires only when ≥2 of the 4 dominant mains changed. This is the tightest
+        // available signal for audible spatial-cluster movement, cleanly separated
+        // from sub threshold crossings and far-field DBAP bleed.
+        if (state.renderClusterEvent.load(std::memory_order_relaxed)) {
+            uint64_t prev = state.renderClusterPrev.load(std::memory_order_relaxed);
+            uint64_t curr = state.renderClusterNext.load(std::memory_order_relaxed);
+            state.renderClusterEvent.store(false, std::memory_order_relaxed);
+            std::cout << "\n[CLUSTER-RENDER] t=" << std::fixed;
+            std::cout.precision(2);
+            std::cout << timeSec << "s  top4: 0x" << std::hex << prev
+                      << " → 0x" << curr << std::dec << std::endl;
+        }
+        if (state.deviceClusterEvent.load(std::memory_order_relaxed)) {
+            uint64_t prev = state.deviceClusterPrev.load(std::memory_order_relaxed);
+            uint64_t curr = state.deviceClusterNext.load(std::memory_order_relaxed);
+            state.deviceClusterEvent.store(false, std::memory_order_relaxed);
+            std::cout << "\n[CLUSTER-DEVICE] t=" << std::fixed;
+            std::cout.precision(2);
+            std::cout << timeSec << "s  top4: 0x" << std::hex << prev
+                      << " → 0x" << curr << std::dec << std::endl;
+        }
 
         // ── Status line every ~500 ms ─────────────────────────────────────
         float  cbCpu    = state.callbackCpuLoad.load(std::memory_order_relaxed);

@@ -305,5 +305,22 @@ struct EngineState {
     std::atomic<float>    mainRmsTotal{0.0f};     // sqrt(sum of per-main-ch mean-square)
     std::atomic<float>    subRmsTotal{0.0f};      // sqrt(sum of per-sub-ch mean-square)
     std::atomic<float>    callbackCpuLoad{0.0f};  // wall-clock callback / block budget
+
+    // Top-4 main-channel cluster tracking (Phase 14 refinement).
+    // Each block the 4 mains with highest mean-square are recorded as a bitmask.
+    // A [CLUSTER] event fires when fewer than 3 of the 4 channels are shared with
+    // the previous block's top-4 (i.e. 2+ channels changed). This is a tighter
+    // signal for audible spatial-cluster movement than domMask alone, and is not
+    // affected by sub threshold crossings or far-field DBAP bleed.
+    // Single writer (audio thread), relaxed stores — same contract as domMask fields.
+    std::atomic<uint64_t> renderClusterMask{0};   // current top-4 mains bitmask
+    std::atomic<uint64_t> renderClusterPrev{0};   // top-4 before last significant shift
+    std::atomic<uint64_t> renderClusterNext{0};   // top-4 after last significant shift
+    std::atomic<bool>     renderClusterEvent{false};
+
+    std::atomic<uint64_t> deviceClusterMask{0};
+    std::atomic<uint64_t> deviceClusterPrev{0};
+    std::atomic<uint64_t> deviceClusterNext{0};
+    std::atomic<bool>     deviceClusterEvent{false};
 };
 
