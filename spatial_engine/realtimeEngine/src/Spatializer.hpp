@@ -651,7 +651,8 @@ public:
 
             uint64_t mask    = 0;
             uint64_t domMask = 0;
-            float    maxMs   = 0.0f;
+            float    maxMs     = 0.0f;
+            float    maxMainMs = 0.0f;  // mains-only max, used for domMask reference
             float    mainMs  = 0.0f, subMs = 0.0f;
             float    chMs[64] = {};
 
@@ -669,15 +670,20 @@ public:
                         mainMs += ms;
                 }
                 if (ms > maxMs) maxMs = ms;
+                if (!isSubwooferChannel(static_cast<int>(ch)) && ms > maxMainMs)
+                    maxMainMs = ms;
             }
 
             // Dominant mask: relative threshold applied after finding per-block max.
             // Guard: only compute if there is meaningful signal (avoids 1.0 * 0 = 0
             // edge case where silence would mark all channels as equally dominant).
-            const float domThresh = maxMs * kDomRelThresh;
+            // Reference is maxMainMs (mains only) so sub threshold crossings do not
+            // rescale the threshold and cause spurious mains-cluster relocation events.
+            // Sub state is captured separately by subRmsTotal.
+            const float domThresh = maxMainMs * kDomRelThresh;
             if (domThresh > kRmsThresh) {
                 for (unsigned int ch = 0; ch < renderChannels && ch < 64u; ++ch) {
-                    if (chMs[ch] >= domThresh)
+                    if (!isSubwooferChannel(static_cast<int>(ch)) && chMs[ch] >= domThresh)
                         domMask |= (1ULL << ch);
                 }
             }
@@ -753,7 +759,8 @@ public:
 
             uint64_t mask    = 0;
             uint64_t domMask = 0;
-            float    maxMs   = 0.0f;
+            float    maxMs     = 0.0f;
+            float    maxMainMs = 0.0f;  // mains-only max, mirrors render-side logic
             float    chMs[64] = {};
 
             for (unsigned int ch = 0; ch < numOutputChannels && ch < 64u; ++ch) {
@@ -764,12 +771,14 @@ public:
                 chMs[ch] = ms;
                 if (ms > kRmsThresh) mask |= (1ULL << ch);
                 if (ms > maxMs) maxMs = ms;
+                if (!isSubwooferChannel(static_cast<int>(ch)) && ms > maxMainMs)
+                    maxMainMs = ms;
             }
 
-            const float domThresh = maxMs * kDomRelThresh;
+            const float domThresh = maxMainMs * kDomRelThresh;
             if (domThresh > kRmsThresh) {
                 for (unsigned int ch = 0; ch < numOutputChannels && ch < 64u; ++ch) {
-                    if (chMs[ch] >= domThresh)
+                    if (!isSubwooferChannel(static_cast<int>(ch)) && chMs[ch] >= domThresh)
                         domMask |= (1ULL << ch);
                 }
             }
