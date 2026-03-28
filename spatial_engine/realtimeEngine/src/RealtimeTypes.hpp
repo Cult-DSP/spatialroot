@@ -285,6 +285,23 @@ struct EngineState {
     std::atomic<uint64_t> deviceRelocNext{0};
     std::atomic<bool>     deviceRelocEvent{false};
 
+    // Dominant-channel relocation (Phase 14 upgrade).
+    // A channel is dominant if its block mean-square ≥ kDomRelThresh × max(ms).
+    // kDomRelThresh = 0.01 (−20 dBFS relative to loudest channel). Filters
+    // far-field DBAP bleed that crosses the absolute kRmsThresh but carries no
+    // meaningful spatial energy. Changes in the dominant set are the stronger
+    // signal for audible channel relocation.
+    std::atomic<uint64_t> renderDomMask{0};
+    std::atomic<uint64_t> deviceDomMask{0};
+
+    std::atomic<uint64_t> renderDomRelocPrev{0};
+    std::atomic<uint64_t> renderDomRelocNext{0};
+    std::atomic<bool>     renderDomRelocEvent{false};
+
+    std::atomic<uint64_t> deviceDomRelocPrev{0};
+    std::atomic<uint64_t> deviceDomRelocNext{0};
+    std::atomic<bool>     deviceDomRelocEvent{false};
+
     std::atomic<float>    mainRmsTotal{0.0f};     // sqrt(sum of per-main-ch mean-square)
     std::atomic<float>    subRmsTotal{0.0f};      // sqrt(sum of per-sub-ch mean-square)
     std::atomic<float>    callbackCpuLoad{0.0f};  // wall-clock callback / block budget

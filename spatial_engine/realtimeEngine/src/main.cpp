@@ -528,10 +528,17 @@ int main(int argc, char* argv[]) {
         }
 
         // ── Phase 14: one-shot relocation event detection ─────────────────
-        // Consume render-bus and device-output relocation latches. Printing
-        // both together lets the reader tell immediately whether the mask
-        // change occurred before the Phase 7 copy (render latch fires first)
-        // or only after it (only device latch fires).
+        // Four latches, printed in pairs so pre/post-copy can be compared:
+        //
+        //   [RELOC-RENDER] / [RELOC-DEVICE] — absolute-mask changes (any channel
+        //     crossing −80 dBFS). Broad; first-block false positive suppressed.
+        //
+        //   [DOM-RENDER] / [DOM-DEVICE] — dominant-mask changes (top-energy
+        //     speaker cluster, −20 dBFS relative threshold). Fewer false
+        //     positives; changes here are more likely to be audible relocations.
+        //
+        // If DOM fires without RELOC, only the dominant cluster shifted (likely
+        // audible). If only RELOC fires, it is probably a far-field bleed edge.
         double timeSec = state.playbackTimeSec.load(std::memory_order_relaxed);
 
         if (state.renderRelocEvent.load(std::memory_order_relaxed)) {
@@ -552,14 +559,34 @@ int main(int argc, char* argv[]) {
             std::cout << timeSec << "s  mask: 0x" << std::hex << prev
                       << " → 0x" << curr << std::dec << std::endl;
         }
+        if (state.renderDomRelocEvent.load(std::memory_order_relaxed)) {
+            uint64_t prev = state.renderDomRelocPrev.load(std::memory_order_relaxed);
+            uint64_t curr = state.renderDomRelocNext.load(std::memory_order_relaxed);
+            state.renderDomRelocEvent.store(false, std::memory_order_relaxed);
+            std::cout << "\n[DOM-RENDER]   t=" << std::fixed;
+            std::cout.precision(2);
+            std::cout << timeSec << "s  dom: 0x" << std::hex << prev
+                      << " → 0x" << curr << std::dec << std::endl;
+        }
+        if (state.deviceDomRelocEvent.load(std::memory_order_relaxed)) {
+            uint64_t prev = state.deviceDomRelocPrev.load(std::memory_order_relaxed);
+            uint64_t curr = state.deviceDomRelocNext.load(std::memory_order_relaxed);
+            state.deviceDomRelocEvent.store(false, std::memory_order_relaxed);
+            std::cout << "\n[DOM-DEVICE]   t=" << std::fixed;
+            std::cout.precision(2);
+            std::cout << timeSec << "s  dom: 0x" << std::hex << prev
+                      << " → 0x" << curr << std::dec << std::endl;
+        }
 
         // ── Status line every ~500 ms ─────────────────────────────────────
-        float  cbCpu   = state.callbackCpuLoad.load(std::memory_order_relaxed);
-        bool   paused  = config.paused.load(std::memory_order_relaxed);
-        uint64_t rMask = state.renderActiveMask.load(std::memory_order_relaxed);
-        uint64_t dMask = state.deviceActiveMask.load(std::memory_order_relaxed);
-        float  mainRms = state.mainRmsTotal.load(std::memory_order_relaxed);
-        float  subRms  = state.subRmsTotal.load(std::memory_order_relaxed);
+        float  cbCpu    = state.callbackCpuLoad.load(std::memory_order_relaxed);
+        bool   paused   = config.paused.load(std::memory_order_relaxed);
+        uint64_t rMask  = state.renderActiveMask.load(std::memory_order_relaxed);
+        uint64_t dMask  = state.deviceActiveMask.load(std::memory_order_relaxed);
+        uint64_t rDom   = state.renderDomMask.load(std::memory_order_relaxed);
+        uint64_t dDom   = state.deviceDomMask.load(std::memory_order_relaxed);
+        float  mainRms  = state.mainRmsTotal.load(std::memory_order_relaxed);
+        float  subRms   = state.subRmsTotal.load(std::memory_order_relaxed);
 
         std::cout << "\r  t=";
         std::cout << std::fixed;
@@ -568,7 +595,9 @@ int main(int argc, char* argv[]) {
                   << "  CPU=" << std::fixed;
         std::cout.precision(1);
         std::cout << (cbCpu * 100.0f) << "%"
-                  << "  rBus=0x" << std::hex << rMask
+                  << "  rDom=0x" << std::hex << rDom
+                  << "  dDom=0x" << dDom
+                  << "  rBus=0x" << rMask
                   << "  dev=0x"  << dMask << std::dec
                   << "  mainRms=" << std::fixed;
         std::cout.precision(4);

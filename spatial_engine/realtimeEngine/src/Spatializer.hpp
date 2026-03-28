@@ -632,26 +632,35 @@ public:
 
         // ── Phase 14 diagnostic: render-bus active-channel mask (pre-copy) ──
         // Measured AFTER all rendering and NaN clamp, BEFORE the OutputRemap
-        // copy. A bitmask of channels whose block RMS exceeds the threshold is
-        // stored atomically for the main thread to read every 500 ms.
+        // copy. Two complementary masks are computed each block:
         //
-        // The relocation latch fires when the active set changes between blocks,
-        // capturing old and new masks so the main thread can print the event
-        // immediately. If only deviceActiveMask changes (not renderActiveMask),
-        // relocation is happening at the output/device layer. If renderActiveMask
-        // itself changes, the problem is upstream in mRenderIO.
+        //   Active mask  (absolute): channels whose block mean-square exceeds
+        //     kRmsThresh = 1e-8 (≈ −80 dBFS). Includes far-field DBAP bleed.
+        //     Useful for detecting any channel going fully silent.
         //
-        // kRmsThresh = 1e-8 ≈ mean-square of a -80 dBFS sine. Any non-zero
-        // render contribution will exceed this; floating-point zero-fill won't.
+        //   Dominant mask (relative): channels whose mean-square is at least
+        //     kDomRelThresh (1%, −20 dBFS) of the loudest channel's power.
+        //     Tracks the speaker cluster carrying the bulk of spatial energy.
+        //     More meaningful for detecting audible channel relocation.
+        //
+        // Both relocation latches suppress the first-block 0→X false positive
+        // (prevMask == 0 guard). Only genuine mid-playback changes fire.
         {
-            constexpr float kRmsThresh = 1e-8f;
-            uint64_t mask = 0;
-            float mainMs = 0.0f, subMs = 0.0f;
+            constexpr float kRmsThresh    = 1e-8f;
+            constexpr float kDomRelThresh = 0.01f;  // 1% of max power = −20 dBFS
+
+            uint64_t mask    = 0;
+            uint64_t domMask = 0;
+            float    maxMs   = 0.0f;
+            float    mainMs  = 0.0f, subMs = 0.0f;
+            float    chMs[64] = {};
+
             for (unsigned int ch = 0; ch < renderChannels && ch < 64u; ++ch) {
                 const float* buf = mRenderIO.outBuffer(ch);
                 float ss = 0.0f;
                 for (unsigned int f = 0; f < numFrames; ++f) ss += buf[f] * buf[f];
                 float ms = ss / static_cast<float>(numFrames);
+                chMs[ch] = ms;
                 if (ms > kRmsThresh) {
                     mask |= (1ULL << ch);
                     if (isSubwooferChannel(static_cast<int>(ch)))
@@ -659,14 +668,38 @@ public:
                     else
                         mainMs += ms;
                 }
+                if (ms > maxMs) maxMs = ms;
             }
+
+            // Dominant mask: relative threshold applied after finding per-block max.
+            // Guard: only compute if there is meaningful signal (avoids 1.0 * 0 = 0
+            // edge case where silence would mark all channels as equally dominant).
+            const float domThresh = maxMs * kDomRelThresh;
+            if (domThresh > kRmsThresh) {
+                for (unsigned int ch = 0; ch < renderChannels && ch < 64u; ++ch) {
+                    if (chMs[ch] >= domThresh)
+                        domMask |= (1ULL << ch);
+                }
+            }
+
+            // Absolute-mask relocation latch — suppress first-block false positive
             uint64_t prevMask = mState.renderActiveMask.load(std::memory_order_relaxed);
-            if (mask != prevMask) {
+            if (mask != prevMask && prevMask != 0) {
                 mState.renderRelocPrev.store(prevMask, std::memory_order_relaxed);
                 mState.renderRelocNext.store(mask,     std::memory_order_relaxed);
                 mState.renderRelocEvent.store(true,    std::memory_order_relaxed);
             }
             mState.renderActiveMask.store(mask, std::memory_order_relaxed);
+
+            // Dominant-mask relocation latch — suppress first-block false positive
+            uint64_t prevDom = mState.renderDomMask.load(std::memory_order_relaxed);
+            if (domMask != prevDom && prevDom != 0) {
+                mState.renderDomRelocPrev.store(prevDom,  std::memory_order_relaxed);
+                mState.renderDomRelocNext.store(domMask,  std::memory_order_relaxed);
+                mState.renderDomRelocEvent.store(true,    std::memory_order_relaxed);
+            }
+            mState.renderDomMask.store(domMask, std::memory_order_relaxed);
+
             mState.mainRmsTotal.store(std::sqrt(mainMs), std::memory_order_relaxed);
             mState.subRmsTotal.store(std::sqrt(subMs),   std::memory_order_relaxed);
         }
@@ -711,27 +744,51 @@ public:
         }
 
         // ── Phase 14 diagnostic: device-output active-channel mask (post-copy) ─
-        // Measured immediately after the Phase 7 copy so io.outBuffer() contains
-        // the final per-device-channel output for this block. Comparing this mask
-        // to renderActiveMask (sampled just before the copy) lets the main thread
-        // determine whether relocation is occurring before or after the copy step.
+        // Same two-tier approach as the render-bus diagnostic above.
+        // Comparing renderDomMask vs deviceDomMask directly shows whether the
+        // dominant speaker cluster shifts at the OutputRemap copy step.
         {
-            constexpr float kRmsThresh = 1e-8f;
-            uint64_t mask = 0;
+            constexpr float kRmsThresh    = 1e-8f;
+            constexpr float kDomRelThresh = 0.01f;
+
+            uint64_t mask    = 0;
+            uint64_t domMask = 0;
+            float    maxMs   = 0.0f;
+            float    chMs[64] = {};
+
             for (unsigned int ch = 0; ch < numOutputChannels && ch < 64u; ++ch) {
                 const float* buf = io.outBuffer(ch);
                 float ss = 0.0f;
                 for (unsigned int f = 0; f < numFrames; ++f) ss += buf[f] * buf[f];
-                if ((ss / static_cast<float>(numFrames)) > kRmsThresh)
-                    mask |= (1ULL << ch);
+                float ms = ss / static_cast<float>(numFrames);
+                chMs[ch] = ms;
+                if (ms > kRmsThresh) mask |= (1ULL << ch);
+                if (ms > maxMs) maxMs = ms;
             }
+
+            const float domThresh = maxMs * kDomRelThresh;
+            if (domThresh > kRmsThresh) {
+                for (unsigned int ch = 0; ch < numOutputChannels && ch < 64u; ++ch) {
+                    if (chMs[ch] >= domThresh)
+                        domMask |= (1ULL << ch);
+                }
+            }
+
             uint64_t prevMask = mState.deviceActiveMask.load(std::memory_order_relaxed);
-            if (mask != prevMask) {
+            if (mask != prevMask && prevMask != 0) {
                 mState.deviceRelocPrev.store(prevMask, std::memory_order_relaxed);
                 mState.deviceRelocNext.store(mask,     std::memory_order_relaxed);
                 mState.deviceRelocEvent.store(true,    std::memory_order_relaxed);
             }
             mState.deviceActiveMask.store(mask, std::memory_order_relaxed);
+
+            uint64_t prevDom = mState.deviceDomMask.load(std::memory_order_relaxed);
+            if (domMask != prevDom && prevDom != 0) {
+                mState.deviceDomRelocPrev.store(prevDom,  std::memory_order_relaxed);
+                mState.deviceDomRelocNext.store(domMask,  std::memory_order_relaxed);
+                mState.deviceDomRelocEvent.store(true,    std::memory_order_relaxed);
+            }
+            mState.deviceDomMask.store(domMask, std::memory_order_relaxed);
         }
     }
 
