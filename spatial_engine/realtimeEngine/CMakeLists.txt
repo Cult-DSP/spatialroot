@@ -26,6 +26,7 @@ add_subdirectory(
 # These are the same files the offline renderer uses, shared from spatial_engine/src/
 add_executable(spatialroot_realtime
     src/main.cpp
+    src/EngineSession.cpp
     ../src/JSONLoader.cpp
     ../src/LayoutLoader.cpp
     ../src/WavUtils.cpp
