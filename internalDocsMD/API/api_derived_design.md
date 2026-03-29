@@ -73,15 +73,20 @@ The startup order in the internal engine is strictly constrained by dependencies
 3. **`applyLayout(const LayoutInput& layoutIn)`**
    - Loads layout JSON, initializes `Pose` (calculates positions from scene + layout), configures `Spatializer` structure, determines layout dimensions, prepares the Output Mapping CSV.
 4. **`configureRuntime(const RuntimeParams& params)`**
-   - Applies live gain parameters, calculates auto compensation off-thread before audio starts.
+   - Applies live gain parameters. Auto-compensation must be calculated via `update()` on the MAIN thread, not as a realtime-safe background operation.
 5. **`start()`**
    - Activates OSC server, starts `RealtimeBackend`, and begins background `LoaderThread`.
-6. **`pause(bool)`**
+6. **`setPaused(bool)`**
    - Flips `config.paused` atomic flag gracefully pausing traversal and outputting silence.
-7. **`queryStatus() -> EngineStatus`**
+7. **`update()`**
+   - Must be called regularly on the MAIN thread to process deferred actions such as `computeFocusCompensation()`.
+8. **`queryStatus() -> EngineStatus`**
    - Provides snapshot copies of relaxed-atomic UI markers for the CLI.
-8. **`shutdown()`**
-   - Cleanly shuts down the OSC server, halts the Audio backend, finally shutting down `Streaming` threads.
+9. **`consumeDiagnostics() -> DiagnosticEvents`**
+   - Separately consumed diagnostic latches strictly decoupled from standard engine status polling.
+10. **`shutdown()`**
+
+- Cleanly shuts down the OSC server, halts the Audio backend, finally shutting down `Streaming` threads.
 
 ## 5. Threading and Safety Constraints
 
@@ -105,5 +110,5 @@ The startup order in the internal engine is strictly constrained by dependencies
 
 ## 7. Deferred Items
 
-- **Stop, restart, and seeking semantics:** Right now, time progression handles pausing (early empty callback returns). True transport seeks or full restarts require changes to `Streaming::loaderWorker` which enforces sequential buffer streaming right now.
+- **Stop, restart, and seeking semantics:** Right now, time progression handles pausing (early empty callback returns). True transport seeks or full restarts require changes to `Streaming::loaderWorker` which enforces sequential buffer streaming right now. These remain deferred unless explicitly proven by code.
 - **Offline Render capabilities:** Are still abstracted under `SpatialRenderer` header logic.

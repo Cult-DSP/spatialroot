@@ -1,5 +1,9 @@
 # Spatial Root - Implementation Handoff Notes
 
+# notes:
+
+no creating random python files.
+
 ## Target Outcome
 
 The next action is to extract the thick backend orchestration occurring entirely inside `spatial_engine/realtimeEngine/src/main.cpp` into a resilient runtime public API composed of `EngineSession.hpp` and `EngineSession.cpp`. `main.cpp` will be stripped down to a slim adapter, focusing merely on string parsing and periodic console display.
@@ -34,7 +38,7 @@ The `EngineSession` constructor should instantiate the core member properties:
 4. **`configureRuntime`:** write atomic properties such as `masterGain`, `dbapFocus`. Explicitly calculate `spatializer->computeFocusCompensation()` directly (main thread safe).
 5. **`start`:** instantiate `al::ParameterServer`, link callbacks. Instantiate `RealtimeBackend`, assign its streams. `streaming->startLoader()` BEFORE `backend->start()`.
 6. **`shutdown`:** Must strictly process in order: `mParamServer->stopServer()` -> wait/halt parameters -> `mBackend->stop()` -> `mStreaming->shutdown()`.
-7. **Status polling (`queryStatus`):** Map read-only getters representing the event loops in `main.cpp` covering things like `nanGuardCount`, `renderRelocEvent`, `cpuLoad`, `timeSec`. Provide an easy way for the main event loop to reset latches (e.g. `clearDiagnosticEvents()`).
+7. **Status polling (`queryStatus`):** Map read-only getters representing the event loops in `main.cpp` covering things like `nanGuardCount`, `renderRelocEvent`, `cpuLoad`, `timeSec`. Provide an easy way for the main event loop to reset latches (e.g. `consumeDiagnostics()`).
 
 ## What to Retain in `main.cpp` (Do NOT touch internal core mechanics)
 

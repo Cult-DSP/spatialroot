@@ -34,11 +34,13 @@
 Evolve the Phase 1 `EngineSession` API past `void` arguments, resolving "Mismatch 5: Error Handlers" and replacing mutable getters. Instead of leaking internal mutable atomic state (`session.config()`), use strict domain-driven structs: `EngineOptions`, `SceneInput`, `LayoutInput`, and `RuntimeParams`.
 
 **Files Modified:**
+
 - `EngineSession.hpp`
 - `EngineSession.cpp`
 - `main.cpp`
 
 **Key Changes:**
+
 1. **Struct Injection:** Defined `EngineOptions`, `SceneInput`, `LayoutInput`, and `RuntimeParams` in `EngineSession.hpp`.
 2. **Signature Update:** Modified `EngineSession` initialization methods:
    - `configureEngine(const EngineOptions& opts)`
