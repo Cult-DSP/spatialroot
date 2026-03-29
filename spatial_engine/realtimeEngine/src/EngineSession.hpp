@@ -96,7 +96,7 @@ public:
     bool start();
     void shutdown();
 
-    void pause(bool isPaused); // Transport control API
+    void setPaused(bool isPaused); // Transport control API
     void update();
 
     EngineStatus queryStatus() const;
@@ -118,6 +118,8 @@ private:
     std::unique_ptr<RealtimeBackend> mBackend;
     std::unique_ptr<OutputRemap> mOutputRemap;
     std::unique_ptr<al::ParameterServer> mParamServer;
+    struct OscParams;
+    std::unique_ptr<OscParams> mOscParams;
 
     std::atomic<bool> mPendingAutoComp;
     int mOscPort = 9009;

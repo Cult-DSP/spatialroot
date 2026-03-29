@@ -31,3 +31,9 @@ This ledger reconciles conflicts between the ideal `api_concept.md` design param
 **Concept Implication:** "Informative failure surface... simple approach such as bool plus lastError()".
 **Code Reality:** Presently failures are printed via `std::cerr` or invoked under strict fatal crash scenarios.
 **Resolution:** Refactoring `EngineSession` initializers (`start`, `loadScene`, etc) will catch these failure patterns and translate them into a `std::string getLastError()` property, allowing the user implementations (like a new CLI app) to safely parse setup failures prior to fatal aborts.
+
+## Mismatch 6: AlloLib Event Callbacks & Object Lifting
+
+**Concept Implication:** OSC ports and runtime parameters are managed internally and hidden from the API caller to keep the header clean of dependencies.
+**Code Reality:** The `al::ParameterServer` expects parameters (`al::Parameter`, `al::ParameterBool`) passed to it via `operator<<` to remain alive in memory for the life of the server. In the original `main.cpp`, they were instantiated as blocking stack variables. When abstracting into `EngineSession`, making them static violates multiple instantiation constraints (as callbacks would retain invalid `this` pointers across restarts). Since `EngineSession.hpp` aims to be free of `allolib` header pollution, they cannot be declared explicitly as struct members in the header.
+**Resolution:** Implemented an opaque pointer (Pimpl pattern) `struct OscParams;` mapped to a `std::unique_ptr<OscParams> mOscParams;` inside `EngineSession.hpp`. The full struct is defined privately inside `EngineSession.cpp`. This encapsulates the lifetime of AlloLib types strictly to the execution context of the active session without polluting the public API or causing callback dangling references.

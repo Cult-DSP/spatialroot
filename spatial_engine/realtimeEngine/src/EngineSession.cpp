@@ -13,6 +13,16 @@
 #include <iostream>
 #include <cmath>
 
+struct EngineSession::OscParams {
+    al::Parameter gain{"gain", "realtime", 0.5f, 0.1f, 3.0f};
+    al::Parameter focus{"focus", "realtime", 1.5f, 0.2f, 5.0f};
+    al::Parameter spkMixDb{"speaker_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
+    al::Parameter subMixDb{"sub_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
+    al::ParameterBool autoComp{"auto_comp", "realtime", 0.0f};
+    al::ParameterBool paused{"paused", "realtime", 0.0f};
+    al::Parameter elevMode{"elevation_mode", "realtime", 0.0f, 0.0f, 2.0f};
+};
+
 EngineSession::EngineSession()
     : mPendingAutoComp(false)
 {
@@ -160,66 +170,55 @@ bool EngineSession::configureRuntime(const RuntimeParams& params)
 bool EngineSession::start()
 {
     mParamServer = std::make_unique<al::ParameterServer>("127.0.0.1", mOscPort);
+    mOscParams = std::make_unique<OscParams>();
 
-    // Register OSC parameters...
-    // We must heap-allocate the parameters so they live for the duration,
-    // actually, we can add them to EngineSession or just static/leak them, 
-    // but AlloLib parameters need to be kept alive.
-    // Let's create proper members in EngineSession or use static for simplicity in this extraction, 
-    // wait, al::Parameter can just be dynamically allocated and managed.
-    // Actually, to fully match, let's just make static parameters here or store them in EngineSession.
-    // We'll dynamically allocate them.
-    
-    // Using a simpler approach: AlloLib ParameterServer keeps a pointer to them, so we need to store them.
-    // Wait, the original code had them as local variables in main, but they were kept alive because main() was blocking.
-    // Let's add them to a small struct inside EngineSession.cpp, or just keep them as static.
-    // Since we only run one session, static is acceptable for parameters.
-    
-    static al::Parameter gainParam{"gain", "realtime", mConfig.masterGain.load(), 0.1f, 3.0f};
-    static al::Parameter focusParam{"focus", "realtime", mConfig.dbapFocus.load(), 0.2f, 5.0f};
-    static al::Parameter spkMixDbParam{"speaker_mix_db", "realtime", (float)(20.0f * std::log10(mConfig.loudspeakerMix.load())), -10.0f, 10.0f};
-    static al::Parameter subMixDbParam{"sub_mix_db", "realtime", (float)(20.0f * std::log10(mConfig.subMix.load())), -10.0f, 10.0f};
-    static al::ParameterBool autoCompParam{"auto_comp", "realtime", mConfig.focusAutoCompensation.load() ? 1.0f : 0.0f};
-    static al::ParameterBool pausedParam{"paused", "realtime", 0.0f};
-    static al::Parameter elevModeParam{"elevation_mode", "realtime", static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)), 0.0f, 2.0f};
+    mOscParams->gain.set(mConfig.masterGain.load());
+    mOscParams->focus.set(mConfig.dbapFocus.load());
+    mOscParams->spkMixDb.set((float)(20.0f * std::log10(mConfig.loudspeakerMix.load())));
+    mOscParams->subMixDb.set((float)(20.0f * std::log10(mConfig.subMix.load())));
+    mOscParams->autoComp.set(mConfig.focusAutoCompensation.load() ? 1.0f : 0.0f);
+    mOscParams->paused.set(mConfig.paused.load() ? 1.0f : 0.0f);
+    mOscParams->elevMode.set(static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)));
 
-    gainParam.registerChangeCallback([this](float v) {
+    mOscParams->gain.registerChangeCallback([this](float v) {
         this->mConfig.masterGain.store(v, std::memory_order_relaxed);
     });
 
-    focusParam.registerChangeCallback([this](float v) {
+    mOscParams->focus.registerChangeCallback([this](float v) {
         this->mConfig.dbapFocus.store(v, std::memory_order_relaxed);
         if (this->mConfig.focusAutoCompensation.load(std::memory_order_relaxed)) {
             this->mPendingAutoComp.store(true, std::memory_order_relaxed);
         }
     });
 
-    spkMixDbParam.registerChangeCallback([this](float dB) {
+    mOscParams->spkMixDb.registerChangeCallback([this](float dB) {
         this->mConfig.loudspeakerMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
     });
 
-    subMixDbParam.registerChangeCallback([this](float dB) {
+    mOscParams->subMixDb.registerChangeCallback([this](float dB) {
         this->mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
     });
 
-    autoCompParam.registerChangeCallback([this](float v) {
+    mOscParams->autoComp.registerChangeCallback([this](float v) {
         bool enable = (v >= 0.5f);
         this->mConfig.focusAutoCompensation.store(enable, std::memory_order_relaxed);
         if (enable) this->mPendingAutoComp.store(true, std::memory_order_relaxed);
     });
 
-    pausedParam.registerChangeCallback([this](float v) {
+    mOscParams->paused.registerChangeCallback([this](float v) {
         bool p = (v >= 0.5f);
         this->mConfig.paused.store(p, std::memory_order_relaxed);
     });
 
-    elevModeParam.registerChangeCallback([this](float v) {
+    mOscParams->elevMode.registerChangeCallback([this](float v) {
         int mode = static_cast<int>(std::round(v));
         mode = std::max(0, std::min(2, mode));
         this->mConfig.elevationMode.store(mode, std::memory_order_relaxed);
     });
 
-    *mParamServer << gainParam << focusParam << spkMixDbParam << subMixDbParam << autoCompParam << pausedParam << elevModeParam;
+    *mParamServer << mOscParams->gain << mOscParams->focus << mOscParams->spkMixDb 
+                  << mOscParams->subMixDb << mOscParams->autoComp << mOscParams->paused 
+                  << mOscParams->elevMode;
 
     if (!mParamServer->serverRunning()) {
         std::cerr << "[EngineSession] FATAL: ParameterServer failed to start." << std::endl;
@@ -254,6 +253,9 @@ void EngineSession::shutdown()
         mParamServer->stopServer();
         mParamServer.reset();
     }
+    if (mOscParams) {
+        mOscParams.reset();
+    }
     if (mBackend) {
         mBackend->shutdown();
         mBackend.reset();
@@ -262,6 +264,11 @@ void EngineSession::shutdown()
         mStreaming->shutdown();
         mStreaming.reset();
     }
+}
+
+void EngineSession::setPaused(bool isPaused)
+{
+    mConfig.paused.store(isPaused, std::memory_order_relaxed);
 }
 
 void EngineSession::update()
