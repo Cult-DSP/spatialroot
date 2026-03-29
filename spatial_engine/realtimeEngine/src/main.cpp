@@ -146,10 +146,15 @@ static void printUsage(const char* progName) {
               << "                      output channels (default: identity, no remapping)\n"
               << "                      CSV format: 'layout,device' (0-based, headers required)\n"
               << "  --osc_port <int>    UDP port for al::ParameterServer OSC control\n"
-              << "                      (default: 9009). GUI sends to this port.\n"
-              << "  --help              Show this message\n"
-              << "\nNote: Output channel count is derived automatically from the speaker\n"
-              << "layout (speakers + subwoofers). No manual channel count needed.\n"
+                      << "                      (default: 9009). GUI sends to this port.\n"
+                      << "  --device <name>     Exact name of the output audio device to open.\n"
+                      << "                      Use --list-devices to see available names as the\n"
+                      << "                      engine sees them. If omitted, the system default\n"
+                      << "                      is used (not recommended for dedicated hardware).\n"
+                      << "  --list-devices      List available output audio devices and exit.\n"
+                      << "  --help              Show this message\n"
+                      << "\nNote: Output channel count is derived automatically from the speaker\n"
+                      << "layout (speakers + subwoofers). No manual channel count needed.\n"
               << std::endl;
 }
 
@@ -162,6 +167,29 @@ int main(int argc, char* argv[]) {
     // ── Help flag ────────────────────────────────────────────────────────
     if (hasArg(argc, argv, "--help") || hasArg(argc, argv, "-h")) {
         printUsage(argv[0]);
+        return 0;
+    }
+
+    // ── List devices mode ────────────────────────────────────────────────
+    // Print all output devices as the engine sees them (via AlloLib/RtAudio)
+    // and exit. This is the reference for --device name strings.
+    if (hasArg(argc, argv, "--list-devices")) {
+        std::cout << "\nAvailable output audio devices:" << std::endl;
+        const int nDev = al::AudioDevice::numDevices();
+        int outCount = 0;
+        for (int i = 0; i < nDev; ++i) {
+            al::AudioDevice dev(i);
+            if (dev.valid() && dev.channelsOutMax() > 0) {
+                std::cout << "  [" << i << "] \"" << dev.name() << "\""
+                          << "  (" << dev.channelsOutMax() << " out ch)"
+                          << std::endl;
+                ++outCount;
+            }
+        }
+        if (outCount == 0) {
+            std::cout << "  (no output devices found)" << std::endl;
+        }
+        std::cout << "\nPass --device \"<exact name>\" to select a specific device." << std::endl;
         return 0;
     }
 
@@ -193,6 +221,9 @@ int main(int argc, char* argv[]) {
     // Phase 10: focus exponent + OSC port
     config.dbapFocus.store(getArgFloat(argc, argv, "--focus", 1.5f), std::memory_order_relaxed);
     int oscPort = getArgInt(argc, argv, "--osc_port", 9009);
+
+    // Output device selection (Track A — explicit device)
+    config.outputDeviceName = getArgString(argc, argv, "--device");
 
     // Elevation mode: 0=RescaleAtmosUp (default), 1=RescaleFullSphere, 2=Clamp
     {
@@ -253,6 +284,11 @@ int main(int argc, char* argv[]) {
         static const char* elModeNames[] = {"RescaleAtmosUp", "RescaleFullSphere", "Clamp"};
         int em = config.elevationMode.load(std::memory_order_relaxed);
         std::cout << "  Elevation:    " << elModeNames[em] << " (mode " << em << ")" << std::endl;
+    }
+    if (config.outputDeviceName.empty()) {
+        std::cout << "  Output device: (system default — use --device to specify)" << std::endl;
+    } else {
+        std::cout << "  Output device: \"" << config.outputDeviceName << "\"" << std::endl;
     }
     std::cout << "  (Output channels will be derived from speaker layout)" << std::endl;
     std::cout << std::endl;

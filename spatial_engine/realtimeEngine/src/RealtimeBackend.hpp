@@ -48,7 +48,8 @@
 #include <functional>
 #include <cstring>  // memset, memcpy
 #include <vector>
-#include <algorithm> // std::min
+#include <algorithm> // std::min, std::transform
+#include <cctype>   // std::tolower (device-name comparison)
 
 #include "al/io/al_AudioIO.hpp"
 
@@ -95,6 +96,81 @@ public:
         std::cout << "  Buffer size:      " << mConfig.bufferSize << " frames" << std::endl;
         std::cout << "  Output channels:  " << mConfig.outputChannels << std::endl;
         std::cout << "  Input channels:   " << mConfig.inputChannels << std::endl;
+
+        // ── Explicit output device selection ─────────────────────────────
+        // If --device was provided, resolve the name to a specific AudioDevice
+        // before opening. AlloLib/RtAudio will then open exactly that device
+        // rather than whatever the OS currently has as default output.
+        //
+        // Matching: exact full-name comparison, case-insensitive.
+        // If no exact match is found, the error message lists all available
+        // output devices so the user can correct the name.
+        //
+        // If no device name was given (empty string), fall through and let
+        // RtAudio use the system default — same behaviour as before this patch.
+        if (!mConfig.outputDeviceName.empty()) {
+            const int nDev = al::AudioDevice::numDevices();
+
+            // Build a lowercased version of the target name for comparison.
+            std::string targetLower = mConfig.outputDeviceName;
+            std::transform(targetLower.begin(), targetLower.end(),
+                           targetLower.begin(),
+                           [](unsigned char c){ return std::tolower(c); });
+
+            int foundIdx = -1;
+            for (int i = 0; i < nDev; ++i) {
+                al::AudioDevice dev(i);
+                if (!dev.valid()) continue;
+                std::string devName = dev.name();
+                std::string devLower = devName;
+                std::transform(devLower.begin(), devLower.end(),
+                               devLower.begin(),
+                               [](unsigned char c){ return std::tolower(c); });
+                if (devLower == targetLower) {
+                    foundIdx = i;
+                    break;
+                }
+            }
+
+            if (foundIdx < 0) {
+                std::cerr << "[Backend] FATAL: Output device not found: \""
+                          << mConfig.outputDeviceName << "\"\n"
+                          << "  Available output devices (run --list-devices for full list):\n";
+                for (int i = 0; i < nDev; ++i) {
+                    al::AudioDevice dev(i);
+                    if (dev.valid() && dev.channelsOutMax() > 0) {
+                        std::cerr << "    [" << i << "] \""
+                                  << dev.name() << "\""
+                                  << "  (" << dev.channelsOutMax() << " out ch)\n";
+                    }
+                }
+                std::cerr << "  → Aborting." << std::endl;
+                return false;
+            }
+
+            al::AudioDevice selectedDev(foundIdx);
+            const int devMaxOut = selectedDev.channelsOutMax();
+            if (devMaxOut < mConfig.outputChannels) {
+                std::cerr << "[Backend] FATAL: Device \""
+                          << mConfig.outputDeviceName << "\" has only "
+                          << devMaxOut << " output channel(s), but the "
+                          << "speaker layout requires "
+                          << mConfig.outputChannels << ".\n"
+                          << "  → Check that the correct device and speaker "
+                          << "layout are selected." << std::endl;
+                return false;
+            }
+
+            std::cout << "[Backend] Output device selected: ["
+                      << foundIdx << "] \""
+                      << selectedDev.name() << "\"  ("
+                      << devMaxOut << " ch available, "
+                      << mConfig.outputChannels << " required)." << std::endl;
+            mAudioIO.deviceOut(selectedDev);
+        } else {
+            std::cout << "[Backend] No --device specified — using system "
+                      << "default output device." << std::endl;
+        }
 
         // Register the static callback with 'this' as userData so we can
         // dispatch into the member function processBlock().

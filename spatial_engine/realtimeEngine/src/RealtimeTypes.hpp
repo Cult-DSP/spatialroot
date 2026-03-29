@@ -146,6 +146,14 @@ struct RealtimeConfig {
     int    bufferSize       = 512;     // Frames per audio callback buffer
     int    inputChannels    = 0;       // Input channels (0 = output only)
 
+    // Explicit output device name. Empty string = system default (not
+    // recommended for hardware installations with specific output devices).
+    // Set via --device CLI flag. Matched by exact full-name comparison
+    // at RealtimeBackend::init(); see that method for the error path that
+    // prints all available devices on mismatch.
+    // Run --list-devices to see what names the engine can see.
+    std::string outputDeviceName;
+
     // ── Layout-derived channel count ─────────────────────────────────────
     // COMPUTED from the speaker layout at load time — never set by the user.
     // Formula (matches offline SpatialRenderer.cpp):

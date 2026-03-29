@@ -1,5 +1,294 @@
 # 3 - 28 - 26 Realtime Testing
 
+## Round 4
+
+## Assesment / findings:
+
+Log Interpretation First
+Before the plan, one critical clarification from the Canyon test log data:
+
+The [RELOC-RENDER] / [RELOC-DEVICE] events are not main-channel relocation. They are the sub channels appearing and disappearing:
+
+0x3ffff = bits 0–17 set (16 main + 2 sub channels active)
+0xffff = bits 0–15 set (16 main, sub channels silent)
+The mask oscillation tracks subRms exactly: when rBus=0x3ffff, subRms > 0; when rBus=0xffff, subRms=0.0000. This is the LFE content turning on and off as the scene progresses. It is expected behavior. Importantly, rBus and dev always agree — there is no discrepancy between the render bus and device output at the software level.
+
+The MOTU hardware evidence is real but cannot be explained by the render path internals. The render path is correct. The "outside-layout" signal observed on physical outputs is entirely a device-selection problem: the engine opens whatever the system default output device is, not the intended device. If macOS switches defaults, or if the default was never the right device, audio goes elsewhere.
+
+Track A: Explicit Output Device Selection
+What is available in AlloLib
+al_AudioIO.hpp exposes exactly what is needed:
+
+// Constructor by name keyword (partial match, case-insensitive in RtAudio):
+al::AudioDevice dev("MOTU", al::AudioDevice::OUTPUT);
+dev.valid() // false if not found
+dev.channelsOutMax() // max output channels on that device
+
+// Overload of AudioIO::init() that accepts a device directly:
+mAudioIO.init(callback, userData, dev, framesPerBuf, framesPerSec, outChans, inChans);
+
+// Enumerate all devices to stdout (for --list-devices CLI mode):
+al::AudioDevice::printAll();
+al::AudioDevice::numDevices();
+This is the complete API needed. No external library required on the C++ side.
+
+GUI changes — RealtimeInputPanel.py
+Add an Output Device row to the input panel, above Buffer Size:
+
+# In \_build_ui(), after the Remap CSV row:
+
+layout.addWidget(self.\_make_row_label("Output Device"))
+dev_row = QHBoxLayout()
+self.\_device_combo = QComboBox()
+self.\_device_combo.addItem("(System Default)", None)
+
+# Populate from sounddevice at construction time:
+
+try:
+import sounddevice as sd
+for info in sd.query_devices():
+if info["max_output_channels"] > 0:
+self.\_device_combo.addItem(info["name"], info["name"])
+except Exception:
+pass # sounddevice not installed — System Default only
+self.\_device_combo.setFont(ui_font(8))
+dev_row.addWidget(self.\_device_combo)
+layout.addLayout(dev_row)
+Add to public read API:
+
+def get_output_device(self) -> Optional[str]:
+return self.\_device_combo.currentData() # None = system default
+Add to set_enabled_for_state(): include self.\_device_combo.
+
+sounddevice is already a common dependency in Python audio projects. If not present, the dropdown falls back to "(System Default)" only — no hard failure.
+
+Python/runner changes — realtime_runner.py
+RealtimeConfig dataclass — add one field:
+
+output_device: Optional[str] = None # None = use system default
+\_build_args() — add device flag:
+
+if cfg.output_device is not None:
+args += ["--device", cfg.output_device]
+\_on_start() in realtimeGUI.py — pass the selection:
+
+cfg = RealtimeConfig(
+source_path = self.\_input_panel.get_source_path(),
+speaker_layout = self.\_input_panel.get_layout_path(),
+remap_csv = self.\_input_panel.get_remap_csv(),
+output_device = self.\_input_panel.get_output_device(), # new
+buffer_size = self.\_input_panel.get_buffer_size(),
+)
+C++ config changes — RealtimeTypes.hpp
+Add to RealtimeConfig:
+
+// ── Output device selection ───────────────────────────────────────────
+// Keyword to match against available output device names (partial, case-
+// insensitive per RtAudio). Empty string = use system default. Set from
+// the --device CLI flag. Must be set before RealtimeBackend::init().
+std::string outputDeviceName; // e.g. "MOTU", "Dante", "" = default
+C++ main changes — main.cpp
+Add --device and --list-devices flags to argument parsing and usage text:
+
+config.outputDeviceName = getArgString(argc, argv, "--device");
+Handle --list-devices early in main():
+
+if (hasArg(argc, argv, "--list-devices")) {
+std::cout << "[Devices] Available audio output devices:" << std::endl;
+al::AudioDevice::printAll();
+return 0;
+}
+Add to usage string: --device <keyword>, --list-devices.
+
+C++ backend changes — RealtimeBackend.hpp
+In RealtimeBackend::init(), immediately before the mAudioIO.init(...) call (currently line 101), insert:
+
+// ── Explicit output device selection ─────────────────────────────────
+// If the user specified --device, resolve it to an al::AudioDevice and
+// validate it before calling init(). Falls through to system default if
+// no name was given.
+if (!mConfig.outputDeviceName.empty()) {
+al::AudioDevice dev(mConfig.outputDeviceName, al::AudioDevice::OUTPUT);
+
+    if (!dev.valid()) {
+        std::cerr << "[Backend] FATAL: Output device not found: '"
+                  << mConfig.outputDeviceName << "'\n"
+                  << "  Run with --list-devices to see available devices."
+                  << std::endl;
+        return false;
+    }
+
+    const int devMaxOut = dev.channelsOutMax();
+    if (devMaxOut < mConfig.outputChannels) {
+        std::cerr << "[Backend] FATAL: Device '" << mConfig.outputDeviceName
+                  << "' has only " << devMaxOut
+                  << " output channel(s), but layout requires "
+                  << mConfig.outputChannels << ".\n"
+                  << "  Check that the correct device and layout are selected."
+                  << std::endl;
+        return false;
+    }
+
+    std::cout << "[Backend] Explicit output device: '" << mConfig.outputDeviceName
+              << "' (" << devMaxOut << " ch available)." << std::endl;
+    mAudioIO.deviceOut(dev);
+
+}
+The existing actualOutChannels < mConfig.outputChannels guard (line 136) remains as the post-open validation.
+
+Failure modes now covered:
+
+--device not specified → system default, same behavior as before (no regression)
+Device name not found → dev.valid() fails, clear error, exit before opening hardware
+Device found but insufficient channels → channelsOutMax() check, clear error, exit
+Device opened with wrong channel count (OS clamped) → existing post-open guard fires
+Minimal startup output self-test
+Add --test-outputs flag. When present, after backend.init() and before backend.start():
+
+if (hasArg(argc, argv, "--test-outputs")) {
+// Play a 100ms 1kHz sine on each output channel sequentially.
+// Confirms physical channel mapping before a full render run.
+// Uses mAudioIO directly; does not start the full spatializer pipeline.
+// ... (≈30 lines, single-threaded, mAudioIO.start / fill / stop loop)
+return 0;
+}
+Scope: one channel at a time, 100ms each, 1kHz sine, then silence. The full implementation is ≈30 lines using mAudioIO.processAudio() in a loop. Propose separately if wanted.
+
+Track A — Exact files and interfaces
+File Change
+RealtimeTypes.hpp Add std::string outputDeviceName to RealtimeConfig
+RealtimeBackend.hpp Device resolution + validation block in init() before mAudioIO.init()
+main.cpp Parse --device, --list-devices; assign config.outputDeviceName
+realtime_runner.py RealtimeConfig.output_device field; \_build_args() passes --device
+RealtimeInputPanel.py Output Device dropdown row; get_output_device() method
+realtimeGUI.py Pass output_device when constructing RealtimeConfig in \_on_start()
+Track B: Cross-Block Gain Continuity
+Where the problem lives now
+RealtimeBackend.hpp:354–362 acknowledges the gap explicitly: mPrevChannelGains / mNextChannelGains is a placeholder that assigns identity gains every block. This means no block-boundary gain ramp exists.
+
+Spatializer.hpp normal path (lines ~519–524):
+
+mDBap->renderBuffer(mRenderIO, safePos, mSourceBuffer.data(), numFrames);
+The center position safePos can jump significantly between consecutive blocks, producing a step in DBAP speaker gains at the block boundary.
+
+The fast-mover path (kFastMoverAngleRad = 0.25 rad ≈ 14.3°) already addresses this for large angular excursions. The remaining problem is:
+
+Sources crossing the guard zone in under 1 block (guard fires at step N+1 but not N, or vice versa)
+Any source where the DBAP cluster shifts enough between safePos[N] and safePos[N+1] to produce an audible click, even if the angular distance is below the fast-mover threshold
+Design
+Do not directly interpolate DBAP gains. renderBuffer() is a black box; gains aren't exposed. Instead, use position continuity at the block boundary, which is sufficient because DBAP gains are a pure function of position.
+
+Key insight: at the block boundary between block N and block N+1:
+
+End of block N: gains computed from safePos[N]
+Start of block N+1: gains computed from safePos[N+1]
+If safePos[N] ≈ safePos[N+1] (continuous trajectory), gains are continuous
+If guard fires in N+1 but not N, safePos[N+1] is guard-pushed and may differ significantly from safePos[N]
+Fix: for sources that had guard activity (guardFiredForSource == true in the current or previous block), apply the same sub-step infrastructure already in place for fast movers, but with only two distinct positions instead of four:
+
+Sub-steps 0, 1 → mPrevSafePos[si] (last block's guard-resolved position)
+Sub-steps 2, 3 → safePos (current block's guard-resolved position)
+The block boundary is then:
+
+End of block N: rendered at safePos[N] (same as sub-steps 2,3 → safePos[N])
+Start of block N+1: rendered at mPrevSafePos[N+1] = safePos[N]
+Continuity: same position → same gains → no step
+State
+All new state goes in Spatializer.hpp private section:
+
+// ── Track B: cross-block gain continuity for guard-transition sources ─
+// For sources whose guard fired this block or last block, the normal
+// single-position renderBuffer() is replaced with a 4-sub-step render
+// where the first two sub-steps use the previous block's safe position
+// and the last two use the current block's safe position. This closes
+// the block-boundary gain step caused by guard entry/exit.
+// Allocated by prepareForSources(); audio-thread-owned after start().
+std::vector<al::Vec3f> mPrevSafePos; // safe position at end of last block
+std::vector<uint8_t> mPrevSafeValid; // 1 = mPrevSafePos initialized, 0 = first block
+std::vector<uint8_t> mPrevGuardFired;// 1 = guard fired in the previous block
+Initialization
+In prepareForSources(size_t numSources) — append three lines:
+
+mPrevSafePos.assign(numSources, al::Vec3f(0.0f, 0.0f, 0.0f));
+mPrevSafeValid.assign(numSources, 0u);
+mPrevGuardFired.assign(numSources, 0u);
+Modified normal path in renderBlock()
+Replace the current if (!isFastMover) block (lines ~519–524) with:
+
+if (!isFastMover) {
+const bool prevGuard = (si < mPrevGuardFired.size()) && mPrevGuardFired[si];
+const bool prevValid = (si < mPrevSafeValid.size()) && mPrevSafeValid[si];
+const bool doBlend = prevValid && (guardFiredForSource || prevGuard);
+
+    if (doBlend) {
+        // Guard was active this block or last block → blend old→new position
+        // using the existing 4-sub-step scratch infrastructure.
+        for (int j = 0; j < kNumSubSteps; ++j) {
+            const al::Vec3f& subPos = (j < kNumSubSteps / 2)
+                                      ? mPrevSafePos[si]
+                                      : safePos;
+            mFastMoverScratch.zeroOut();
+            mDBap->renderBuffer(mFastMoverScratch, subPos,
+                                mSourceBuffer.data() + j * subFrames,
+                                subFrames);
+            for (unsigned int ch = 0; ch < renderChannels; ++ch) {
+                const float* src = mFastMoverScratch.outBuffer(ch);
+                float*       dst = mRenderIO.outBuffer(ch);
+                for (unsigned int f = 0; f < subFrames; ++f)
+                    dst[j * subFrames + f] += src[f];
+            }
+        }
+    } else {
+        // Normal path: single position, no extra cost.
+        mDBap->renderBuffer(mRenderIO, safePos,
+                            mSourceBuffer.data(), numFrames);
+    }
+
+}
+
+// Save position state for next block (guard-transition blending).
+if (si < mPrevSafePos.size()) {
+mPrevSafePos[si] = safePos;
+mPrevSafeValid[si] = 1u;
+mPrevGuardFired[si] = guardFiredForSource ? 1u : 0u;
+}
+The subFrames local is already defined in the fast-mover block. Move the definition above the isFastMover test so both paths can use it:
+
+const unsigned int subFrames = numFrames / static_cast<unsigned int>(kNumSubSteps);
+Interaction with existing systems
+System Interaction
+Normal DBAP path Replaced only when doBlend == true (guard active). Zero overhead otherwise.
+Fast-mover path Unchanged. Fast movers take if (isFastMover) first; this code is in the else.
+mFastMoverScratch Reused as-is. Scratch is already sized to subFrames = numFrames / kNumSubSteps. No new allocation.
+Onset fade Applied to mSourceBuffer before this block runs. Unaffected.
+Soft-guard (Pass 1 + Pass 2) Still runs before this block. safePos and mPrevSafePos are both guard-resolved.
+RealtimeBackend placeholder mPrevChannelGains / mNextChannelGains remains identity — this Track B fix supersedes it for the relevant sources and is more fundamental.
+Track B — Exact files and interfaces
+File Change
+Spatializer.hpp 3 new member vectors (mPrevSafePos, mPrevSafeValid, mPrevGuardFired); extend prepareForSources(); replace normal-path renderBuffer() with doBlend conditional; move subFrames definition above the isFastMover test; save state after the branch.
+No other files change for Track B.
+
+Confirmed vs Speculative
+Routing relocation (Track A)
+Status Finding
+Confirmed rBus and dev masks always agree in logs → no relocation in the software render path
+Confirmed [RELOC-RENDER/DEVICE] events are sub-channel toggling (0x3ffff ↔ 0xffff = bits 16–17), not main-channel relocation
+Confirmed The engine uses mAudioIO.init() without specifying a device → system default only
+Confirmed AlloLib AudioIO has deviceOut(AudioDevice) and AudioDevice(nameKeyword, OUTPUT) → explicit selection is directly implementable
+Confirmed Post-open channel-count guard exists and catches wrong-device opens
+Speculative → resolved by architecture "Outside layout" hardware signal is at the OS/device level, caused by audio going to a device that was never explicitly selected. Track A fix directly eliminates this.
+Pops / high-pitched noise (Track B)
+Status Finding
+Confirmed Fast-mover sub-stepping (Fix 2) is in code and addresses large-angular-motion gain steps
+Confirmed Soft-zone guard (kGuardSoftZone = 0.45m) is in code and reduced but did not eliminate Canyon relocation/buzzing
+Confirmed Block-boundary gain state for the normal path is an explicit placeholder (identity, not implemented)
+Confirmed mFastMoverScratch and subFrames infrastructure is already present and sized correctly for the blending approach
+Speculative (strong) Guard-transition pops: sources crossing the soft zone in under 1 block still produce a gain step at the block boundary → addressed by Track B
+Speculative Whether the remaining Ascent pops after soft-guard are entirely explained by guard-transition block boundaries, or also have contribution from non-guard DBAP cluster shifts in difficult geometries → confirm by testing Ascent post-Track-B implementation
+Still open SpkG=0 test showed pops without any guard activity → there is at least one remaining pop mechanism not guard-related. Do not pursue until guard-transition blending is confirmed clean.
+
+## pre test agent notes
+
 ## Round 3
 
 ## Assesment / findings:

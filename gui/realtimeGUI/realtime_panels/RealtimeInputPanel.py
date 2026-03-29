@@ -71,6 +71,10 @@ class RealtimeInputPanel(QWidget):
         v = self._remap_edit.text().strip()
         return v if v else None
 
+    def get_output_device(self) -> Optional[str]:
+        """Return the selected output device name, or None for system default."""
+        return self._device_combo.currentData()  # None = system default
+
     def get_buffer_size(self) -> int:
         return int(self._buffer_combo.currentText())
 
@@ -83,6 +87,7 @@ class RealtimeInputPanel(QWidget):
         for w in (self._source_edit, self._source_file_btn, self._source_dir_btn,
                   self._layout_combo, self._layout_edit, self._layout_btn,
                   self._remap_combo, self._remap_edit, self._remap_btn,
+                  self._device_combo,
                   self._buffer_combo):
             w.setEnabled(not running)
 
@@ -172,6 +177,24 @@ class RealtimeInputPanel(QWidget):
         remap_row.addWidget(self._remap_btn)
         layout.addLayout(remap_row)
 
+        # Output Device row
+        layout.addWidget(self._make_row_label("Output Device"))
+        dev_row = QHBoxLayout()
+        self._device_combo = QComboBox()
+        self._device_combo.addItem("(System Default)", None)
+        try:
+            import sounddevice as _sd  # type: ignore
+            for _info in _sd.query_devices():
+                if _info["max_output_channels"] > 0:
+                    _name = _info["name"]
+                    self._device_combo.addItem(_name, _name)
+        except Exception:
+            pass  # sounddevice not installed — System Default only
+        self._device_combo.setFont(ui_font(8))
+        dev_row.addWidget(self._device_combo)
+        dev_row.addStretch()
+        layout.addLayout(dev_row)
+
         # Buffer + scan row
         opts_row = QHBoxLayout()
         opts_row.addWidget(self._make_row_label("Buffer Size"))
@@ -213,6 +236,7 @@ class RealtimeInputPanel(QWidget):
         self._layout_btn.clicked.connect(self._browse_layout)
         self._remap_combo.currentIndexChanged.connect(self._on_remap_combo_changed)
         self._remap_btn.clicked.connect(self._browse_remap)
+        self._device_combo.currentIndexChanged.connect(lambda _: self.config_changed.emit())
         self._source_edit.textChanged.connect(self._on_source_changed)
         self._layout_edit.textChanged.connect(lambda _: self.config_changed.emit())
         self._remap_edit.textChanged.connect(lambda _: self.config_changed.emit())
