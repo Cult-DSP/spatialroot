@@ -5,6 +5,7 @@
 // than OSC, matching the Stage 2 embedding architecture.
 
 #include "App.hpp"
+#include "FileDialog.hpp"
 #include "imgui_stdlib.h"    // ImGui::InputText with std::string
 
 #include <filesystem>
@@ -192,9 +193,14 @@ void App::renderEngineTab() {
     // Source path
     ImGui::TextDisabled("SOURCE");
     ImGui::SameLine(120.f);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
     if (ImGui::InputText("##source", &mSourcePath)) detectSource();
-    // Hint text
+    ImGui::SameLine();
+    if (ImGui::Button("Browse##src")) {
+        std::string p = pickFileOrDirectory("Select Audio Source");
+        if (!p.empty()) { mSourcePath = p; detectSource(); }
+    }
+    // Hint text (below source row)
     if (!mSourceHint.empty()) {
         ImVec4 hintCol = (mSourceIsAdm || mSourceIsLusid)
             ? ImVec4{0.3f, 0.9f, 0.3f, 1.f}
@@ -212,16 +218,26 @@ void App::renderEngineTab() {
             mLayoutPath = resolveProjectPath(kLayoutPaths[mLayoutPreset]);
     }
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
     ImGui::InputText("##layout", &mLayoutPath);
+    ImGui::SameLine();
+    if (ImGui::Button("Browse##layout")) {
+        std::string p = pickFile("Select Speaker Layout", {"*.json"}, "JSON files");
+        if (!p.empty()) { mLayoutPath = p; mLayoutPreset = 2; }  // switch to Custom
+    }
 
     // Remap CSV (optional)
     ImGui::TextDisabled("REMAP CSV");
     ImGui::SameLine(120.f);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
     ImGui::InputText("##remap", &mRemapPath);
-    ImGui::SameLine(120.f);
-    ImGui::TextDisabled("(optional — leave blank for identity)");
+    ImGui::SameLine();
+    if (ImGui::Button("Browse##remap")) {
+        std::string p = pickFile("Select Remap CSV", {"*.csv"}, "CSV files");
+        if (!p.empty()) mRemapPath = p;
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(optional)");
 
     // Output device
     ImGui::TextDisabled("DEVICE");
@@ -405,8 +421,13 @@ void App::renderTranscodeTab() {
     // Input file
     ImGui::TextDisabled("INPUT FILE");
     ImGui::SameLine(130.f);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
     ImGui::InputText("##tcinput", &mTcInput);
+    ImGui::SameLine();
+    if (ImGui::Button("Browse##tcinput")) {
+        std::string p = pickFile("Select ADM Input", {"*.wav", "*.xml"}, "ADM files");
+        if (!p.empty()) mTcInput = p;
+    }
 
     // In-format override
     ImGui::TextDisabled("IN-FORMAT");

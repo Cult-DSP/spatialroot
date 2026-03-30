@@ -1,6 +1,8 @@
 ## notes from first gui prototype
 
-functional:
+mostly good
+
+functional notes:
 
 - source audio needs to prompt an os file selector
 - same with remap csv
@@ -9,7 +11,7 @@ functional:
 
 I after i verify basic functionality
 
-aesthetic:
+aesthetic notes:
 
 - after these functional changes, i want to change the font and overall aesthetic to look professional, and like our old prototype, which I will provide an image of. it should like a native apple app.
 - can we give the application a logo in desktop: gui/imgui/src/miniLogo.png

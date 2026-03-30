@@ -40,6 +40,7 @@ set(APP_SOURCES
     src/main.cpp
     src/App.cpp
     src/SubprocessRunner.cpp
+    src/FileDialog.cpp
 )
 
 add_executable(spatialroot_gui
@@ -49,8 +50,11 @@ add_executable(spatialroot_gui
 
 # macOS: OpenGL is deprecated (but fully functional on all current hardware).
 # GL_SILENCE_DEPRECATION suppresses the Xcode/compiler deprecation warnings.
+# AppKit is required for NSOpenPanel (FileDialog_macOS.mm).
 if(APPLE)
     target_compile_definitions(spatialroot_gui PRIVATE GL_SILENCE_DEPRECATION)
+    target_sources(spatialroot_gui PRIVATE src/FileDialog_macOS.mm)
+    target_link_libraries(spatialroot_gui PRIVATE "-framework AppKit")
 endif()
 
 target_include_directories(spatialroot_gui PRIVATE
@@ -69,3 +73,8 @@ target_link_libraries(spatialroot_gui PRIVATE
     OpenGL::GL
     Threads::Threads
 )
+
+# Windows: GetOpenFileName lives in Comdlg32 (FileDialog.cpp)
+if(WIN32)
+    target_link_libraries(spatialroot_gui PRIVATE Comdlg32)
+endif()
