@@ -193,9 +193,11 @@ Update `PUBLIC_DOCS/API.md`:
 
 ---
 
-## Stage 3 — Qt GUI + Python Removal
+## Stage 3 — ImGui + GLFW GUI + Python Removal
 
-**Goal:** Build the C++ Qt GUI as the replacement for the Python PySide6 GUI. After human verification of full feature parity, remove the Python GUI and all Python launch/build infrastructure.
+**Status:** Scaffold complete (2026-03-30) — pending human build verification. All source files written. Binary has not yet been built or run. Deviations from original plan: (1) no native file dialog in V1 (tinyfiledialogs not yet a submodule — user types/drags paths); (2) no audio device enumeration dropdown in V1 (avoids PortAudio init at startup — user runs `--list-devices`); (3) OSC always-on (`oscPort=9009`) with DEV NOTE in `App.hpp` to evaluate a UI toggle in a future iteration. Stage 3.2 (Python removal) begins after human verifies full feature parity.
+
+**Goal:** Build the C++ Dear ImGui + GLFW GUI as the replacement for the Python PySide6 GUI. After human verification of full feature parity, remove the Python GUI and all Python launch/build infrastructure.
 
 **Completion bar:**
 

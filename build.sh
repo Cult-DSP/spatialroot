@@ -6,8 +6,11 @@
 #   ./build.sh --engine-only    # Build spatialroot_realtime only
 #   ./build.sh --offline-only   # Build spatialroot_spatial_render only
 #   ./build.sh --cult-only      # Build cult-transcoder only
+#   ./build.sh --gui            # Build all + ImGui + GLFW desktop GUI
 #
 # Run init.sh once before the first build to initialize submodules.
+# The --gui flag requires thirdparty/imgui and thirdparty/glfw submodules
+# (see init.sh — they are initialized automatically when registered).
 # Subsequent builds can call build.sh directly.
 
 set -e
@@ -19,7 +22,7 @@ BUILD_DIR="${PROJECT_ROOT}/build"
 BUILD_ENGINE=ON
 BUILD_OFFLINE=ON
 BUILD_CULT=ON
-BUILD_GUI=OFF  # OFF until Qt is confirmed and Stage 3 GUI is implemented
+BUILD_GUI=OFF  # Use --gui flag to enable (requires imgui + glfw submodules)
 
 for arg in "$@"; do
     case "$arg" in
@@ -35,13 +38,16 @@ for arg in "$@"; do
             BUILD_ENGINE=OFF
             BUILD_OFFLINE=OFF
             ;;
+        --gui)
+            BUILD_GUI=ON
+            ;;
         --help|-h)
-            echo "Usage: ./build.sh [--engine-only | --offline-only | --cult-only]"
+            echo "Usage: ./build.sh [--engine-only | --offline-only | --cult-only | --gui]"
             exit 0
             ;;
         *)
             echo "Unknown argument: $arg"
-            echo "Usage: ./build.sh [--engine-only | --offline-only | --cult-only]"
+            echo "Usage: ./build.sh [--engine-only | --offline-only | --cult-only | --gui]"
             exit 1
             ;;
     esac
@@ -61,6 +67,7 @@ echo "spatialroot build"
 echo "  Engine   (spatialroot_realtime)       : ${BUILD_ENGINE}"
 echo "  Offline  (spatialroot_spatial_render) : ${BUILD_OFFLINE}"
 echo "  CULT     (cult-transcoder)            : ${BUILD_CULT}"
+echo "  GUI      (spatialroot_gui ImGui+GLFW) : ${BUILD_GUI}"
 echo "  Cores                                 : ${NUM_CORES}"
 echo "============================================================"
 echo ""
@@ -93,6 +100,9 @@ if [ "${BUILD_OFFLINE}" = "ON" ]; then
 fi
 if [ "${BUILD_CULT}" = "ON" ]; then
     echo "  cult-transcoder            : ${BUILD_DIR}/cult_transcoder/cult-transcoder"
+fi
+if [ "${BUILD_GUI}" = "ON" ]; then
+    echo "  spatialroot_gui            : ${BUILD_DIR}/gui/imgui/spatialroot_gui"
 fi
 echo "============================================================"
 echo ""

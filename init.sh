@@ -84,8 +84,42 @@ else
 fi
 echo ""
 
-# ── Step 4: Build all C++ components ─────────────────────────────────────────
-echo "Step 4: Building all C++ components..."
+# ── Step 4: Initialize Dear ImGui submodule (optional — needed for GUI build) ─
+# Only initialized when thirdparty/imgui has been added via:
+#   git submodule add https://github.com/ocornut/imgui.git thirdparty/imgui
+IMGUI_DIR="${PROJECT_ROOT}/thirdparty/imgui"
+if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/imgui" "${PROJECT_ROOT}/.gitmodules" 2>/dev/null; then
+    if [ -f "${IMGUI_DIR}/imgui.h" ]; then
+        echo "✓ thirdparty/imgui already initialized"
+    else
+        echo "Fetching thirdparty/imgui..."
+        git submodule update --init --depth 1 thirdparty/imgui
+        echo "✓ thirdparty/imgui initialized"
+    fi
+else
+    echo "ℹ  thirdparty/imgui not registered (GUI build not enabled)"
+fi
+echo ""
+
+# ── Step 5: Initialize GLFW submodule (optional — needed for GUI build) ───────
+# Only initialized when thirdparty/glfw has been added via:
+#   git submodule add https://github.com/glfw/glfw.git thirdparty/glfw
+GLFW_DIR="${PROJECT_ROOT}/thirdparty/glfw"
+if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/glfw" "${PROJECT_ROOT}/.gitmodules" 2>/dev/null; then
+    if [ -f "${GLFW_DIR}/CMakeLists.txt" ]; then
+        echo "✓ thirdparty/glfw already initialized"
+    else
+        echo "Fetching thirdparty/glfw..."
+        git submodule update --init --depth 1 thirdparty/glfw
+        echo "✓ thirdparty/glfw initialized"
+    fi
+else
+    echo "ℹ  thirdparty/glfw not registered (GUI build not enabled)"
+fi
+echo ""
+
+# ── Step 6: Build all C++ components ─────────────────────────────────────────
+echo "Step 6: Building all C++ components..."
 echo ""
 "${PROJECT_ROOT}/build.sh" "$@"
 

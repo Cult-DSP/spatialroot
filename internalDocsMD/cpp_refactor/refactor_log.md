@@ -21,6 +21,58 @@ See `refactor_planning.md` for stage-level status updates.
 
 <!-- Agent: append entries below this line. Do not edit above it. -->
 
+### [Stage 3 — init.sh / build.sh: imgui + glfw submodule init and --gui flag]
+
+**Date:** 03-30
+**Files changed:** `init.sh`, `build.sh`
+**What was done:** Added Step 4 (Dear ImGui submodule init via `thirdparty/imgui`) and Step 5 (GLFW submodule init via `thirdparty/glfw`) to `init.sh`, each guarded by `.gitmodules` grep checks. Added `--gui` flag to `build.sh` argument parser that sets `BUILD_GUI=ON`, updated header comment to document `--gui`, and added `build/gui/imgui/spatialroot_gui` to the build summary output.
+**Notes:** Submodule guards use `grep -q "thirdparty/imgui"` in `.gitmodules` so the steps are silently skipped if the submodules have not been registered yet (graceful for users who haven't run `git submodule add`).
+
+---
+
+### [Stage 3 — gui/imgui/CMakeLists.txt: ImGui + GLFW GUI CMake target]
+
+**Date:** 03-30
+**Files changed:** `gui/imgui/CMakeLists.txt` (created)
+**What was done:** Created CMakeLists.txt for the `spatialroot_gui` executable. Adds GLFW via `add_subdirectory` guarded with `if(NOT TARGET glfw)`. Finds OpenGL via `find_package(OpenGL REQUIRED)`. Compiles ImGui core sources + GLFW/OpenGL3 backends + `imgui_stdlib.cpp`. Links `EngineSessionCore + glfw + OpenGL::GL + Threads::Threads`. Defines `GL_SILENCE_DEPRECATION` on Apple.
+**Notes:** Uses the Dear ImGui built-in `imgui_impl_opengl3_loader.h` — no GLAD or GLEW needed. `glViewport`, `glClearColor`, `glClear` are GL 1.0 functions exposed by `GLFW/glfw3.h` directly.
+
+---
+
+### [Stage 3 — SubprocessRunner: cross-platform background subprocess]
+
+**Date:** 03-30
+**Files changed:** `gui/imgui/src/SubprocessRunner.hpp` (created), `gui/imgui/src/SubprocessRunner.cpp` (created)
+**What was done:** `SubprocessRunner` runs a subprocess on a background thread and streams stdout+stderr (merged via `2>&1`) to an `OutputCallback` one line at a time. `start()` returns false if already running. `isRunning()`, `exitCode()`, `wait()` interface. `buildCommand()` double-quotes and backslash-escapes all tokens. Uses `popen`/`_popen` on POSIX/Windows. `WEXITSTATUS(ret)` on POSIX for correct exit code extraction.
+**Notes:** `OutputCallback` is called from the background thread — callers must protect any shared state (e.g. lock a mutex before appending to a shared log deque). Chose `popen` over `posix_spawn` for simplicity and cross-platform coverage; good enough for V1 use case (cult-transcoder invocation).
+
+---
+
+### [Stage 3 — App.hpp: App class declaration and state machine]
+
+**Date:** 03-30
+**Files changed:** `gui/imgui/src/App.hpp` (created)
+**What was done:** Declared `AppState` enum (`Idle, Transcoding, Running, Paused, Error`), `LogEntry` struct, and `App` class. Contains: `EngineSession mSession`, all UI state (source path, layout, remap, device, buffer size, layout preset), runtime controls (`mGain`, `mFocus`, `mSpkMixDb`, `mSubMixDb`, `mAutoComp`, `mElevationMode`), two `SubprocessRunner` instances for ADM flow and standalone transcode tab, `mEngineLog` (main-thread only), `mTcLog + mTcLogMutex` (thread-safe). Static constant arrays for buffer sizes, layout names/paths, elevation mode names, and transcode format values.
+**Notes:** DEV NOTE added regarding OSC toggle: `oscPort=9009` always-on for V1 (matches Python GUI default); evaluate adding a UI toggle in a future iteration. `mEngineLog` is main-thread only — no mutex needed. `mTcLog` is written from `SubprocessRunner` background thread — protected by `mTcLogMutex`.
+
+---
+
+### [Stage 3 — main.cpp: GLFW window + Dear ImGui setup + render loop]
+
+**Date:** 03-30
+**Files changed:** `gui/imgui/src/main.cpp` (created)
+**What was done:** Sets up GLFW with OpenGL 3.3 Core Profile (`GLFW_OPENGL_FORWARD_COMPAT` on Apple). Initialises Dear ImGui with dark theme + custom `ImGuiStyle` (rounded corners, `WindowBg = {0.08,0.08,0.08,1}`). `io.IniFilename = nullptr` (no imgui.ini persistence). Render loop uses `glfwWaitEventsTimeout(0.05)` for ~20 Hz minimum tick rate. GLFW window close callback lambda calls `app.requestShutdown()`. Parses `--root <path>` CLI arg (defaults to `"."`).
+**Notes:** `glfwWaitEventsTimeout(0.05)` satisfies the API.md "50ms polling interval" contract for `update()`, `queryStatus()`, and `consumeDiagnostics()`. Window close callback is mandatory for clean macOS CoreAudio teardown (constraint #4 from `api_mismatch_ledger.md`).
+
+---
+
+### [Stage 3 — App.cpp: full ImGui application implementation]
+
+**Date:** 03-30
+**Files changed:** `gui/imgui/src/App.cpp` (created)
+**What was done:** Full implementation (~530 lines). `tick()` → `tickEngine()` + `renderUI()`. `tickEngine()` runs `queryStatus/update/consumeDiagnostics`, logs diagnostic events, handles `isExitRequested`, checks transcoder completion and calls `doLaunchEngine()`. `renderUI()` full-screen window with ENGINE + TRANSCODE tab bar. `renderEngineTab()`: input config section (source + layout preset + remap + device + buffer size), transport buttons (START/STOP/PAUSE/RESUME with `BeginDisabled`), status section (time/CPU/RMS/xruns — only when running), runtime controls section (slider+InputFloat pairs for gain/focus/spkMix/subMix + autoComp checkbox + elevMode combo — disabled when not running), engine log child window. `renderTranscodeTab()`: cult-transcoder inputs, TRANSCODE button, status label, thread-safe log render. `doLaunchEngine()`: full 5-stage lifecycle (`configureEngine → loadScene → applyLayout → configureRuntime → start`) + `setElevationMode()` sync. `onStart()`: validates inputs, `resetRuntimeToDefaults()`, branches ADM vs LUSID. `findCultTranscoder()`: checks `build/cult_transcoder/cult-transcoder` then `cult_transcoder/build/cult-transcoder`; appends `.exe` on Windows. `transcodeOutputPath()`: outputs to `processedData/stageForRender/<stem>.lusid.json`. `appendTcLog()`: thread-safe, color-codes error/warn/ok lines.
+**Notes:** Immediate-mode setter pattern: ImGui widget return values directly trigger `mSession.setXxx()` calls — no debounce or prev-value tracking needed. Source detection uses `std::filesystem`. No native file dialog in V1 (avoids tinyfiledialogs dependency not yet a submodule) — users type/drag paths. No device enumeration dropdown in V1 (avoids PortAudio init at GUI startup) — users run `--list-devices`.
+
 ### [Stage 2 — Task 2.1: Runtime setter methods on EngineSession]
 
 **Date:** 03-30

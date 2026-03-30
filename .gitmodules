@@ -24,3 +24,9 @@
 [submodule "cult_transcoder"]
 	path = cult_transcoder
 	url = https://github.com/Cult-DSP/cult_transcoder
+[submodule "thirdparty/imgui"]
+	path = thirdparty/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "thirdparty/glfw"]
+	path = thirdparty/glfw
+	url = https://github.com/glfw/glfw.git
