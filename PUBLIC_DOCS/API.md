@@ -63,6 +63,15 @@ Required methods:
 - `EngineStatus status() const`
 - `std::string lastError() const`
 
+### Method preconditions
+
+- `configureEngine()` must be called before anything else
+- `loadScene()` requires configured engine options
+- `applyLayout()` requires a loaded scene
+- `configureRuntime()` can happen before `start()`
+- `start()` requires scene + layout + runtime config to be valid
+- `shutdown()` should be safe to call even after partial failure
+
 Runtime setters:
 
 - `setMasterGain(float)`
@@ -76,9 +85,26 @@ Not part of V1 public API:
 
 - `update()`
 - `consumeDiagnostics()`
+- `stop()`
+- `seek()`
 - relocation-event reporting
 - CLI banner/help/device-list presentation
-- restartable stop()/seek() transport semantics unless the implementation explicitly supports them
+- restartable transport semantics unless the implementation explicitly supports them
+
+## Public types
+
+The API requires these configurations and return types. The exact field definitions must contain at least:
+
+- **EngineOptions**: `sampleRate` (int), `bufferSize` (int), `enableOsc` (bool)
+- **SceneInput**: `scenePath` (string), `inputMode` (enum `InputMode`), `sourcesFolder` (string)
+- **LayoutInput**: `layoutPath` (string)
+- **RuntimeParams**: `masterGain` (float), `dbapFocus` (float)
+- **ElevationMode**: Enum for vertical scaling behaviors (e.g., `RescaleAtmosUp`, `RescaleFullSphere`, `Clamp`)
+- **EngineStatus**: `running` (bool), `paused` (bool), `playbackTime` (double), `frameCounter` (uint64_t), `cpuLoad` (float), `mainRms` (float), `subRms` (float), `underrunCount` (size_t), `sourceCount` (size_t), `speakerCount` (size_t), `outputChannelCount` (size_t)
+
+### OSC behavior
+
+If `enableOsc == true` in `EngineOptions`, OSC server startup happens inside `start()`. If `false`, no OSC objects are created.
 
 ## Status surface
 
@@ -172,6 +198,8 @@ shutdown() must preserve the current runtime teardown order:
 - stop OSC server first
 - stop/shutdown backend second
 - shut down streaming last
+
+shutdown() should tolerate partially initialized sessions and should clean up only the subsystems that were successfully created.
 
 The agent must preserve this ordering while moving orchestration out of main.cpp.
 
