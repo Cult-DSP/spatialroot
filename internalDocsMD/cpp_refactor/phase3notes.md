@@ -2,12 +2,17 @@
 
 mostly good
 
-functional notes:
+v1 functional notes:
 
 - source audio needs to prompt an os file selector
 - same with remap csv
 - layout needs to keep the drop down on the left but also provide an os file selector on the right
 - transcod tab also needs os file selector drop down menu
+
+v2:
+
+- adm detetced green text should be displayed next to "source" and just say "ADM" or "LUSID" or wahtever source in green
+  -device still needs a drop down menu and scanning logic
 
 I after i verify basic functionality
 
