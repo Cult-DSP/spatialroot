@@ -444,25 +444,31 @@ Key implementation constraints:
 
 **Stage 1 is complete and verified.** init.sh + build.sh produce all three binaries from clean with no Python dependency. README, API.md, and CMakeLists files are updated.
 
-**Stage 2 is in progress.** Task 2.3 (OSC port=0 guard) is done. Remaining Stage 2 tasks:
+**Stage 2 is complete and verified.** Build passes. `embedding_test` binary runs and prints `PASS`. All tasks done:
+- Task 2.1: `setMasterGain`, `setDbapFocus`, `setSpeakerMixDb`, `setSubMixDb`, `setAutoCompensation`, `setElevationMode` added to `EngineSession.hpp/.cpp`.
+- Task 2.2: Deferred. `add_subdirectory` path propagates AlloLib include dirs correctly. Full `install(EXPORT)` / `find_package` support requires BUILD_INTERFACE/INSTALL_INTERFACE generator expressions — future work.
+- Task 2.3: `if (mOscPort > 0)` guard in `start()` — done in prior session.
+- Task 2.4: `EngineOptions::elevationMode` changed from `int` to `ElevationMode` enum. `main.cpp` updated with `static_cast<ElevationMode>(...)`. `configureEngine()` updated with `static_cast<int>(opts.elevationMode)`.
+- Task 2.5: `API.md` updated — setter docs, Runtime Parameter Control section, `oscPort=0` behavior, `update()` polling contract.
+- Embedding test: `spatial_engine/realtimeEngine/src/embedding_test.cpp` written and passing. Target added to `realtimeEngine/CMakeLists.txt`.
 
-- **Task 2.1** — Add runtime setter methods to EngineSession.hpp/.cpp:
-  `setMasterGain(float)`, `setDbapFocus(float)`, `setSpeakerMixDb(float)`, `setSubMixDb(float)`, `setAutoCompensation(bool)`, `setElevationMode(ElevationMode)`. Implementations mirror the OSC callbacks in `start()` exactly. See "Stage 2 implementation notes" section below.
+**You are beginning Stage 3.** The goal is to build the Dear ImGui + GLFW desktop GUI, verify feature parity with the Python GUI, then remove all Python infrastructure.
 
-- **Task 2.2** — Resolve AlloLib include path for CMake install export. The `install(EXPORT)` mechanism was attempted in Stage 1 but requires switching `target_include_directories` in `realtimeEngine/CMakeLists.txt` from absolute source paths to `$<BUILD_INTERFACE:...>` / `$<INSTALL_INTERFACE:...>` generator expressions, AND resolving that `al` (AlloLib) is not in an export set. For Stage 2, the priority is the embedding test working from the source tree — the `add_subdirectory` path already propagates include dirs correctly. The full install export can be deferred.
+**CMakeLists.txt root update required (do this first in Stage 3):** The root `CMakeLists.txt` still references `gui/qt/` throughout — update all references to `gui/imgui/`. The `SPATIALROOT_BUILD_GUI` option description also says "Qt desktop GUI" — update to "ImGui + GLFW desktop GUI".
 
-- **Task 2.4** — Change `EngineOptions::elevationMode` from `int` to `ElevationMode` enum in `EngineSession.hpp`. Update `configureEngine()` in `EngineSession.cpp` (it currently calls `opts.elevationMode` directly — cast to int for storage: `static_cast<int>(opts.elevationMode)`). Update `API.md` table. This is a breaking API change — do it before any GUI is written.
-
-- **Embedding test** — Write `spatial_engine/realtimeEngine/src/embedding_test.cpp`. It must: (a) construct `EngineSession`, (b) call the full staged lifecycle with `oscPort=0`, (c) call all six new setter methods after `start()`, (d) call `queryStatus()` and `consumeDiagnostics()`, (e) call `shutdown()`. No audio device required — the test can use a non-existent device name to verify that `start()` fails gracefully, OR it can use the default device if one is available. Add it as a build target in `realtimeEngine/CMakeLists.txt`.
-
-- **Task 2.5** — Update `PUBLIC_DOCS/API.md`: remove runtime setters from "Out of Scope for V1", add "Runtime Parameter Control" section with setter docs and OSC param ranges (gain: 0.1–3.0, focus: 0.2–5.0, speakerMixDb: ±10, subMixDb: ±10), document `update()` / polling loop contract, document `oscPort=0` behavior.
-
-**GUI framework decision (affects Stage 3):** Dear ImGui + GLFW (NOT Qt). Qt cannot be a git submodule. Dear ImGui (MIT, ~5MB submodule) + GLFW (zlib, ~1MB submodule) are the replacement. Stage 3 builds `gui/imgui/` not `gui/qt/`. Update `SPATIALROOT_BUILD_GUI` in the root CMakeLists.txt to point at `gui/imgui/` when Stage 3 begins.
+**Stage 3 section in this doc still uses Qt terminology** (QTimer, QProcess, QMainWindow, gui/qt/). Treat those sections as the requirements spec and adapt to ImGui + GLFW equivalents:
+- `gui/qt/` → `gui/imgui/`
+- `QTimer` polling → render loop (GLFW event loop with `glfwWaitEventsTimeout` or a fixed sleep)
+- `QProcess` for cult-transcoder → `popen`/`posix_spawn` or a thin subprocess wrapper
+- `QMainWindow::closeEvent` → GLFW window close callback (`glfwSetWindowCloseCallback`)
+- Qt widget layout → Dear ImGui immediate-mode panels
 
 ## What you should do right now
 
-1. Read the eight source-of-truth files listed above.
-2. Confirm you have read them by summarizing: (a) the current EngineSession public method surface, (b) the RealtimeConfig atomics that will be exposed as new setters, and (c) the hard constraints from api_mismatch_ledger.md.
-3. Read `refactor_log.md` to see exactly what has been done already.
-4. Begin the remaining Stage 2 tasks in order: 2.1 (setters) → 2.4 (elevationMode type) → embedding test → 2.5 (API.md). Task 2.2 (full install export) can be done after the embedding test if time permits.
+1. Read the eight source-of-truth files listed above (same list — still authoritative).
+2. Read `refactor_log.md` to see everything done in Stages 1 and 2.
+3. Read `gui/realtimeGUI/` (the Python PySide6 GUI) to understand the required feature set before designing anything.
+4. Read `spatial_engine/realtimeEngine/src/main.cpp` — it is the canonical reference for how the polling loop, `update()`, `queryStatus()`, and `consumeDiagnostics()` are used together.
+5. Ask the user which Dear ImGui + GLFW submodule paths to use before writing any CMake. The submodules need to be added to `thirdparty/` and initialized. Do not assume paths.
+6. Begin Stage 3 tasks in order: CMakeLists.txt root fix (gui/qt → gui/imgui) → submodule setup → `gui/imgui/` CMake scaffold → ImGui application skeleton → feature implementation → Python removal.
 ```

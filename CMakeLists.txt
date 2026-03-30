@@ -16,9 +16,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(SPATIALROOT_BUILD_ENGINE   "Build spatialroot_realtime engine"    ON)
 option(SPATIALROOT_BUILD_OFFLINE  "Build spatialroot_spatial_render"     ON)
 option(SPATIALROOT_BUILD_CULT     "Build cult-transcoder CLI"            ON)
-option(SPATIALROOT_BUILD_GUI      "Build Qt desktop GUI"                 OFF)
-# SPATIALROOT_BUILD_GUI is OFF by default until Qt is confirmed installed.
-# Enable only after running init.sh which fetches Qt (see Discovery Task A).
+option(SPATIALROOT_BUILD_GUI      "Build ImGui + GLFW desktop GUI"       OFF)
+# SPATIALROOT_BUILD_GUI is OFF by default until gui/imgui/ is created in Stage 3.
 
 # ── AlloLib — shared dependency for ENGINE and OFFLINE ───────────────────────
 # Added once at the root level so that both add_subdirectory(realtimeEngine)
@@ -51,16 +50,15 @@ if(SPATIALROOT_BUILD_OFFLINE)
 endif()
 
 if(SPATIALROOT_BUILD_GUI)
-    # gui/qt/ does not yet exist — created in Stage 3.
-    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/gui/qt/CMakeLists.txt)
+    # gui/imgui/ does not yet exist — created in Stage 3.
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/gui/imgui/CMakeLists.txt)
         message(FATAL_ERROR
-            "SPATIALROOT_BUILD_GUI=ON but gui/qt/CMakeLists.txt does not exist.\n"
-            "The Qt GUI is implemented in Stage 3 of the refactor.\n"
+            "SPATIALROOT_BUILD_GUI=ON but gui/imgui/CMakeLists.txt does not exist.\n"
+            "The ImGui + GLFW GUI is implemented in Stage 3 of the refactor.\n"
             "Set SPATIALROOT_BUILD_GUI=OFF or wait until Stage 3 is complete."
         )
     endif()
-    find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
-    add_subdirectory(gui/qt)
+    add_subdirectory(gui/imgui)
 endif()
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -69,6 +67,6 @@ message(STATUS "=== spatialroot build configuration ===")
 message(STATUS "  ENGINE   (spatialroot_realtime)       : ${SPATIALROOT_BUILD_ENGINE}")
 message(STATUS "  OFFLINE  (spatialroot_spatial_render) : ${SPATIALROOT_BUILD_OFFLINE}")
 message(STATUS "  CULT     (cult-transcoder)            : ${SPATIALROOT_BUILD_CULT}")
-message(STATUS "  GUI      (Qt desktop app)             : ${SPATIALROOT_BUILD_GUI}")
+message(STATUS "  GUI      (ImGui + GLFW desktop app)   : ${SPATIALROOT_BUILD_GUI}")
 message(STATUS "=======================================")
 message(STATUS "")

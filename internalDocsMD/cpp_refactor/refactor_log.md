@@ -55,6 +55,15 @@ See `refactor_planning.md` for stage-level status updates.
 **What was done:** Removed runtime setters from "Out of Scope for V1". Added method documentation for all six setter methods. Added "Runtime Parameter Control (V1.1)" section with setter method table (ranges matching OSC param ranges), `update()` polling loop contract for GUI hosts, and `oscPort=0` behavior documentation. Updated `EngineOptions` table: `elevationMode` field now documents `ElevationMode` enum type instead of `int`.
 **Notes:** OSC param ranges from `OscParams` in `EngineSession.cpp`: gain 0.1–3.0, focus 0.2–5.0, spkMixDb/subMixDb ±10.
 
+---
+
+### [Stage 2 → Stage 3 handoff — root CMakeLists.txt and onboarding prompt update]
+
+**Date:** 03-30
+**Files changed:** `CMakeLists.txt`, `internalDocsMD/cpp_refactor/refactor_planning.md`
+**What was done:** Updated root `CMakeLists.txt`: replaced all `gui/qt/` references with `gui/imgui/`, removed `find_package(Qt6)` call, updated option description and status message to "ImGui + GLFW". Updated onboarding prompt "Current state" and "What you should do right now" sections to reflect Stage 2 complete and Stage 3 starting.
+**Notes:** The Stage 3 task sections (3.1, 3.2, 3.3) in refactor_planning.md still use Qt terminology — the next agent is instructed to treat them as the requirements spec and adapt to ImGui/GLFW equivalents. Key mappings: gui/qt/ → gui/imgui/, QTimer → GLFW render loop, QProcess → popen/posix_spawn, QMainWindow::closeEvent → glfwSetWindowCloseCallback.
+
 ### [Stage 1 — Root CMakeLists.txt]
 
 **Date:** 2026-03-29
