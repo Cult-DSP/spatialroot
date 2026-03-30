@@ -2,6 +2,12 @@
 
 `EngineSession` is the embeddable C++ runtime for the Spatial Root realtime spatial audio engine. It handles audio device setup, scene and layout loading, DSP parameter control, and clean shutdown — exposing a single typed surface usable from a CLI, a GUI host, or any embedding context.
 
+## Document in progress:
+
+- To prepare the API documentation for the next iteration, the document needs significant clarification around runtime control and error conditions. Most importantly, it must explicitly state how a host C++ application can dynamically update parameters (like gain or focus) while the engine is running, rather than implying this is an OSC-only feature. Additionally, the lifecycle state machine needs to address edge cases, such as whether initialization methods can be re-called to correct errors, how setPaused() behaves before start(), and if background threads terminate automatically when isExitRequested fires. The failure states for configureEngine(), applyLayout(), and configureRuntime() must also be explicitly defined.
+
+- Furthermore, the data types and main loop contract require stricter constraints. The document needs to define acceptable ranges and limits for fields like sampleRate, bufferSize, and dB trims, convert elevationMode into a clearly defined enum, and explicitly confirm or deny the 64-channel limit implied by the uint64_t bitmasks. Finally, the main loop documentation must provide guidance on the required polling frequency for update() and consumeDiagnostics(), clarifying the relationship between these calls to prevent buffer overruns or event queue bloat.
+
 ## Quick Start
 
 ```cpp
@@ -188,13 +194,13 @@ Returns the error message from the most recent failed method call. Returns an em
 
 Passed to `configureEngine()`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `sampleRate` | `int` | `48000` | Audio sample rate in Hz |
-| `bufferSize` | `int` | `512` | Frames per audio callback |
-| `outputDeviceName` | `std::string` | `""` | Exact device name to open. Empty selects the system default. |
-| `oscPort` | `int` | `9009` | UDP port for OSC parameter control. Set to `0` to disable OSC. |
-| `elevationMode` | `int` | `0` | Vertical rescaling mode: `0` = RescaleAtmosUp, `1` = RescaleFullSphere, `2` = Clamp |
+| Field              | Type          | Default | Description                                                                         |
+| ------------------ | ------------- | ------- | ----------------------------------------------------------------------------------- |
+| `sampleRate`       | `int`         | `48000` | Audio sample rate in Hz                                                             |
+| `bufferSize`       | `int`         | `512`   | Frames per audio callback                                                           |
+| `outputDeviceName` | `std::string` | `""`    | Exact device name to open. Empty selects the system default.                        |
+| `oscPort`          | `int`         | `9009`  | UDP port for OSC parameter control. Set to `0` to disable OSC.                      |
+| `elevationMode`    | `int`         | `0`     | Vertical rescaling mode: `0` = RescaleAtmosUp, `1` = RescaleFullSphere, `2` = Clamp |
 
 ---
 
@@ -202,11 +208,11 @@ Passed to `configureEngine()`.
 
 Passed to `loadScene()`. Exactly one of `sourcesFolder` or `admFile` must be non-empty.
 
-| Field | Type | Description |
-|---|---|---|
-| `scenePath` | `std::string` | Path to the LUSID scene JSON file |
+| Field           | Type          | Description                                    |
+| --------------- | ------------- | ---------------------------------------------- |
+| `scenePath`     | `std::string` | Path to the LUSID scene JSON file              |
 | `sourcesFolder` | `std::string` | Directory containing per-source mono WAV files |
-| `admFile` | `std::string` | Path to a multichannel ADM WAV file |
+| `admFile`       | `std::string` | Path to a multichannel ADM WAV file            |
 
 ---
 
@@ -214,9 +220,9 @@ Passed to `loadScene()`. Exactly one of `sourcesFolder` or `admFile` must be non
 
 Passed to `applyLayout()`.
 
-| Field | Type | Description |
-|---|---|---|
-| `layoutPath` | `std::string` | Path to the speaker layout JSON file |
+| Field          | Type          | Description                                                                 |
+| -------------- | ------------- | --------------------------------------------------------------------------- |
+| `layoutPath`   | `std::string` | Path to the speaker layout JSON file                                        |
 | `remapCsvPath` | `std::string` | Optional CSV remapping internal layout channels to physical device channels |
 
 ---
@@ -225,13 +231,13 @@ Passed to `applyLayout()`.
 
 Passed to `configureRuntime()`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `masterGain` | `float` | `0.5` | Output gain, linear scale 0.0–1.0 |
-| `dbapFocus` | `float` | `1.5` | DBAP rolloff exponent, typical range 0.2–5.0 |
-| `speakerMixDb` | `float` | `0.0` | Loudspeaker mix trim in dB (±10) |
-| `subMixDb` | `float` | `0.0` | Subwoofer mix trim in dB (±10) |
-| `autoCompensation` | `bool` | `false` | Enables automatic gain compensation as DBAP focus changes |
+| Field              | Type    | Default | Description                                               |
+| ------------------ | ------- | ------- | --------------------------------------------------------- |
+| `masterGain`       | `float` | `0.5`   | Output gain, linear scale 0.0–1.0                         |
+| `dbapFocus`        | `float` | `1.5`   | DBAP rolloff exponent, typical range 0.2–5.0              |
+| `speakerMixDb`     | `float` | `0.0`   | Loudspeaker mix trim in dB (±10)                          |
+| `subMixDb`         | `float` | `0.0`   | Subwoofer mix trim in dB (±10)                            |
+| `autoCompensation` | `bool`  | `false` | Enables automatic gain compensation as DBAP focus changes |
 
 ---
 
@@ -239,21 +245,21 @@ Passed to `configureRuntime()`.
 
 Returned by `queryStatus()`.
 
-| Field | Type | Description |
-|---|---|---|
-| `timeSec` | `double` | Current playback position in seconds |
-| `cpuLoad` | `float` | Audio callback CPU load, 0.0–1.0 |
-| `renderActiveMask` | `uint64_t` | Bitmask of active render bus speakers |
-| `deviceActiveMask` | `uint64_t` | Bitmask of active device output channels |
-| `renderDomMask` | `uint64_t` | Dominant render bus speaker mask |
-| `deviceDomMask` | `uint64_t` | Dominant device channel mask |
-| `mainRms` | `float` | RMS level of the main speaker mix |
-| `subRms` | `float` | RMS level of the subwoofer mix |
-| `xruns` | `size_t` | Cumulative audio callback overrun count |
-| `nanGuardCount` | `uint64_t` | Cumulative NaN/denormal interceptions |
-| `speakerProximityCount` | `uint64_t` | Cumulative proximity gain correction events |
-| `paused` | `bool` | `true` if output is currently paused |
-| `isExitRequested` | `bool` | `true` if the engine has requested host shutdown (e.g. device loss) |
+| Field                   | Type       | Description                                                         |
+| ----------------------- | ---------- | ------------------------------------------------------------------- |
+| `timeSec`               | `double`   | Current playback position in seconds                                |
+| `cpuLoad`               | `float`    | Audio callback CPU load, 0.0–1.0                                    |
+| `renderActiveMask`      | `uint64_t` | Bitmask of active render bus speakers                               |
+| `deviceActiveMask`      | `uint64_t` | Bitmask of active device output channels                            |
+| `renderDomMask`         | `uint64_t` | Dominant render bus speaker mask                                    |
+| `deviceDomMask`         | `uint64_t` | Dominant device channel mask                                        |
+| `mainRms`               | `float`    | RMS level of the main speaker mix                                   |
+| `subRms`                | `float`    | RMS level of the subwoofer mix                                      |
+| `xruns`                 | `size_t`   | Cumulative audio callback overrun count                             |
+| `nanGuardCount`         | `uint64_t` | Cumulative NaN/denormal interceptions                               |
+| `speakerProximityCount` | `uint64_t` | Cumulative proximity gain correction events                         |
+| `paused`                | `bool`     | `true` if output is currently paused                                |
+| `isExitRequested`       | `bool`     | `true` if the engine has requested host shutdown (e.g. device loss) |
 
 ---
 
@@ -261,20 +267,20 @@ Returned by `queryStatus()`.
 
 Returned by `consumeDiagnostics()`. Each event field is `true` at most once per call — the struct is cleared on read. Relocation events fire when the dominant speaker assignment changes. Cluster events fire when the dominant speaker group changes.
 
-| Fields | Type | Description |
-|---|---|---|
-| `renderRelocEvent` | `bool` | A render bus speaker relocation occurred |
-| `renderRelocPrev` / `renderRelocNext` | `uint64_t` | Speaker masks before and after relocation |
-| `deviceRelocEvent` | `bool` | A device channel relocation occurred |
-| `deviceRelocPrev` / `deviceRelocNext` | `uint64_t` | Channel masks before and after relocation |
-| `renderDomRelocEvent` | `bool` | Dominant render bus group changed |
-| `renderDomRelocPrev` / `renderDomRelocNext` | `uint64_t` | Dominant render masks before and after |
-| `deviceDomRelocEvent` | `bool` | Dominant device channel group changed |
-| `deviceDomRelocPrev` / `deviceDomRelocNext` | `uint64_t` | Dominant device masks before and after |
-| `renderClusterEvent` | `bool` | Top render speaker cluster changed |
-| `renderClusterPrev` / `renderClusterNext` | `uint64_t` | Cluster masks before and after |
-| `deviceClusterEvent` | `bool` | Top device channel cluster changed |
-| `deviceClusterPrev` / `deviceClusterNext` | `uint64_t` | Cluster masks before and after |
+| Fields                                      | Type       | Description                               |
+| ------------------------------------------- | ---------- | ----------------------------------------- |
+| `renderRelocEvent`                          | `bool`     | A render bus speaker relocation occurred  |
+| `renderRelocPrev` / `renderRelocNext`       | `uint64_t` | Speaker masks before and after relocation |
+| `deviceRelocEvent`                          | `bool`     | A device channel relocation occurred      |
+| `deviceRelocPrev` / `deviceRelocNext`       | `uint64_t` | Channel masks before and after relocation |
+| `renderDomRelocEvent`                       | `bool`     | Dominant render bus group changed         |
+| `renderDomRelocPrev` / `renderDomRelocNext` | `uint64_t` | Dominant render masks before and after    |
+| `deviceDomRelocEvent`                       | `bool`     | Dominant device channel group changed     |
+| `deviceDomRelocPrev` / `deviceDomRelocNext` | `uint64_t` | Dominant device masks before and after    |
+| `renderClusterEvent`                        | `bool`     | Top render speaker cluster changed        |
+| `renderClusterPrev` / `renderClusterNext`   | `uint64_t` | Cluster masks before and after            |
+| `deviceClusterEvent`                        | `bool`     | Top device channel cluster changed        |
+| `deviceClusterPrev` / `deviceClusterNext`   | `uint64_t` | Cluster masks before and after            |
 
 ---
 
