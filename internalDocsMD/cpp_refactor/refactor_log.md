@@ -9,7 +9,7 @@ See `refactor_planning.md` for stage-level status updates.
 
 ```
 ### [Stage N — Task description]
-**Date:** YYYY-MM-DD
+**Date:** MM-DD
 **Files changed:** list each file
 **What was done:** one or two sentences
 **Notes:** anything surprising, a decision made, or a constraint discovered
@@ -22,6 +22,7 @@ See `refactor_planning.md` for stage-level status updates.
 <!-- Agent: append entries below this line. Do not edit above it. -->
 
 ### [Stage 1 — Root CMakeLists.txt]
+
 **Date:** 2026-03-29
 **Files changed:** `CMakeLists.txt` (created)
 **What was done:** Created root CMakeLists.txt with option flags (SPATIALROOT_BUILD_ENGINE, SPATIALROOT_BUILD_OFFLINE, SPATIALROOT_BUILD_CULT, SPATIALROOT_BUILD_GUI) and add_subdirectory wiring for all components. AlloLib is added once at the root level when ENGINE or OFFLINE is enabled.
@@ -30,6 +31,7 @@ See `refactor_planning.md` for stage-level status updates.
 ---
 
 ### [Stage 1 — AlloLib double-include guard]
+
 **Date:** 2026-03-29
 **Files changed:** `spatial_engine/realtimeEngine/CMakeLists.txt`, `spatial_engine/spatialRender/CMakeLists.txt`
 **What was done:** Wrapped add_subdirectory(allolib) in both component CMakeLists files with `if(NOT TARGET al)` guard. Without this, including both components from the root would define the `al` target twice and fail configuration.
@@ -38,6 +40,7 @@ See `refactor_planning.md` for stage-level status updates.
 ---
 
 ### [Stage 1 — EngineSessionCore install() targets]
+
 **Date:** 2026-03-29
 **Files changed:** `spatial_engine/realtimeEngine/CMakeLists.txt`
 **What was done:** Added install() for EngineSessionCore static library archive and public headers (EngineSession.hpp, RealtimeTypes.hpp). Also renamed the first "── Executable ──" comment to "── Core engine library ──" to fix duplicate section heading.
@@ -46,6 +49,7 @@ See `refactor_planning.md` for stage-level status updates.
 ---
 
 ### [Stage 1 — build.sh + init.sh (macOS/Linux)]
+
 **Date:** 2026-03-29
 **Files changed:** `build.sh` (created), `init.sh` (rewritten)
 **What was done:** Created build.sh that runs cmake configure + cmake --build on the root CMakeLists.txt with --engine-only / --offline-only / --cult-only argument support. Rewrote init.sh to: (1) check cmake/git, (2) init allolib submodule, (3) init cult_transcoder and its nested libbw64 submodule, (4) call build.sh. No Python dependency.
@@ -54,6 +58,7 @@ See `refactor_planning.md` for stage-level status updates.
 ---
 
 ### [Stage 1 — build.ps1 + init.ps1 (Windows)]
+
 **Date:** 2026-03-29
 **Files changed:** `build.ps1` (created), `init.ps1` (rewritten)
 **What was done:** Created build.ps1 (PowerShell equivalent of build.sh) and rewrote init.ps1 (submodule init + call build.ps1). No Python dependency.
@@ -62,6 +67,7 @@ See `refactor_planning.md` for stage-level status updates.
 ---
 
 ### [Stage 1 — README.md rewrite]
+
 **Date:** 2026-03-29
 **Files changed:** `README.md`
 **What was done:** Complete rewrite. spatialroot_realtime documented as the primary CLI with actual flags. init.sh + build.sh documented as the build path. Two-step ADM workflow (cult-transcoder transcode → spatialroot_realtime) documented. OSC port fixed: README previously said 12345, code uses 9009. Qt GUI noted as in development (C++). Python GUI references retained with a note it will be removed in Stage 3.
@@ -69,7 +75,17 @@ See `refactor_planning.md` for stage-level status updates.
 
 ---
 
+### [Stage 2 — Discovery Task B: OSC port=0 guard]
+
+**Date:** 2026-03-30
+**Files changed:** `spatial_engine/realtimeEngine/src/EngineSession.cpp`
+**What was done:** Investigated `al::ParameterServer` port=0 behavior by reading AlloLib source. `ParameterServer::listen()` checks `if (oscPort < 0)` — port 0 falls through and calls `osc::Recv::open(0, ...)`. UDP bind to port 0 succeeds on macOS with OS-assigned ephemeral port. Result: port=0 does NOT fail `start()`, but does NOT disable OSC either — it starts a server on a random port. Added `if (mOscPort > 0)` guard wrapping the entire ParameterServer + OscParams block in `start()`.
+**Notes:** IDE diagnostics (clangd) show false errors because clangd lacks CMake include paths; actual compile is unaffected. `shutdown()` is already guarded with `if (mParamServer)` — no change needed there. Stage 2 Tasks 2.1, 2.2, 2.4, 2.5, and the embedding test remain for the next agent.
+
+---
+
 ### [Stage 1 — API.md constraints and embedding instructions]
+
 **Date:** 2026-03-29
 **Files changed:** `PUBLIC_DOCS/API.md`
 **What was done:** Added Constraints section documenting: staged setup requirement, shutdown() is terminal, OSC ownership, shutdown order, 64-channel bitmask limit, update() main-thread requirement. Added Embedding Instructions section with CMake and include path guidance. Updated "Out of Scope for V1" to note runtime setters are planned for V1.1.

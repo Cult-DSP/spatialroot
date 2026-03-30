@@ -169,60 +169,67 @@ bool EngineSession::configureRuntime(const RuntimeParams& params)
 
 bool EngineSession::start()
 {
-    mParamServer = std::make_unique<al::ParameterServer>("127.0.0.1", mOscPort);
-    mOscParams = std::make_unique<OscParams>();
+    // OSC server: only started if mOscPort > 0.
+    // oscPort = 0 means "disable OSC" — no server is created.
+    // Discovery Task B: al::ParameterServer on port 0 binds an OS-assigned
+    // ephemeral port rather than acting as a no-op, so the guard is required
+    // to honor the documented oscPort = 0 contract.
+    if (mOscPort > 0) {
+        mParamServer = std::make_unique<al::ParameterServer>("127.0.0.1", mOscPort);
+        mOscParams = std::make_unique<OscParams>();
 
-    mOscParams->gain.set(mConfig.masterGain.load());
-    mOscParams->focus.set(mConfig.dbapFocus.load());
-    mOscParams->spkMixDb.set((float)(20.0f * std::log10(mConfig.loudspeakerMix.load())));
-    mOscParams->subMixDb.set((float)(20.0f * std::log10(mConfig.subMix.load())));
-    mOscParams->autoComp.set(mConfig.focusAutoCompensation.load() ? 1.0f : 0.0f);
-    mOscParams->paused.set(mConfig.paused.load() ? 1.0f : 0.0f);
-    mOscParams->elevMode.set(static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)));
+        mOscParams->gain.set(mConfig.masterGain.load());
+        mOscParams->focus.set(mConfig.dbapFocus.load());
+        mOscParams->spkMixDb.set((float)(20.0f * std::log10(mConfig.loudspeakerMix.load())));
+        mOscParams->subMixDb.set((float)(20.0f * std::log10(mConfig.subMix.load())));
+        mOscParams->autoComp.set(mConfig.focusAutoCompensation.load() ? 1.0f : 0.0f);
+        mOscParams->paused.set(mConfig.paused.load() ? 1.0f : 0.0f);
+        mOscParams->elevMode.set(static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)));
 
-    mOscParams->gain.registerChangeCallback([this](float v) {
-        this->mConfig.masterGain.store(v, std::memory_order_relaxed);
-    });
+        mOscParams->gain.registerChangeCallback([this](float v) {
+            this->mConfig.masterGain.store(v, std::memory_order_relaxed);
+        });
 
-    mOscParams->focus.registerChangeCallback([this](float v) {
-        this->mConfig.dbapFocus.store(v, std::memory_order_relaxed);
-        if (this->mConfig.focusAutoCompensation.load(std::memory_order_relaxed)) {
-            this->mPendingAutoComp.store(true, std::memory_order_relaxed);
+        mOscParams->focus.registerChangeCallback([this](float v) {
+            this->mConfig.dbapFocus.store(v, std::memory_order_relaxed);
+            if (this->mConfig.focusAutoCompensation.load(std::memory_order_relaxed)) {
+                this->mPendingAutoComp.store(true, std::memory_order_relaxed);
+            }
+        });
+
+        mOscParams->spkMixDb.registerChangeCallback([this](float dB) {
+            this->mConfig.loudspeakerMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+        });
+
+        mOscParams->subMixDb.registerChangeCallback([this](float dB) {
+            this->mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+        });
+
+        mOscParams->autoComp.registerChangeCallback([this](float v) {
+            bool enable = (v >= 0.5f);
+            this->mConfig.focusAutoCompensation.store(enable, std::memory_order_relaxed);
+            if (enable) this->mPendingAutoComp.store(true, std::memory_order_relaxed);
+        });
+
+        mOscParams->paused.registerChangeCallback([this](float v) {
+            bool p = (v >= 0.5f);
+            this->mConfig.paused.store(p, std::memory_order_relaxed);
+        });
+
+        mOscParams->elevMode.registerChangeCallback([this](float v) {
+            int mode = static_cast<int>(std::round(v));
+            mode = std::max(0, std::min(2, mode));
+            this->mConfig.elevationMode.store(mode, std::memory_order_relaxed);
+        });
+
+        *mParamServer << mOscParams->gain << mOscParams->focus << mOscParams->spkMixDb
+                      << mOscParams->subMixDb << mOscParams->autoComp << mOscParams->paused
+                      << mOscParams->elevMode;
+
+        if (!mParamServer->serverRunning()) {
+            setLastError("ParameterServer failed to start.");
+            return false;
         }
-    });
-
-    mOscParams->spkMixDb.registerChangeCallback([this](float dB) {
-        this->mConfig.loudspeakerMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
-    });
-
-    mOscParams->subMixDb.registerChangeCallback([this](float dB) {
-        this->mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
-    });
-
-    mOscParams->autoComp.registerChangeCallback([this](float v) {
-        bool enable = (v >= 0.5f);
-        this->mConfig.focusAutoCompensation.store(enable, std::memory_order_relaxed);
-        if (enable) this->mPendingAutoComp.store(true, std::memory_order_relaxed);
-    });
-
-    mOscParams->paused.registerChangeCallback([this](float v) {
-        bool p = (v >= 0.5f);
-        this->mConfig.paused.store(p, std::memory_order_relaxed);
-    });
-
-    mOscParams->elevMode.registerChangeCallback([this](float v) {
-        int mode = static_cast<int>(std::round(v));
-        mode = std::max(0, std::min(2, mode));
-        this->mConfig.elevationMode.store(mode, std::memory_order_relaxed);
-    });
-
-    *mParamServer << mOscParams->gain << mOscParams->focus << mOscParams->spkMixDb 
-                  << mOscParams->subMixDb << mOscParams->autoComp << mOscParams->paused 
-                  << mOscParams->elevMode;
-
-    if (!mParamServer->serverRunning()) {
-        setLastError("ParameterServer failed to start.");
-        return false;
     }
 
     mBackend = std::make_unique<RealtimeBackend>(mConfig, mState);

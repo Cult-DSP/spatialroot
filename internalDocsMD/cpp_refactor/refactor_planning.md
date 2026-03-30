@@ -113,7 +113,11 @@ Add a documented constraints section to `PUBLIC_DOCS/API.md` covering:
 
 ---
 
-## Stage 2 — EngineSessionCore Hardening for Qt Embedding
+## Stage 2 — EngineSessionCore Hardening for Embedding
+
+**Status:** In progress — 2026-03-30. Task 2.3 (OSC port=0 guard) complete. Tasks 2.1, 2.2, 2.4, 2.5, and embedding test remain.
+
+**GUI framework decision (replaces Qt):** Dear ImGui + GLFW. Qt cannot be used as a git submodule (multi-GB source, complex bootstrap). All dependencies must be open-source submodules. Dear ImGui (MIT, ~5MB) + GLFW (zlib, ~1MB) are the replacement. This changes Stage 3 from "Qt GUI" to "ImGui + GLFW GUI". The architectural requirements (link EngineSessionCore, staged lifecycle, runtime setters, update() via timer/loop, no OSC dependency) are unchanged.
 
 **Goal:** Expose a direct runtime setter surface on `EngineSession` so a Qt host can control live parameters without OSC. Fix the `oscPort = 0` guard. Fix the `elevationMode` type. Stabilize the public API surface for the Qt host.
 
@@ -330,13 +334,15 @@ Do not start work until you have read all eight files.
 ## Architecture summary
 
 Spatial Root is a C++ spatial audio engine. The refactor goal is to:
-- Replace the Python build system with init.sh/init.ps1 + build.sh/build.ps1 + a root CMakeLists.txt (macOS/Linux and Windows both supported)
-- Harden EngineSessionCore for direct embedding by a Qt host
-- Add runtime setter methods to EngineSession so a Qt GUI can control live parameters without OSC
-- Build a C++ Qt desktop GUI that embeds EngineSessionCore directly (same process, direct API calls)
-- Remove all Python GUI, launch wrappers, and build infrastructure after Qt GUI reaches parity
+- Replace the Python build system with init.sh/init.ps1 + build.sh/build.ps1 + a root CMakeLists.txt (macOS/Linux and Windows both supported) — **DONE (Stage 1)**
+- Harden EngineSessionCore for direct embedding (setter methods, oscPort=0 guard, type fix, install targets)
+- Add runtime setter methods to EngineSession so a GUI host can control live parameters without OSC
+- Build a C++ **Dear ImGui + GLFW** desktop GUI that embeds EngineSessionCore directly (same process, direct API calls)
+- Remove all Python GUI, launch wrappers, and build infrastructure after ImGui GUI reaches parity
 
-The chosen architecture: the Qt GUI links EngineSessionCore, calls the standard staged lifecycle, and uses direct C++ setter methods for runtime parameter control. OSC is demoted to an optional secondary surface. The engine's RealtimeConfig already uses std::atomic for all runtime-controllable parameters — adding setters is a thin API surface addition, not a redesign.
+**GUI framework decision:** Dear ImGui + GLFW (NOT Qt). Qt cannot be used as a git submodule. All dependencies must be open-source submodules. Dear ImGui (MIT, ~5MB) + GLFW (zlib, ~1MB) replace Qt. The Stage 3 GUI is an ImGui application, not a Qt application. All architectural requirements remain the same.
+
+The chosen architecture: the ImGui GUI links EngineSessionCore, calls the standard staged lifecycle, and uses direct C++ setter methods for runtime parameter control. OSC is demoted to an optional secondary surface.
 
 CULT (cult_transcoder submodule) is NOT to be modified in this refactor.
 
@@ -352,9 +358,9 @@ Full task details for each stage are in refactor_planning.md.
 
 ## Stage completion bars
 
-- Stage 1 done when: init.sh + build.sh runs from clean, produces all binaries, no Python toolchain required. README.md reflects actual entry points.
+- Stage 1 done when: init.sh + build.sh runs from clean, produces all binaries, no Python toolchain required. README.md reflects actual entry points. **— COMPLETE**
 - Stage 2 done when: a minimal C++ embedding test compiles and links EngineSessionCore, calls the full lifecycle, sets runtime parameters via the new setter methods, reads queryStatus(), with oscPort = 0 (no OSC dependency).
-- Stage 3 done when: Qt GUI launches, plays a scene, all parameters are live-controllable. Human verifies full feature parity with the Python GUI. Python GUI and all Python infrastructure removed.
+- Stage 3 done when: Dear ImGui + GLFW GUI launches, plays a scene, all parameters are live-controllable. Human verifies full feature parity with the Python GUI. Python GUI and all Python infrastructure removed.
 
 ## Git workflow
 
@@ -397,13 +403,11 @@ Maintain two running documents as you work. Do not skip this — it is how the n
 
 Both files should be updated before asking for human stage-gate review. The human will read them as part of the review.
 
-## Discovery tasks (Stage 1 and 2)
+## Discovery tasks (resolved)
 
-There are two open discovery tasks that require investigation before implementation:
+Discovery Task A (GUI framework): Qt cannot be used as a git submodule (multi-GB source, complex bootstrap). All project dependencies must be open-source git submodules. **Decision: Dear ImGui (MIT, ~5MB) + GLFW (zlib, ~1MB).** Stage 3 GUI is an ImGui application, not a Qt application.
 
-Discovery Task A (Stage 1): How should Qt be fetched? Investigate whether FetchContent or find_package(Qt6) with installation instructions is the right approach given the project's existing dependency model (submodules + FetchContent via AlloLib). Report findings before implementing.
-
-Discovery Task B (Stage 2): Does al::ParameterServer on port 0 behave as a no-op, or does it bind an OS-assigned port? The API.md Quick Start documents oscPort = 0 as the way to disable OSC, but EngineSession::start() unconditionally creates the ParameterServer. Test and report before adding any guard.
+Discovery Task B (oscPort=0 guard): **Resolved and implemented.** `al::ParameterServer` on port 0 binds an OS-assigned ephemeral port (UDP bind with port=0 succeeds on macOS). It does NOT act as a no-op. Guard added in `EngineSession::start()`: `if (mOscPort > 0)` wraps the entire ParameterServer + OscParams block. `shutdown()` was already guarded with `if (mParamServer)` — no change needed there.
 
 ## Key naming conventions
 
@@ -436,10 +440,29 @@ Key implementation constraints:
 
 - All stores use std::memory_order_relaxed. Do not use stronger ordering — the existing threading model is designed around relaxed loads/stores for these parameters (a one-buffer lag is inaudible and is not a data race).
 
+## Current state when this prompt was last updated (2026-03-30)
+
+**Stage 1 is complete and verified.** init.sh + build.sh produce all three binaries from clean with no Python dependency. README, API.md, and CMakeLists files are updated.
+
+**Stage 2 is in progress.** Task 2.3 (OSC port=0 guard) is done. Remaining Stage 2 tasks:
+
+- **Task 2.1** — Add runtime setter methods to EngineSession.hpp/.cpp:
+  `setMasterGain(float)`, `setDbapFocus(float)`, `setSpeakerMixDb(float)`, `setSubMixDb(float)`, `setAutoCompensation(bool)`, `setElevationMode(ElevationMode)`. Implementations mirror the OSC callbacks in `start()` exactly. See "Stage 2 implementation notes" section below.
+
+- **Task 2.2** — Resolve AlloLib include path for CMake install export. The `install(EXPORT)` mechanism was attempted in Stage 1 but requires switching `target_include_directories` in `realtimeEngine/CMakeLists.txt` from absolute source paths to `$<BUILD_INTERFACE:...>` / `$<INSTALL_INTERFACE:...>` generator expressions, AND resolving that `al` (AlloLib) is not in an export set. For Stage 2, the priority is the embedding test working from the source tree — the `add_subdirectory` path already propagates include dirs correctly. The full install export can be deferred.
+
+- **Task 2.4** — Change `EngineOptions::elevationMode` from `int` to `ElevationMode` enum in `EngineSession.hpp`. Update `configureEngine()` in `EngineSession.cpp` (it currently calls `opts.elevationMode` directly — cast to int for storage: `static_cast<int>(opts.elevationMode)`). Update `API.md` table. This is a breaking API change — do it before any GUI is written.
+
+- **Embedding test** — Write `spatial_engine/realtimeEngine/src/embedding_test.cpp`. It must: (a) construct `EngineSession`, (b) call the full staged lifecycle with `oscPort=0`, (c) call all six new setter methods after `start()`, (d) call `queryStatus()` and `consumeDiagnostics()`, (e) call `shutdown()`. No audio device required — the test can use a non-existent device name to verify that `start()` fails gracefully, OR it can use the default device if one is available. Add it as a build target in `realtimeEngine/CMakeLists.txt`.
+
+- **Task 2.5** — Update `PUBLIC_DOCS/API.md`: remove runtime setters from "Out of Scope for V1", add "Runtime Parameter Control" section with setter docs and OSC param ranges (gain: 0.1–3.0, focus: 0.2–5.0, speakerMixDb: ±10, subMixDb: ±10), document `update()` / polling loop contract, document `oscPort=0` behavior.
+
+**GUI framework decision (affects Stage 3):** Dear ImGui + GLFW (NOT Qt). Qt cannot be a git submodule. Dear ImGui (MIT, ~5MB submodule) + GLFW (zlib, ~1MB submodule) are the replacement. Stage 3 builds `gui/imgui/` not `gui/qt/`. Update `SPATIALROOT_BUILD_GUI` in the root CMakeLists.txt to point at `gui/imgui/` when Stage 3 begins.
+
 ## What you should do right now
 
 1. Read the eight source-of-truth files listed above.
 2. Confirm you have read them by summarizing: (a) the current EngineSession public method surface, (b) the RealtimeConfig atomics that will be exposed as new setters, and (c) the hard constraints from api_mismatch_ledger.md.
-3. Ask any clarifying questions before starting Stage 1.
-4. Begin Stage 1.
+3. Read `refactor_log.md` to see exactly what has been done already.
+4. Begin the remaining Stage 2 tasks in order: 2.1 (setters) → 2.4 (elevationMode type) → embedding test → 2.5 (API.md). Task 2.2 (full install export) can be done after the embedding test if time permits.
 ```
