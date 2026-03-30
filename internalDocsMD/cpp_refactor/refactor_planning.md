@@ -68,7 +68,7 @@ Responsibilities:
 - Accept optional arguments to restrict build: `--engine-only`, `--gui-only`, `--offline-only`, or default to all
 - These flags map to the CMake option flags above via `-D` arguments
 
-**Before writing the Windows scripts:** read `src/config/configCPP_windows.py` and audit what it does beyond invoking CMake. If it performs any Windows-specific setup (MSVC detection, environment variables, PATH manipulation), the PowerShell replacement must cover those steps.
+**Before writing any scripts:** read both `src/config/configCPP_posix.py` and `src/config/configCPP_windows.py` and audit what each does beyond invoking CMake. If either performs platform-specific setup (tool detection, environment variables, PATH manipulation, submodule init), the replacement scripts must cover those steps.
 
 Both script pairs replace `src/config/configCPP*.py`, `configCPP_posix.py`, `configCPP_windows.py`, and `configCPP.py`. Those Python files are removed in Stage 3.
 
@@ -223,6 +223,13 @@ Create `gui/qt/` as the new Qt application directory. Add to root `CMakeLists.tx
 - Status display: playback time, CPU load, xrun count, RMS levels
 - Diagnostic event display
 
+**ADM workflow in the Qt GUI:**
+The engine accepts an `admFile` path in `SceneInput` for direct ADM streaming, but the scene JSON (`scenePath`) must be produced by `cult-transcoder` first — the engine does not call CULT internally. When the user selects an ADM file, the Qt GUI must:
+1. Invoke `cult-transcoder transcode <adm.wav>` as a `QProcess` subprocess and wait for completion
+2. Pass the resulting LUSID JSON path as `scenePath` and the original ADM file path as `admFile` into `loadScene()`
+
+The `cult-transcoder` binary location should follow from the build output path established in Stage 1. Flag to user if the binary path needs to be configurable at runtime.
+
 **Internal Qt design** (e.g. widget vs QML, layout, visual design) is left to the implementing agent. Human visual similarity verification is the acceptance bar.
 
 **OSC in the Qt app:** The Qt app may pass `oscPort = 9009` (default) to keep OSC running for remote/debug use, or `oscPort = 0` to disable it. This is a runtime decision for the user — the GUI should expose an option or default to enabled. Flag to user for decision.
@@ -349,7 +356,7 @@ Full task details for each stage are in refactor_planning.md.
 
 ## Git workflow
 
-All work is committed to the `cpp` branch. Do not create new branches. Commit after each stage completes and before requesting human review. Commit after any significant discrete task within a stage if it represents a stable checkpoint. Never force-push.
+All work targets the `cpp` branch. Do not create new branches. Do not make any git commits — the human will review all changes and commit manually after verifying each stage. Do not run git add, git commit, or git push at any point.
 
 ## How to work
 
