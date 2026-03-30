@@ -16,13 +16,15 @@ set(AL_VERBOSE_OUTPUT      OFF CACHE BOOL "Disable verbose output")
 
 # AlloLib lives at <project_root>/thirdparty/allolib
 # From realtimeEngine/, that is ../../thirdparty/allolib
-add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
-    ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
-)
+# Guard: when built via the root CMakeLists.txt, allolib is already added there.
+if(NOT TARGET al)
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
+        ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
+    )
+endif()
 
-# ── Executable ────────────────────────────────────────────────────────────
-# Core engine library
+# ── Core engine library ───────────────────────────────────────────────────
 add_library(EngineSessionCore
     src/EngineSession.cpp
     ../src/JSONLoader.cpp
@@ -58,4 +60,26 @@ target_link_libraries(internal_validation_runner
     EngineSessionCore
 )
 
-# ── Executable ────────────────────────────────────────────────────────────
+# ── Install targets for EngineSessionCore (Task 1.3) ─────────────────────
+# Allows an embedding host to locate EngineSessionCore via cmake --install.
+# AlloLib headers are already transitively exposed via the PUBLIC
+# target_include_directories above — a host that links EngineSessionCore
+# automatically inherits those include paths.
+include(GNUInstallDirs)
+
+install(TARGETS EngineSessionCore
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    EXPORT  EngineSessionCoreTargets
+)
+
+install(FILES
+    src/EngineSession.hpp
+    src/RealtimeTypes.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spatialroot
+)
+
+install(EXPORT EngineSessionCoreTargets
+    FILE        EngineSessionCoreTargets.cmake
+    NAMESPACE   spatialroot::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/spatialroot
+)

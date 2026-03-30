@@ -20,6 +20,8 @@ Three stages. Each stage gates on human review before the next begins. The agent
 
 ## Stage 1 — Build Infrastructure and Docs
 
+**Status:** Complete — 2026-03-29. All tasks done. CMake minimum raised to 3.20 (cult_transcoder requires it). AlloLib double-include guards added to component CMakeLists files. Discovery Task B (OSC port=0 bug) identified: `start()` unconditionally creates ParameterServer; guard needed in Stage 2. Discovery Task A (Qt fetch strategy) not needed for Stage 1; recommended approach is `find_package(Qt6)` with system install, not FetchContent (Qt is ~1GB binary).
+
 **Goal:** Replace the Python build system with `init.sh` + `build.sh` + a root `CMakeLists.txt`. Update docs to reflect the C++ binary as the primary interface. No audio engine code changes.
 
 **Completion bar:** `init.sh` + `build.sh` runs from clean, produces all binaries, with no Python toolchain required. `README.md` reflects actual entry points.

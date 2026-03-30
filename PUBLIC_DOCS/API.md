@@ -289,6 +289,58 @@ Returned by `consumeDiagnostics()`. Each event field is `true` at most once per 
 The following are not part of this API:
 
 - `stop()` / `seek()` — restartable transport
-- Per-parameter runtime setters — use `configureRuntime()` before `start()`
-- Audio device enumeration — handled at the CLI layer
+- Per-parameter runtime setters — use `configureRuntime()` before `start()` (planned for V1.1)
+- Audio device enumeration — handled at the CLI layer (`--list-devices` flag)
 - Direct access to internal DSP or streaming objects
+
+---
+
+## Constraints
+
+These constraints are structural realities of the engine architecture. Do not attempt to work around them without a fundamental engine rewrite.
+
+### 1. Staged setup is non-negotiable
+
+The five-stage lifecycle (`configureEngine` → `loadScene` → `applyLayout` → `configureRuntime` → `start`) cannot be collapsed into a single call. Object counts from `loadScene` dictate memory allocations required before `applyLayout` can construct the spatial matrix.
+
+### 2. `shutdown()` is terminal
+
+There is no `restart()`. Once `shutdown()` is called, construct a new `EngineSession` to run again. Calling `shutdown()` is always safe, including after partial initialization or a failed `start()`.
+
+### 3. OSC server ownership
+
+`mParamServer` is internal to `EngineSession` and cannot be shared with the host application. It is spun up and torn down inside `EngineSession` to guarantee valid AlloLib parameter scoping. Do not attempt to access or share the OSC server object.
+
+### 4. Shutdown order is mandatory
+
+The internal shutdown sequence is: OSC server → audio backend → streaming. This order is enforced by `shutdown()` internally. Violating it (e.g., by calling streaming teardown before backend shutdown) **will cause deadlocks on macOS CoreAudio and ASIO teardowns**. The host only needs to call `shutdown()` — do not call internal teardown methods directly.
+
+### 5. 64-channel output limit
+
+The `uint64_t` bitmasks in `EngineStatus` (`renderActiveMask`, `deviceActiveMask`, etc.) implicitly cap the engine at 64 output channels. The AlloSphere (54.1 channels) is within range. Arrays larger than 64 channels are not supported without a redesign of the bitmask tracking system.
+
+### 6. `update()` must be called from the main thread
+
+`update()` handles deferred main-thread work including auto-compensation recomputation. It must be called regularly from the main thread while the session is running — not from an audio thread or a background thread. A Qt host should drive it via a `QTimer` callback (e.g. 50 ms interval). `queryStatus()` and `consumeDiagnostics()` should be called in the same timer callback.
+
+---
+
+## Embedding Instructions
+
+To embed `EngineSessionCore` in a host application:
+
+**CMake:**
+```cmake
+# After cmake --install (or building from source with add_subdirectory):
+find_package(spatialroot REQUIRED)
+target_link_libraries(myapp spatialroot::EngineSessionCore)
+# AlloLib include paths are inherited automatically via PUBLIC target_include_directories.
+```
+
+**Include:**
+```cpp
+#include "EngineSession.hpp"   // Public API header
+#include "RealtimeTypes.hpp"   // ElevationMode enum, RealtimeConfig, EngineState
+```
+
+**Required headers from AlloLib** are exposed transitively through the `EngineSessionCore` CMake target. A host that links `EngineSessionCore` does not need to add AlloLib include paths manually.

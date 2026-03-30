@@ -1,22 +1,26 @@
-Cult DSP — Open Spatial Audio Infrastructure  
+Cult DSP — Open Spatial Audio Infrastructure
 Lead Developer: Lucian Parisi
 
 # spatialroot
 
-This repository contains a comprehensive **spatial audio infrastructure** for decoding Audio Definition Model Broadcast WAV (ADM BWF) files — Atmos masters — with mapping to speaker arrays using multiple spatializers (DBAP, VBAP, LBAP). The system includes both real-time performance capabilities and modern offline batch rendering pipeline.
+Spatial Root is a C++ spatial audio engine for decoding ADM BW64 files and rendering to multichannel speaker arrays using DBAP spatialization. It includes a real-time streaming engine, an offline batch renderer, and the CULT transcoder for ADM→LUSID scene conversion.
+
+A C++ Qt desktop GUI is in development as the replacement for the current Python GUI.
+
+---
 
 ## Quick Start
 
 ### First Time Setup
 
-Run this **once** to set up everything:
+Run **once** after cloning to initialize submodules and build all C++ components:
 
-**macOS/Linux:**
+**macOS / Linux:**
 
 ```bash
 git clone https://github.com/Cult-DSP/spatialroot.git
 cd spatialroot
-source init.sh
+./init.sh
 ```
 
 **Windows (PowerShell):**
@@ -24,383 +28,217 @@ source init.sh
 ```powershell
 git clone https://github.com/Cult-DSP/spatialroot.git
 cd spatialroot
+Set-ExecutionPolicy -Scope Process Bypass
 .\init.ps1
 ```
 
-**Important:** Use `source init.sh` (not `./init.sh`) on macOS/Linux to ensure the virtual environment activates in your current shell. On Windows, the PowerShell/Command Prompt scripts handle activation automatically.
+No Python toolchain required. Requires CMake 3.20+ and a C++17 compiler.
 
-**If you need to reactivate the virtual environment in a new PowerShell session:**
+After setup, binaries are at:
 
-```powershell
-cd spatialroot
-. .\spatialroot\bin\Activate.ps1
-```
+| Binary | Path |
+|---|---|
+| `spatialroot_realtime` | `build/spatial_engine/realtimeEngine/spatialroot_realtime` |
+| `spatialroot_spatial_render` | `build/spatial_engine/spatialRender/spatialroot_spatial_render` |
+| `cult-transcoder` | `build/cult_transcoder/cult-transcoder` |
 
-You'll know the virtual environment is active when you see `(spatialroot)` in your PowerShell prompt.
-
-The setup scripts will:
-
--- Create a Python virtual environment (`spatialroot/`)
-
-- Install all Python dependencies
-- Initialize git submodules (AlloLib, libbw64, libadm)
-  -- Build the embedded ADM extractor (`spatialroot_adm_extract[.exe]`)
-- Build the Spatial renderer (supports DBAP, VBAP, LBAP)
-- Activate the virtual environment automatically
-
-After setup completes, you'll see `(spatialroot)` in your terminal prompt.
-
-### Get Example Files
+### Subsequent Builds
 
 ```bash
-python utils/getExamples.py
+./build.sh                  # Rebuild all components
+./build.sh --engine-only    # Rebuild spatialroot_realtime only
+./build.sh --offline-only   # Rebuild spatialroot_spatial_render only
+./build.sh --cult-only      # Rebuild cult-transcoder only
 ```
-
-This downloads example Atmos ADM files for testing.
-
-### Run the Realtime Engine
-
-For live spatial audio playback:
-
-```bash
-# With LUSID scene and mono stems
-python realtimeMain.py --scene processedData/stageForRender/scene.lusid.json --sources processedData/stageForRender/ --layout spatial_engine/speaker_layouts/allosphere_layout.json
-
-# With ADM file (direct streaming, no stem splitting)
-python realtimeMain.py --adm sourceData/driveExampleSpruce.wav --scene processedData/scene.lusid.json --layout spatial_engine/speaker_layouts/allosphere_layout.json
-
-# With GUI
-python realtimeMain.py --scene processedData/stageForRender/scene.lusid.json --sources processedData/stageForRender/ --layout spatial_engine/speaker_layouts/allosphere_layout.json --gui
-```
-
-**Realtime options:**
-
-- `--scene` - LUSID scene JSON file
-- `--sources` - Directory with mono WAV stems (for LUSID packages)
-- `--adm` - Multichannel ADM WAV file (direct streaming)
-- `--layout` - Speaker layout JSON
-- `--gui` - Launch realtime GUI for parameter control
-- `--osc_port` - OSC port for external control (default: 12345)
-
-See [`internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md`](internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md) for full documentation.
 
 ---
 
-## Usage in other projects
+## Realtime Engine — `spatialroot_realtime`
 
-See internalDocsMD/AGENTS.md for help implementing in other projects.
+The primary entry point for live spatial audio playback.
 
-## Realtime Spatial Audio
+### ADM workflow (recommended)
 
-The realtime engine performs live spatial audio rendering using the same LUSID scenes and spatializers as the offline pipeline. It streams audio through your system's audio device for real-time playback.
+The engine requires a LUSID scene JSON file. For ADM input, use `cult-transcoder` to produce it first:
 
-**Key Features:**
+```bash
+# Step 1: transcode ADM → LUSID scene
+./build/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
 
-- **Live Playback**: Real-time spatial audio with OSC control
-- **Multiple Input Modes**: LUSID packages (mono stems) or direct ADM streaming
-- **Spatializers**: DBAP, VBAP, LBAP with configurable parameters
-- **OSC Integration**: External control via Open Sound Control
-- **GUI Control**: Optional PySide6 interface for parameter adjustment
+# Step 2: play with the realtime engine
+./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+    --scene processedData/stageForRender/scene.lusid.json \
+    --adm   sourceData/myfile.wav \
+    --layout spatial_engine/speaker_layouts/allosphere_layout.json
+```
 
-**Architecture:**
+### LUSID package (mono stems) workflow
 
-The engine uses a sequential agent model with double-buffered streaming, pose interpolation, and DBAP spatialization. All agents share thread-safe configuration via atomics.
+```bash
+./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+    --scene   processedData/stageForRender/scene.lusid.json \
+    --sources processedData/stageForRender/ \
+    --layout  spatial_engine/speaker_layouts/allosphere_layout.json
+```
 
-**Supported Spatializers:**
+### All flags
 
-| Feature          | DBAP (default)            | VBAP                  | LBAP                 |
-| ---------------- | ------------------------- | --------------------- | -------------------- |
-| **Coverage**     | No gaps (works anywhere)  | Can have gaps         | No gaps              |
-| **Layout Req**   | Any layout                | Good 3D triangulation | Multi-ring layers    |
-| **Localization** | Moderate                  | Precise               | Moderate             |
-| **Best For**     | Unknown/irregular layouts | Dense 3D arrays       | Allosphere, TransLAB |
+```
+Required:
+  --layout <path>      Speaker layout JSON file
+  --scene  <path>      LUSID scene JSON file (positions/trajectories)
 
-See [`internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md`](internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md) for detailed architecture documentation.
+Source input (one required):
+  --sources <path>     Folder containing mono source WAV files
+  --adm     <path>     Multichannel ADM WAV file
+
+Optional:
+  --samplerate <int>   Audio sample rate in Hz (default: 48000)
+  --buffersize <int>   Frames per audio callback (default: 512)
+  --gain <float>       Master gain 0.0–1.0 (default: 0.5)
+  --focus <float>      DBAP rolloff exponent 0.2–5.0 (default: 1.5)
+  --speaker_mix <dB>   Loudspeaker mix trim in dB (±10, default: 0)
+  --sub_mix <dB>       Subwoofer mix trim in dB (±10, default: 0)
+  --auto_compensation  Enable focus auto-compensation (default: off)
+  --elevation_mode <n> Vertical rescaling: 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp
+  --remap <path>       CSV mapping internal layout channels to device channels
+  --osc_port <int>     OSC control port (default: 9009; 0 = disable)
+  --device <name>      Exact audio output device name
+  --list-devices       List available output audio devices and exit
+  --help               Show this message
+```
+
+### OSC parameter control
+
+When `--osc_port` is non-zero (default: 9009), the engine accepts OSC messages on `127.0.0.1:<port>` for live parameter updates: `/realtime/gain`, `/realtime/focus`, `/realtime/speaker_mix_db`, `/realtime/sub_mix_db`, `/realtime/auto_comp`, `/realtime/paused`, `/realtime/elevation_mode`.
+
+### Quick dev rebuild (engine only)
+
+```bash
+./engine.sh
+```
 
 ---
 
-## Opening a New Terminal Session
+## CULT Transcoder — `cult-transcoder`
 
-**IMPORTANT:** If you close your terminal and come back later, you need to reactivate the virtual environment:
+Converts ADM BW64 WAV files to the LUSID scene JSON format required by the engine.
 
 ```bash
-cd spatialroot
-source activate.sh
+# Transcode an ADM file → LUSID JSON
+./build/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
+
+# Show all options
+./build/cult_transcoder/cult-transcoder --help
 ```
-
-You'll know the virtual environment is active when you see `(spatialroot)` at the start of your terminal prompt.
-
-**Why?** Virtual environments only last for your current terminal session. This is standard Python practice and keeps your system Python clean and isolated from project dependencies.
 
 ---
 
-## Troubleshooting
+## Offline Renderer — `spatialroot_spatial_render`
 
-### "ModuleNotFoundError" or "command not found: python"
-
-**Problem:** The virtual environment is not active.
-
-**Solution:** Run this in your terminal:
+Batch multichannel WAV rendering from a LUSID scene. The Python pipeline (`runPipeline.py`) previously used to orchestrate this renderer is deprecated; direct binary invocation is the post-refactor path.
 
 ```bash
-source activate.sh
-```
-
-Check that you see `(spatialroot)` in your prompt. If you don't see it, the venv is not active.
-
-### Dependency or build errors
-
-If you encounter dependency errors:
-
-```bash
-rm .init_complete
-source init.sh
-```
-
-### Rebuilding the Renderers
-
-After making changes to C++ source files (`spatial_engine/src/` or `spatial_engine/realtimeEngine/src/`), rebuild the renderers:
-
-**QUICK DEBUGGING REBUILD - for live engine**
-
-```bash
-cd spatial_engine/realtimeEngine/build && make -j$(sysctl -n hw.ncpu)
-```
-
-**Option 1: Force rebuild (recommended)**
-
-```bash
-# Rebuild spatial renderer
-rm -rf spatial_engine/spatialRender/build/
-python -c "from src.config.configCPP import buildSpatialRenderer; buildSpatialRenderer()"
-
-# Rebuild realtime engine
-rm -rf spatial_engine/realtimeEngine/build/
-python -c "from src.config.configCPP import buildRealtimeEngine; buildRealtimeEngine()"
-```
-
-**Option 2: Clean and rebuild**
-
-```bash
-# Clean and rebuild spatial renderer
-cd spatial_engine/spatialRender/build/
-make clean
-make -j$(sysctl -n hw.ncpu)
-cd ../../../
-
-# Clean and rebuild realtime engine
-cd spatial_engine/realtimeEngine/build/
-make clean
-make -j$(sysctl -n hw.ncpu)
-cd ../../../
-```
-
-**Option 3: Manual CMake build**
-
-```bash
-# Full manual rebuild of spatial renderer
-cd spatial_engine/spatialRender/
-rm -rf build/
-mkdir build && cd build/
-cmake ..
-make -j$(sysctl -n hw.ncpu)
-
-# Full manual rebuild of realtime engine
-cd spatial_engine/realtimeEngine/
-rm -rf build/
-mkdir build && cd build/
-cmake ..
-make -j$(sysctl -n hw.ncpu)
-```
-
-The built executables will be at:
-
-- `spatial_engine/spatialRender/build/spatialroot_spatial_render`
-- `spatial_engine/realtimeEngine/build/spatialroot_realtime`
-
-## Manual Setup
-
-If `init.sh` fails, you can set up manually:
-
-```bash
-# 1. Create virtual environment
-python3 -m venv spatialroot
-
-# 2. Install Python dependencies
-spatialroot/bin/pip install -r requirements.txt
-
-# 3. Initialize submodules and build all C++ tools (ADM extractor + renderer)
-spatialroot/bin/python -c "from src.config.configCPP import setupCppTools; setupCppTools()"
-```
-
-## Utilities
-
-- `init.sh` - One-time setup script (creates venv, installs dependencies, builds C++ tools, activates venv)
-- `activate.sh` - Reactivates the virtual environment in new terminal sessions (use: `source activate.sh`)
-- `utils/getExamples.py` - Downloads example ADM files
-- `utils/deleteData.py` - Cleans processed data directory
-- `src/config/configCPP.py` - C++ build utilities (use `buildSpatialRenderer()` and `buildRealtimeEngine()` to rebuild renderers)
-- `gui/main.py` - Desktop GUI for offline pipeline configuration and execution
-- `realtimeMain.py` - Command-line interface for realtime spatial audio engine
-
-## Realtime Engine Overview
-
-1. **Load Scene** - Parse LUSID JSON scene file
-2. **Load Layout** - Read speaker layout and compute output channels
-3. **Initialize Streaming** - Set up double-buffered audio streaming (mono stems or ADM direct)
-4. **Initialize Pose** - Load keyframes and prepare interpolation
-5. **Initialize Spatializer** - Build speakers and DBAP spatializer
-6. **Start Audio I/O** - Open AlloLib audio device and begin real-time processing
-7. **OSC Server** - Start parameter server for external control
-8. **Process Blocks** - Real-time audio processing with spatialization
-
-## Spatial Renderer Options
-
-The spatial renderer supports multiple spatializers (DBAP, VBAP, LBAP) and render resolution modes:
-
-| Mode     | Description                                              | Recommended       |
-| -------- | -------------------------------------------------------- | ----------------- |
-| `block`  | Compute direction once per block (default, blockSize=64) | ✓ Yes             |
-| `sample` | Compute direction for every sample (highest accuracy)    | For critical work |
-| `smooth` | _Deprecated_ - gain interpolation can cause artifacts    | No                |
-
-### Command Line Usage
-
-```bash
-./spatialroot_spatial_render <input.json> <layout.json> <output.wav> [options]
+./build/spatial_engine/spatialRender/spatialroot_spatial_render \
+    <scene.lusid.json> <layout.json> <output.wav> [options]
 
 Options:
-  --render_resolution <mode>  Set render mode: block (recommended), sample, smooth
-  --block_size <n>            Set block size for block mode (default: 64)
-  --spatializer <type>        Set spatializer: dbap (default), vbap, lbap
+  --render_resolution <mode>   block (default), sample, smooth
+  --block_size <n>             Block size for block mode (default: 64)
+  --spatializer <type>         dbap (default), vbap, lbap
 ```
 
-### JSON Time Units
+---
 
-The LUSID scene JSON supports an explicit `timeUnit` field:
+## Build System
 
-```json
-{
-  "sampleRate": 48000,
-  "timeUnit": "seconds",
-  "sources": [...]
-}
+The build system is CMake + shell scripts. No Python required.
+
+| Script | Platform | Role |
+|---|---|---|
+| `init.sh` | macOS / Linux | Initialize submodules + call `build.sh` |
+| `build.sh` | macOS / Linux | CMake configure + build |
+| `init.ps1` | Windows | Initialize submodules + call `build.ps1` |
+| `build.ps1` | Windows | CMake configure + build |
+| `engine.sh` | macOS / Linux | Fast clean rebuild of the realtime engine only |
+
+The root `CMakeLists.txt` builds all components via option flags:
+
+```cmake
+SPATIALROOT_BUILD_ENGINE   ON   # spatialroot_realtime
+SPATIALROOT_BUILD_OFFLINE  ON   # spatialroot_spatial_render
+SPATIALROOT_BUILD_CULT     ON   # cult-transcoder
+SPATIALROOT_BUILD_GUI      OFF  # Qt GUI (in development, Stage 3)
 ```
 
-Valid values: `"seconds"` (default), `"samples"`, `"milliseconds"`
+Each component can also be built standalone from its own CMakeLists.txt.
 
-For detailed documentation, see:
+### Requirements
 
-- [Spatialization/RENDERING.md](internalDocsMD/Spatialization/RENDERING.md) - Full rendering documentation
-- [Dependencies/json_schema_info.md](internalDocsMD/Dependencies/json_schema_info.md) - JSON schema reference
+- **CMake 3.20+**
+- **C++17 compiler**: clang on macOS, gcc or clang on Linux, MSVC or clang-cl on Windows
+- **make / ninja** (macOS/Linux) or **MSBuild / Ninja** (Windows)
+- **git** (for submodule initialization)
 
-## Testing Files
+---
+
+## Rebuilding after C++ source changes
+
+```bash
+# Quick rebuild — realtime engine only (clean + rebuild)
+./engine.sh
+
+# Full rebuild — all components
+./build.sh
+```
+
+---
+
+## Example Files
 
 Example ADM files: https://zenodo.org/records/15268471
 
-## Requirements
-
-### Essential
-
-- **Python 3.8+** - Core runtime for the Python components
-- **CMake 3.12+** - Required to build the spatial audio renderer and embedded ADM extractor (C++17)
-- **Build tools** - make, clang/gcc compiler toolchain
-
-### Platform-specific notes
-
-- **macOS**: Fully supported via `./init.sh`
-- **Windows/Linux**: CMake + make/ninja required to build `spatialroot_adm_extract`
-
-### ADM extraction
-
-- **Primary**: `spatialroot_adm_extract` (embedded, built by `init.sh`) — no external install needed
+```bash
+python utils/getExamples.py   # Download example files (Python optional utility)
+```
 
 ---
 
-## Offline Rendering Pipeline
+## Public API
 
-The offline rendering pipeline provides batch processing capabilities for spatial audio rendering, now fully modernized to match the realtime engine's architecture and performance.
+The realtime engine exposes a C++ embedding API (`EngineSessionCore` static library). See [PUBLIC_DOCS/API.md](PUBLIC_DOCS/API.md) for full documentation.
 
-### Run the Pipeline
+---
 
+## Python GUI (current, to be replaced)
+
+The current PySide6 GUI at `gui/realtimeGUI/` is the active GUI while the C++ Qt replacement is in development. It requires the Python venv from the legacy `init.sh` to be active. This GUI and all Python launch infrastructure will be removed once the Qt GUI reaches feature parity (Stage 3 of the C++ refactor).
+
+To use the current Python GUI during the transition period:
 ```bash
-# ADM direct input (recommended - no intermediate files)
-python runPipeline.py sourceData/driveExampleSpruce.wav
-
-# LUSID package input (legacy mono WAV stems)
-python runPipeline.py sourceData/lusid_package
+# Legacy setup (Python venv required)
+python3 -m venv spatialroot
+spatialroot/bin/pip install -r requirements.txt
+python realtimeMain.py --gui ...
 ```
 
-**Command options:**
+---
 
-```bash
-# Default mode (uses example ADM file)
-python runPipeline.py
+## Project Structure
 
-# With custom ADM file (direct streaming)
-python runPipeline.py path/to/your_adm.wav
-
-# With LUSID package (mono WAV folder)
-python runPipeline.py path/to/lusid_package_folder
-
-# Full options with custom layout
-python runPipeline.py <input> <speaker_layout.json> <spatializer> <resolution> <master_gain> <analysis>
 ```
-
-**Arguments:**
-
-- `input` - ADM WAV file or LUSID package directory
-- `speaker_layout.json` - Speaker layout JSON (default: `spatial_engine/speaker_layouts/allosphere_layout.json`)
-- `spatializer` - Spatialization mode: `dbap`, `vbap`, or `lbap` (default: `dbap`)
-- `resolution` - Spatial resolution parameter (default: `1.5`)
-- `master_gain` - Master gain in dB (default: `0.5`)
-- `analysis` - Create PDF analysis: `true` or `false` (default: `true`)
-
-### Input Modes
-
-**ADM Direct Input (Recommended):**
-
-- Streams multichannel ADM WAV directly to spatial renderer
-- No intermediate stem splitting required
-- Uses `cult-transcoder` for ADM→LUSID conversion
-- Fastest and most efficient workflow
-
-**LUSID Package Input (Legacy):**
-
-- Uses existing mono WAV stems with LUSID scene
-- Maintains backward compatibility
-- Requires pre-split audio stems
-
-### Run the Desktop GUI
-
-For a graphical interface to configure and run the offline pipeline:
-
-```bash
-python gui/main.py
+spatialroot/
+├── spatial_engine/
+│   ├── realtimeEngine/     # spatialroot_realtime engine + EngineSessionCore library
+│   ├── spatialRender/      # spatialroot_spatial_render offline renderer
+│   └── src/                # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
+├── cult_transcoder/        # cult-transcoder (git submodule, standalone)
+├── thirdparty/
+│   └── allolib/            # AlloLib (audio I/O, DBAP, OSC; git submodule)
+├── gui/
+│   └── realtimeGUI/        # Current Python PySide6 GUI (will be removed in Stage 3)
+├── PUBLIC_DOCS/API.md      # EngineSession C++ embedding API documentation
+├── CMakeLists.txt          # Root build — all components
+├── build.sh / init.sh      # macOS/Linux build scripts
+└── build.ps1 / init.ps1    # Windows build scripts
 ```
-
-The GUI provides file pickers, render settings, progress tracking, and log viewing.
-
-### Spatial Rendering
-
-The project supports three spatializers from AlloLib:
-
-- **DBAP** (default) - Distance-Based Amplitude Panning, works with any layout
-- **VBAP** - Vector Base Amplitude Panning, best for layouts with good 3D coverage
-- **LBAP** - Layer-Based Amplitude Panning, designed for multi-ring layouts
-
-See [`internalDocsMD/Offline_Rendering/offline_pipeline.md`](internalDocsMD/Offline_Rendering/offline_pipeline.md) for complete offline rendering documentation.
-
-### Offline Pipeline Overview
-
-**ADM Input Workflow:**
-
-1. **ADM Preprocessing** - `cult-transcoder` extracts LUSID scene from ADM WAV
-2. **Spatial Render** - Direct ADM streaming to spatial renderer
-3. **Analysis** - Optional PDF analysis of spatial audio output
-
-**LUSID Package Workflow:**
-
-1. **Package Validation** - Verify LUSID scene and mono WAV stems
-2. **Spatial Render** - Render mono stems using LUSID scene positions
-3. **Analysis** - Optional PDF analysis of spatial audio output

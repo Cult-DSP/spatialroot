@@ -1,111 +1,107 @@
 #!/bin/bash
-# init.sh - Complete setup script for spatialroot project
-# This script handles:
-# 1. Python virtual environment creation
-# 2. Python dependencies installation
-# 3. C++ tools setup (allolib submodules, embedded ADM extractor, spatial renderers build)
+# init.sh — One-time dependency setup for spatialroot (macOS / Linux)
+#
+# Run once after cloning to initialize all git submodules and build all
+# C++ components. Subsequent builds can use build.sh directly.
+#
+# Usage:
+#   ./init.sh          # Initialize deps and build everything
+#   ./init.sh --help   # Show this message
+#
+# No Python toolchain required.
 
-set -e  # Exit on any error
-
-# Detect whether this script is being sourced or executed.
-# If sourced, we can activate the venv in the caller's shell. If executed,
-# any 'source' will only affect the child's shell and won't persist for the user.
-if [ "${BASH_SOURCE[0]}" != "$0" ]; then
-    _INIT_SOURCED=1
-else
-    _INIT_SOURCED=0
-fi
+set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$PROJECT_ROOT"
+cd "${PROJECT_ROOT}"
+
+if [ "${1}" = "--help" ] || [ "${1}" = "-h" ]; then
+    echo "Usage: ./init.sh"
+    echo ""
+    echo "Initializes git submodules and builds all C++ components."
+    echo "Run once after cloning. Subsequent builds: ./build.sh"
+    exit 0
+fi
 
 echo "============================================================"
-echo "spatialroot Initialization"
+echo "spatialroot Initialization (macOS / Linux)"
 echo "============================================================"
 echo ""
 
-# Step 1: Create Python virtual environment
-echo "Step 1: Setting up Python virtual environment..."
-if [ -d "spatialroot/bin" ]; then
-    echo "✓ Virtual environment already exists at spatialroot/"
-else
-    echo "Creating virtual environment..."
-    python3 -m venv spatialroot
-    echo "✓ Virtual environment created"
-fi
+# ── Step 1: Check build tools ─────────────────────────────────────────────────
+echo "Step 1: Checking build tools..."
 
-# Fix activation script permissions
-chmod +x spatialroot/bin/activate 2>/dev/null || true
-echo ""
-
-# Step 2: Install Python dependencies (using venv's Python directly)
-echo "Step 2: Installing Python dependencies..."
-
-if spatialroot/bin/pip install -r requirements.txt; then
-    echo "✓ Python dependencies installed"
-else
-    echo "✗ Error installing Python dependencies"
+if ! command -v cmake &>/dev/null; then
+    echo "✗ cmake not found. Install CMake 3.20+ and try again."
+    echo "  macOS:  brew install cmake"
+    echo "  Linux:  sudo apt install cmake  (or equivalent)"
     exit 1
 fi
-echo ""
 
-# Step 3: Setup C++ tools using Python script
-# Note: submodule init uses --depth 1 (shallow clone) to keep clone size small.
-# AlloLib full history is ~511 MB; shallow reduces it to a few MB.
-# To deepen later: git -C thirdparty/allolib fetch --unshallow
-# To apply opt-in sparse checkout (trims working tree): ./scripts/sparse-allolib.sh
-echo "Step 3: Setting up C++ tools (allolib, embedded ADM extractor, spatial renderers)..."
-if spatialroot/bin/python -c "from src.config.configCPP import setupCppTools; exit(0 if setupCppTools() else 1)"; then
-    echo "✓ C++ tools setup complete"
-    cpp_ok=1
-else
-    echo "⚠ Warning: C++ tools setup had issues — run ./init.sh again or check CMake logs"
-    cpp_ok=0
-fi
-echo ""
+CMAKE_VERSION=$(cmake --version | head -1 | awk '{print $3}')
+echo "✓ cmake ${CMAKE_VERSION} found"
 
-# Step 4: Create initialization flag file
-echo "Step 4: Creating initialization flag file (only if all setup steps succeeded)"
-if [ "${cpp_ok}" -eq 1 ]; then
-cat > .init_complete << EOF
-# spatialroot initialization complete
-# Generated: $(date)
-# Python venv: spatialroot/
-# This file indicates that init.sh has been run successfully.
-# Delete this file to force re-initialization.
-EOF
-
-echo "✓ Initialization flag created (.init_complete)"
-else
-    echo "⚠ Initialization incomplete: not creating .init_complete"
-    echo "Run ./init.sh again after resolving the errors above."
+if ! command -v git &>/dev/null; then
+    echo "✗ git not found. Install git and try again."
     exit 1
 fi
+echo "✓ git found"
 echo ""
 
+# ── Step 2: Initialize allolib submodule ──────────────────────────────────────
+echo "Step 2: Initializing allolib submodule..."
+
+ALLOLIB_INCLUDE="${PROJECT_ROOT}/thirdparty/allolib/include"
+if [ -d "${ALLOLIB_INCLUDE}" ]; then
+    echo "✓ thirdparty/allolib already initialized"
+else
+    echo "Fetching thirdparty/allolib (shallow, depth=1)..."
+    git submodule update --init --recursive --depth 1 thirdparty/allolib
+    echo "✓ thirdparty/allolib initialized"
+fi
+echo ""
+
+# ── Step 3: Initialize cult_transcoder submodule ──────────────────────────────
+echo "Step 3: Initializing cult_transcoder submodule..."
+
+CULT_CMAKE="${PROJECT_ROOT}/cult_transcoder/CMakeLists.txt"
+if [ -f "${CULT_CMAKE}" ]; then
+    echo "✓ cult_transcoder already initialized"
+else
+    echo "Fetching cult_transcoder..."
+    git submodule update --init --depth 1 cult_transcoder
+    echo "✓ cult_transcoder initialized"
+fi
+
+# cult_transcoder owns its own libbw64 submodule (required before CMake configure)
+LIBBW64_HEADER="${PROJECT_ROOT}/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp"
+if [ -f "${LIBBW64_HEADER}" ]; then
+    echo "✓ cult_transcoder/thirdparty/libbw64 already initialized"
+else
+    echo "Fetching cult_transcoder/thirdparty/libbw64..."
+    git -C "${PROJECT_ROOT}/cult_transcoder" submodule update --init --depth 1 thirdparty/libbw64
+    echo "✓ cult_transcoder/thirdparty/libbw64 initialized"
+fi
+echo ""
+
+# ── Step 4: Build all C++ components ─────────────────────────────────────────
+echo "Step 4: Building all C++ components..."
+echo ""
+"${PROJECT_ROOT}/build.sh" "$@"
+
+echo ""
 echo "============================================================"
 echo "✓ Initialization complete!"
+echo ""
+echo "Binaries:"
+echo "  spatialroot_realtime       : build/spatial_engine/realtimeEngine/spatialroot_realtime"
+echo "  spatialroot_spatial_render : build/spatial_engine/spatialRender/spatialroot_spatial_render"
+echo "  cult-transcoder            : build/cult_transcoder/cult-transcoder"
+echo ""
+echo "For quick dev rebuilds of the realtime engine only:"
+echo "  ./engine.sh"
+echo ""
+echo "For subsequent full builds:"
+echo "  ./build.sh"
 echo "============================================================"
-echo ""
-echo "Activating virtual environment..."
-if [ "${_INIT_SOURCED}" -eq 1 ]; then
-    # We're being sourced, so source the activation script into the caller shell
-    source activate.sh
-else
-    # We're being executed; activating here won't affect the user's shell
-    echo "Note: init.sh was executed, not sourced — the virtualenv was NOT activated in your shell."
-    echo "To activate the virtual environment in your current shell, run:" 
-    echo "  source activate.sh"
-fi
-echo ""
-echo "You can now run:"
-echo "  python utils/getExamples.py          # Download example files"
-echo "  python runPipeline.py <file.wav>     # Run the offline pipeline"
-echo "  python runRealtime.py <file.wav>     # Run the realtime engine"
-echo ""
-echo "To reactivate the environment later, run:"
-echo "  source activate.sh"
-echo ""
-echo "If you encounter dependency errors, delete .init_complete and re-run:"
-echo "  rm .init_complete && ./init.sh"
 echo ""

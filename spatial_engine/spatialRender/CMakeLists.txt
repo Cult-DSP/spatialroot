@@ -14,10 +14,13 @@ set(ALLOLIB_BUILD_TESTS OFF CACHE BOOL "Don't build AlloLib tests")
 set(AL_VERBOSE_OUTPUT OFF CACHE BOOL "Disable verbose output")
 
 # AlloLib is in thirdparty at project root (two levels up from spatial_engine/spatialRender)
-add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
-    ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
-)
+# Guard: when built via the root CMakeLists.txt, allolib is already added there.
+if(NOT TARGET al)
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
+        ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
+    )
+endif()
 
 # Source files are in spatial_engine/src (one level up from spatialRender)
 # SpatialRenderer is in renderer subdirectory
