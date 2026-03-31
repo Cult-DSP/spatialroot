@@ -106,7 +106,7 @@ The first working version must:
    math from `SpatialRenderer.cpp`).
 5. Route LFE to subwoofer channels (same logic as offline).
 6. Output to hardware speakers via AlloLib AudioIO.
-7. Be launchable from `runRealtime.py` and from the Qt GUI.
+7. (Archived; removed in Phase 6) Be launchable from `runRealtime.py` and from the Qt GUI.
 
 This effectively **replicates the offline pipeline but plays back in
 real-time** instead of writing a WAV file.
@@ -251,13 +251,13 @@ Parameter Delivery` for the full threading analysis.
 
 **Files created:**
 
-| File                                                    | Purpose                                                                                                                                                                                                                                                 |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spatial_engine/realtimeEngine/CMakeLists.txt`          | Build system — links AlloLib + Gamma, shares `JSONLoader`/`LayoutLoader`/`WavUtils` from `../src/`                                                                                                                                                      |
-| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp`   | Shared data types: `RealtimeConfig` (device settings, paths, atomic gain/playback flags) and `EngineState` (frame counter, playback time, CPU load, xrun count)                                                                                         |
-| `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Agent 8 implementation — wraps AlloLib `AudioIO` with `init()`/`start()`/`stop()`/`shutdown()` lifecycle, static C-style callback dispatches to `processBlock()`, CPU load clamping                                                                     |
-| `spatial_engine/realtimeEngine/src/main.cpp`            | CLI entry point — parses `--layout`/`--scene`/`--sources` + optional args, runs monitoring loop with status display, handles SIGINT for clean shutdown                                                                                                  |
-| `runRealtime.py`                                        | Python launcher — mirrors `runPipeline.py` with same input types (ADM WAV or LUSID package). Runs preprocessing pipeline, then launches C++ executable. `run_realtime_from_ADM()` / `run_realtime_from_LUSID()` entry points. Handles Ctrl+C forwarding |
+| File                                                    | Purpose                                                                                                                                                                             |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spatial_engine/realtimeEngine/CMakeLists.txt`          | Build system — links AlloLib + Gamma, shares `JSONLoader`/`LayoutLoader`/`WavUtils` from `../src/`                                                                                  |
+| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp`   | Shared data types: `RealtimeConfig` (device settings, paths, atomic gain/playback flags) and `EngineState` (frame counter, playback time, CPU load, xrun count)                     |
+| `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Agent 8 implementation — wraps AlloLib `AudioIO` with `init()`/`start()`/`stop()`/`shutdown()` lifecycle, static C-style callback dispatches to `processBlock()`, CPU load clamping |
+| `spatial_engine/realtimeEngine/src/main.cpp`            | CLI entry point — parses `--layout`/`--scene`/`--sources` + optional args, runs monitoring loop with status display, handles SIGINT for clean shutdown                              |
+| `runRealtime.py`                                        | (Archived; removed in Phase 6) Python launcher used during the prototype era to orchestrate preprocessing + launch the C++ binary.                                                  |
 
 **Build & test results:**
 
@@ -273,7 +273,7 @@ Parameter Delivery` for the full threading analysis.
 - A working audio callback that currently outputs silence
 - `processBlock(AudioIOData&)` is the insertion point for all future agents
 - `RealtimeConfig` and `EngineState` are the shared state structs
-- `runRealtime.py` is ready to call from the GUI (accepts same inputs as `runPipeline.py`)
+- (Archived; removed in Phase 6) `runRealtime.py` could be called from the PySide6 GUI in the prototype era
 
 ### Phase 2 Completion Log (Streaming Agent)
 
@@ -770,64 +770,59 @@ auditable specification of what each thread owns and what the rules are.
 
 ---
 
-### Exact File Paths for Key Artifacts
+### Exact File Paths for Key Artifacts (Phase 6)
 
-| Artifact                          | Path                                                                                        |
-| --------------------------------- | ------------------------------------------------------------------------------------------- |
-| Real-time C++ executable          | `spatial_engine/realtimeEngine/build/spatialroot_realtime`                                  |
-| Offline C++ executable            | `spatial_engine/spatialRender/build/spatialroot_spatial_render`                             |
-| CMakeLists (real-time)            | `spatial_engine/realtimeEngine/CMakeLists.txt`                                              |
-| Shared JSONLoader                 | `spatial_engine/src/JSONLoader.cpp` / `.hpp`                                                |
-| Shared LayoutLoader               | `spatial_engine/src/LayoutLoader.cpp` / `.hpp`                                              |
-| Shared WavUtils                   | `spatial_engine/src/WavUtils.cpp` / `.hpp`                                                  |
-| LUSID XML parser                  | `LUSID/src/xml_etree_parser.py`                                                             |
-| LUSID scene model                 | `LUSID/src/scene.py`                                                                        |
-| Package/scene writer              | `src/packageADM/packageForRender.py` (has both `packageForRender()` and `writeSceneOnly()`) |
-| Python launcher                   | `runRealtime.py` (project root)                                                             |
-| Speaker layouts dir               | `spatial_engine/speaker_layouts/`                                                           |
-| Processed data (scene JSON, etc.) | `processedData/stageForRender/scene.lusid.json`                                             |
-| ADM extracted metadata            | `processedData/currentMetaData.xml`                                                         |
-| LUSID schema                      | `LUSID/schema/lusid_scene_v0.5.schema.json`                                                 |
-| Design doc (streaming/DBAP)       | `internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md`                                |
-| ADM streaming design doc          | `internalDocsMD/Realtime_Engine/agentDocs/agent_adm_direct_streaming.md`                    |
+> Phase 6 removed the Python launcher (`runRealtime.py`) and the PySide6/QProcess GUI. Paths below reflect the current C++ entrypoints.
 
-### Verified Test Commands (End-to-End)
+| Artifact                          | Path                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| Real-time C++ executable          | `build/spatial_engine/realtimeEngine/spatialroot_realtime`               |
+| Offline C++ executable            | `build/spatial_engine/spatialRender/spatialroot_spatial_render`          |
+| CULT transcoder (ADM → LUSID)     | `build/cult_transcoder/cult-transcoder`                                  |
+| CMakeLists (real-time)            | `spatial_engine/realtimeEngine/CMakeLists.txt`                           |
+| Shared JSONLoader                 | `spatial_engine/src/JSONLoader.cpp` / `.hpp`                             |
+| Shared LayoutLoader               | `spatial_engine/src/LayoutLoader.cpp` / `.hpp`                           |
+| Shared WavUtils                   | `spatial_engine/src/WavUtils.cpp` / `.hpp`                               |
+| Speaker layouts dir               | `spatial_engine/speaker_layouts/`                                        |
+| Processed data (scene JSON, etc.) | `processedData/stageForRender/scene.lusid.json`                          |
+| ADM extracted metadata            | `processedData/currentMetaData.xml`                                      |
+| LUSID schema                      | `LUSID/schema/lusid_scene_v0.5.schema.json`                              |
+| Design doc (streaming/DBAP)       | `internalDocsMD/Realtime_Engine/realtimeEngine_designDoc.md`             |
+| ADM streaming design doc          | `internalDocsMD/Realtime_Engine/agentDocs/agent_adm_direct_streaming.md` |
+
+### Verified Test Commands (Phase 6)
 
 ```bash
-# ADM direct streaming (SWALE test file, TransLab layout):
-python runRealtime.py sourceData/SWALE-ATMOS-LFE.wav \
-    spatial_engine/speaker_layouts/translab-sono-layout.json
+# Build (engine only, fast path):
+./engine.sh
 
-# LUSID package (pre-split mono stems, Allosphere layout):
-python runRealtime.py sourceData/lusid_package \
-    spatial_engine/speaker_layouts/allosphere_layout.json 0.3 1.5 512
+# Or full rebuild:
+./build.sh
 
-# C++ engine directly (ADM mode):
-cd spatial_engine/realtimeEngine
-./build/spatialroot_realtime \
-    --layout ../speaker_layouts/translab-sono-layout.json \
-    --scene ../../processedData/stageForRender/scene.lusid.json \
-    --adm ../../sourceData/SWALE-ATMOS-LFE.wav \
-    --gain 0.5 --buffersize 512
+# Generate the LUSID scene JSON from an ADM file:
+./build/cult_transcoder/cult-transcoder transcode sourceData/SWALE-ATMOS-LFE.wav
 
-# C++ engine directly (mono mode):
-./build/spatialroot_realtime \
-    --layout ../speaker_layouts/allosphere_layout.json \
-    --scene ../../processedData/stageForRender/scene.lusid.json \
-    --sources ../../sourceData/lusid_package \
-    --gain 0.1 --buffersize 512
+# Realtime engine (ADM mode):
+./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+  --scene  processedData/stageForRender/scene.lusid.json \
+  --adm    sourceData/SWALE-ATMOS-LFE.wav \
+  --layout spatial_engine/speaker_layouts/translab-sono-layout.json \
+  --gain 0.5 --buffersize 512
 
-# Build from scratch:
-cd spatial_engine/realtimeEngine/build
-cmake ..
-make -j4
+# Realtime engine (mono stems mode):
+./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+  --scene   processedData/stageForRender/scene.lusid.json \
+  --sources processedData/stageForRender/ \
+  --layout  spatial_engine/speaker_layouts/allosphere_layout.json \
+  --gain 0.1 --buffersize 512
+
+# ImGui GUI (builds first if needed):
+./run.sh
 ```
 
-### Python Environment
+### Python Environment (Phase 6)
 
-- **Venv**: `spatialroot/bin/python` (Python 3.12.2)
-- **Activation**: `source activate.sh` (from project root)
-- **Key packages**: PySide6 (GUI), lxml (legacy XML), gdown (example downloads)
+- No Python toolchain is required for building or running the realtime engine or GUI as of Phase 6.
 
 ---
 
@@ -837,7 +832,7 @@ This real-time spatial audio engine is designed as a collection of specialized *
 
 Key design goals include:
 
-- **Hard Real-Time Performance:** The audio processing must complete within each audio callback frame (e.g. on a 512-sample buffer at 48 kHz, ~10.7ms per callback) to avoid underruns or glitches. Each agent is designed to do its work within strict time budgets:contentReference[oaicite:0]{index=0}.
+- **Hard Real-Time Performance:** The audio processing must complete within each audio callback frame (e.g. on a 512-sample buffer at 48 kHz, ~10.7ms per callback) to avoid underruns or glitches. Each agent is designed to do its work within strict time budgets.
 - **Modularity:** Each agent has a clear responsibility and interface, making the system easier to maintain and allowing multiple team members to work in parallel.
 - **Thread Safety:** Agents communicate via thread-safe or lock-free structures to avoid blocking the high-priority audio thread. No dynamic memory allocation or unbounded waits occur in the audio callback.
 - **Scalability:** The architecture should handle multiple audio sources and outputs, scaling with available CPU cores by distributing work across threads where possible.
