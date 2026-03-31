@@ -64,7 +64,7 @@ private:
     std::string mProjectRoot;
 
     // ── Engine ───────────────────────────────────────────────────────────
-    EngineSession mSession;
+    std::unique_ptr<EngineSession> mSession;
     AppState      mState      = AppState::Idle;
     std::string   mLastError;
     bool          mShutdownRequested = false;

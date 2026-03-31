@@ -37,6 +37,7 @@ constexpr const char* App::kTcLfeModeValues[];
 
 App::App(std::string projectRoot)
     : mProjectRoot(std::move(projectRoot))
+    , mSession(std::make_unique<EngineSession>())
 {
     // Pre-populate layout path from the default preset
     mLayoutPath = resolveProjectPath(kLayoutPaths[0]);
@@ -84,10 +85,10 @@ void App::tick() {
 void App::tickEngine() {
     // Poll the running engine
     if (mState == AppState::Running || mState == AppState::Paused) {
-        mStatus = mSession.queryStatus();
-        mSession.update();
+        mStatus = mSession->queryStatus();
+        mSession->update();
 
-        DiagnosticEvents ev = mSession.consumeDiagnostics();
+        DiagnosticEvents ev = mSession->consumeDiagnostics();
 
         // Log diagnostic events
         char buf[256];
@@ -128,7 +129,7 @@ void App::tickEngine() {
         if (mStatus.isExitRequested) {
             appendEngineLog("[Engine] Exit requested (device loss?). Shutting down.",
                             {1.f, 0.5f, 0.2f, 1.f});
-            mSession.shutdown();
+            mSession->shutdown();
             mState = AppState::Idle;
         }
 
@@ -169,7 +170,7 @@ void App::requestShutdown() {
     mShutdownRequested = true;
     if (mState == AppState::Running || mState == AppState::Paused) {
         appendEngineLog("[GUI] Shutting down engine...");
-        mSession.shutdown();
+        mSession->shutdown();
         mState = AppState::Idle;
     }
 }
@@ -410,55 +411,55 @@ void App::renderEngineTab() {
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##gain", &mGain, 0.1f, 3.0f, "%.2f"))
-            if (isRunning) mSession.setMasterGain(mGain);
+            if (isRunning) mSession->setMasterGain(mGain);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##gaininput", &mGain, 0.f, 0.f, "%.2f"))
-            if (isRunning) { mGain = std::clamp(mGain, 0.1f, 3.0f); mSession.setMasterGain(mGain); }
+            if (isRunning) { mGain = std::clamp(mGain, 0.1f, 3.0f); mSession->setMasterGain(mGain); }
 
         // DBAP Focus
         ImGui::TextDisabled("DBAP FOCUS");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##focus", &mFocus, 0.2f, 5.0f, "%.2f"))
-            if (isRunning) mSession.setDbapFocus(mFocus);
+            if (isRunning) mSession->setDbapFocus(mFocus);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##focusinput", &mFocus, 0.f, 0.f, "%.2f"))
-            if (isRunning) { mFocus = std::clamp(mFocus, 0.2f, 5.0f); mSession.setDbapFocus(mFocus); }
+            if (isRunning) { mFocus = std::clamp(mFocus, 0.2f, 5.0f); mSession->setDbapFocus(mFocus); }
 
         // Speaker Mix dB
         ImGui::TextDisabled("SPEAKER MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##spkmix", &mSpkMixDb, -10.f, 10.f, "%.1f dB"))
-            if (isRunning) mSession.setSpeakerMixDb(mSpkMixDb);
+            if (isRunning) mSession->setSpeakerMixDb(mSpkMixDb);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##spkmixinput", &mSpkMixDb, 0.f, 0.f, "%.1f"))
-            if (isRunning) { mSpkMixDb = std::clamp(mSpkMixDb, -10.f, 10.f); mSession.setSpeakerMixDb(mSpkMixDb); }
+            if (isRunning) { mSpkMixDb = std::clamp(mSpkMixDb, -10.f, 10.f); mSession->setSpeakerMixDb(mSpkMixDb); }
 
         // Sub Mix dB
         ImGui::TextDisabled("SUB MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##submix", &mSubMixDb, -10.f, 10.f, "%.1f dB"))
-            if (isRunning) mSession.setSubMixDb(mSubMixDb);
+            if (isRunning) mSession->setSubMixDb(mSubMixDb);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##submixinput", &mSubMixDb, 0.f, 0.f, "%.1f"))
-            if (isRunning) { mSubMixDb = std::clamp(mSubMixDb, -10.f, 10.f); mSession.setSubMixDb(mSubMixDb); }
+            if (isRunning) { mSubMixDb = std::clamp(mSubMixDb, -10.f, 10.f); mSession->setSubMixDb(mSubMixDb); }
 
         // Auto Compensation
         if (ImGui::Checkbox("FOCUS AUTO-COMPENSATION", &mAutoComp))
-            if (isRunning) mSession.setAutoCompensation(mAutoComp);
+            if (isRunning) mSession->setAutoCompensation(mAutoComp);
 
         // Elevation Mode
         ImGui::TextDisabled("ELEVATION MODE");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
         if (ImGui::Combo("##elevmode", &mElevationMode, kElevModeNames, 3))
-            if (isRunning) mSession.setElevationMode(static_cast<ElevationMode>(mElevationMode));
+            if (isRunning) mSession->setElevationMode(static_cast<ElevationMode>(mElevationMode));
 
         if (!isRunning) ImGui::EndDisabled();
     }
@@ -725,7 +726,7 @@ void App::onStart() {
 void App::onStop() {
     if (mState == AppState::Running || mState == AppState::Paused) {
         appendEngineLog("[GUI] Stopping engine...");
-        mSession.shutdown();
+        mSession->shutdown();
         mState = AppState::Idle;
         appendEngineLog("[GUI] Engine stopped.");
     }
@@ -733,7 +734,7 @@ void App::onStop() {
 
 void App::onPause() {
     if (mState == AppState::Running) {
-        mSession.setPaused(true);
+        mSession->setPaused(true);
         mState = AppState::Paused;
         appendEngineLog("[GUI] Paused.");
     }
@@ -741,7 +742,7 @@ void App::onPause() {
 
 void App::onResume() {
     if (mState == AppState::Paused) {
-        mSession.setPaused(false);
+        mSession->setPaused(false);
         mState = AppState::Running;
         appendEngineLog("[GUI] Resumed.");
     }
@@ -750,6 +751,7 @@ void App::onResume() {
 void App::doLaunchEngine(const std::string& scenePath,
                           const std::string& sourcesFolder,
                           const std::string& admFile) {
+    mSession = std::make_unique<EngineSession>();
     appendEngineLog("[GUI] Configuring engine...");
 
     EngineOptions opts;
@@ -759,8 +761,8 @@ void App::doLaunchEngine(const std::string& scenePath,
     opts.oscPort       = 9009;  // OSC enabled by default (see App.hpp DEV NOTE)
     opts.elevationMode = ElevationMode::RescaleAtmosUp;
 
-    if (!mSession.configureEngine(opts)) {
-        mLastError = mSession.getLastError();
+    if (!mSession->configureEngine(opts)) {
+        mLastError = mSession->getLastError();
         mState = AppState::Error;
         appendEngineLog("[Engine] configureEngine failed: " + mLastError, {1.f,0.4f,0.4f,1.f});
         return;
@@ -771,11 +773,11 @@ void App::doLaunchEngine(const std::string& scenePath,
     scene.sourcesFolder = sourcesFolder;
     scene.admFile       = admFile;
 
-    if (!mSession.loadScene(scene)) {
-        mLastError = mSession.getLastError();
+    if (!mSession->loadScene(scene)) {
+        mLastError = mSession->getLastError();
         mState = AppState::Error;
         appendEngineLog("[Engine] loadScene failed: " + mLastError, {1.f,0.4f,0.4f,1.f});
-        mSession.shutdown();
+        mSession->shutdown();
         return;
     }
 
@@ -783,11 +785,11 @@ void App::doLaunchEngine(const std::string& scenePath,
     layout.layoutPath   = mLayoutPath;
     layout.remapCsvPath = mRemapPath;
 
-    if (!mSession.applyLayout(layout)) {
-        mLastError = mSession.getLastError();
+    if (!mSession->applyLayout(layout)) {
+        mLastError = mSession->getLastError();
         mState = AppState::Error;
         appendEngineLog("[Engine] applyLayout failed: " + mLastError, {1.f,0.4f,0.4f,1.f});
-        mSession.shutdown();
+        mSession->shutdown();
         return;
     }
 
@@ -798,25 +800,25 @@ void App::doLaunchEngine(const std::string& scenePath,
     rp.subMixDb         = mSubMixDb;
     rp.autoCompensation = mAutoComp;
 
-    if (!mSession.configureRuntime(rp)) {
-        mLastError = mSession.getLastError();
+    if (!mSession->configureRuntime(rp)) {
+        mLastError = mSession->getLastError();
         mState = AppState::Error;
         appendEngineLog("[Engine] configureRuntime failed: " + mLastError, {1.f,0.4f,0.4f,1.f});
-        mSession.shutdown();
+        mSession->shutdown();
         return;
     }
 
-    if (!mSession.start()) {
-        mLastError = mSession.getLastError();
+    if (!mSession->start()) {
+        mLastError = mSession->getLastError();
         mState = AppState::Error;
         appendEngineLog("[Engine] start() failed: " + mLastError, {1.f,0.4f,0.4f,1.f});
-        mSession.shutdown();
+        mSession->shutdown();
         return;
     }
 
     // Apply elevation mode (start() uses ElevationMode::RescaleAtmosUp from opts;
     // if the user has changed the combo, sync it now via the V1.1 setter)
-    mSession.setElevationMode(static_cast<ElevationMode>(mElevationMode));
+    mSession->setElevationMode(static_cast<ElevationMode>(mElevationMode));
 
     mState = AppState::Running;
     appendEngineLog("[Engine] Started successfully. OSC port 9009.",
