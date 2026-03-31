@@ -1,6 +1,6 @@
 # Development History
 
-**Last Updated:** March 7, 2026
+**Last Updated:** March 31, 2026
 
 ## Transition from `spatialroot_adm_extract` to `cult-transcoder`
 
@@ -25,7 +25,7 @@ In Phase 3 of the project (March 2026), the ADM extraction functionality was tra
 - **Advantages**:
   - Simplified pipeline with fewer dependencies.
   - Enhanced functionality beyond ADM extraction.
-  - Direct integration with the `runRealtime.py` pipeline.
+  - Direct integration with the realtime workflow (at the time driven by `runRealtime.py`).
 
 ### Documentation Updates
 
@@ -56,6 +56,14 @@ In Phase 3 of the project (March 2026), the ADM extraction functionality was tra
 
 - **Date**: March 2026
 - **Description**: Fully transitioned to `cult-transcoder` for ADM extraction and removed all references to `spatialroot_adm_extract`.
+
+---
+
+### Phase 4: C++ Refactor and ImGui GUI
+
+- **Date**: March 31, 2026
+- **Description**: Python build system replaced by `init.sh` and `build.sh`. `EngineSessionCore` static library hardened with V1.1 API, adding runtime setters, a typed `ElevationMode`, and an `oscPort=0` guard. Python PySide6 GUI replaced by a Dear ImGui + GLFW GUI linking `EngineSessionCore` directly. Python GUI, entry points, LUSID library, and Python virtual environment all removed.
+- **Note**: `spatialroot_realtime` is now the primary CLI. `EngineSession::shutdown()` is terminal; a new instance must be constructed to restart.
 
 ---
 

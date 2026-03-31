@@ -1,6 +1,15 @@
 # Real-Time Spatial Audio Engine – Agent Overview
 
-## Implementation Decisions (Updated 2026-02-26)
+## Phase 6 Update (2026-03-31) — C++ Refactor Complete
+
+- **Canonical entrypoints:** `spatialroot_realtime` (CLI) and `gui/imgui/` (Dear ImGui + GLFW desktop GUI).
+- **Removed:** `runRealtime.py` (Python launcher) and the PySide6 realtime GUI (`gui/realtimeGUI/`) were removed in Phase 6.
+- **GUI architecture:** ImGui GUI embeds `EngineSessionCore` in-process (no `QProcess`, no subprocess).
+- **Runtime control plane:** Primary control is direct C++ setter methods on the embedded session/core. OSC remains available as an optional secondary surface (default port 9009; disable with `oscPort=0`).
+
+> Everything below is retained for archaeology as the Phase 1–10 prototype planning/completion log (updated 2026-02-26). Treat it as **archived** guidance unless explicitly referenced for historical context.
+
+## Implementation Decisions (Archived — updated 2026-02-26)
 
 > These decisions were made during initial planning and override any conflicting
 > assumptions in the agent sub-documents. Sub-documents remain useful for
@@ -40,7 +49,9 @@ Continue using **AlloLib's AudioIO** (already a dependency via
   comments for provenance but do not `#include` it.
 - Goal: the offline renderer continues to compile and work exactly as before.
 
-### GUI – Dedicated Realtime GUI Entry (PySide6)
+### GUI – Dedicated Realtime GUI Entry (PySide6) (Archived)
+
+> **Archived:** This PySide6/QProcess GUI approach was implemented for the Phase 10 prototype and later superseded/removed in Phase 6 in favor of the ImGui + GLFW GUI (`gui/imgui/`).
 
 - Keep PySide6 (Qt) and **do not switch to ImGui** (ImGui remains reference-only).
 - Do **not** bloat the existing offline GUI. Create a parallel realtime entry:
@@ -48,13 +59,17 @@ Continue using **AlloLib's AudioIO** (already a dependency via
   - optional `gui/realtimeGUI/` folder with panels + `realtime_runner.py`
 - The realtime GUI launches `runRealtime.py` via `QProcess` (same pattern as `pipeline_runner.py`).
 
-### Runtime Control Plane (stability priority)
+### Runtime Control Plane (stability priority) (Archived)
+
+> **Archived:** Phase 6 uses direct in-process setters as the primary control plane; OSC/ParameterServer-style control is secondary/optional.
 
 - Prefer AlloLib **`al::Parameter` / `ParameterBundle` + `ParameterServer` (OSC)** for live runtime controls.
 - GUI sends OSC updates; engine reads parameters in a RT-safe way (audio thread reads, heavy work on main/control thread).
 - This control-plane contract is intended to **survive the later pipeline refactor**.
 
-### Python Entry Point – `runRealtime.py`
+### Python Entry Point – `runRealtime.py` (Archived)
+
+> **Archived:** `runRealtime.py` was removed in Phase 6. The canonical entrypoint is now the `spatialroot_realtime` binary (CLI) and the ImGui GUI.
 
 - **`runRealtime.py`** at the project root mirrors `runPipeline.py` — it
   accepts the **same inputs** (ADM WAV file or LUSID package directory +
@@ -114,7 +129,7 @@ Based on the architecture's data-flow dependencies, the planned order is:
 | 8     | **Threading and Safety**  | Harden all inter-thread communication                 | ✅ Complete |
 
 9 - update init.sh and files in src/config to handle the updated realtime engine and tooling. ✅ Complete
-| 10 | **GUI Agent** | PySide6 realtimeGUI (separate entry), QProcess→runRealtime.py, ParameterServer control plane | ✅ Complete |
+| 10 | **GUI Agent** | (Archived prototype) PySide6 realtimeGUI + QProcess + OSC/ParameterServer | ✅ Complete |
 
 11 - update main project read me and relevant documentation - in progress
 12 - polish tasks:
@@ -129,42 +144,12 @@ Based on the architecture's data-flow dependencies, the planned order is:
 
 ### Next Major Task (after Phase 10 prototype): Pipeline Refactor (C++-first realtime)
 
-- Promote the C++ realtime executable to the canonical entrypoint (Python becomes optional wrapper/tooling).
-- Keep Python for LUSID transcoding + batch prep initially; evaluate rewrite of runtime-prep into C/C++ once the GUI prototype is stable.
-- Preserve the control plane contract (parameter names + ranges) so UI work is not thrown away.
+✅ **Completed in Phase 6 (2026-03-31).** The C++ realtime executable is the canonical entrypoint, and Python-era wrapper/tooling and PySide6 GUI paths are removed.
 
 ### Phase 10 Completion Log (GUI Agent) — ✅ Complete (Feb 26 2026)
 
 **Design doc:** `internalDocsMD/Realtime_Engine/agentDocs/agent_gui_UPDATED_v3.md`
 **AlloLib IPC reference:** `internalDocsMD/Realtime_Engine/agentDocs/allolib_parameters_reference.md`
-
-#### Decisions locked
-
-| Decision                 | Detail                                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| Framework                | PySide6 (no ImGui)                                                                              |
-| Entry point              | `realtimeMain.py` at project root — standalone window, NOT a tab in `gui/main.py`               |
-| Process launch           | `runRealtime.py` via `QProcess` (mirrors PipelineRunner pattern)                                |
-| IPC / runtime controls   | AlloLib `al::Parameter` + `al::ParameterServer` (OSC, port 9009). GUI sends via `python-osc`    |
-| Pause/Play               | C++ changes in-scope: `config.paused` atomic + callback silence branch + ParameterServer wiring |
-| `--remap` passthrough    | Add to `runRealtime.py` and `_launch_realtime_engine()`                                         |
-| `--osc_port` passthrough | Add to `runRealtime.py` and `_launch_realtime_engine()`                                         |
-| Stylesheet               | Reuse `gui/styles.qss`                                                                          |
-| Visualization            | Deferred                                                                                        |
-
-#### Files to create (GUI)
-
-| File                                                        | Purpose                                                                               |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `realtimeMain.py`                                           | Project-root launcher — loads styles.qss, creates `RealtimeWindow`, runs QApplication |
-| `gui/realtimeGUI/__init__.py`                               | Package marker                                                                        |
-| `gui/realtimeGUI/realtimeGUI.py`                            | `RealtimeWindow` — main QWidget, assembles panels                                     |
-| `gui/realtimeGUI/realtime_runner.py`                        | `RealtimeRunner` + `RealtimeConfig` — QProcess wrapper, OSC sender, state machine     |
-| `gui/realtimeGUI/realtime_panels/__init__.py`               | Package marker                                                                        |
-| `gui/realtimeGUI/realtime_panels/RealtimeInputPanel.py`     | Source/layout/remap/buffer/scan inputs                                                |
-| `gui/realtimeGUI/realtime_panels/RealtimeControlsPanel.py`  | Live sliders + auto comp toggle                                                       |
-| `gui/realtimeGUI/realtime_panels/RealtimeLogPanel.py`       | Stdout/stderr console, 2000-line cap                                                  |
-| `gui/realtimeGUI/realtime_panels/RealtimeTransportPanel.py` | Start/Stop/Kill/Restart/Pause/Play + status pill                                      |
 
 #### Files to modify (C++ engine + Python)
 
@@ -1520,22 +1505,22 @@ root cause of the movement-click artifacts. The proximity guard coordinate fix
 
 ### Phase 13 Agent Implementation Order Table Update
 
-| Phase | Agent(s)                                               | Status                                            |
-| ----- | ------------------------------------------------------ | ------------------------------------------------- |
-| 1–12  | _(as above)_                                           | ✅ Complete                                       |
-| 13    | **Coordinate Space + AutoComp Correctness**            | ✅ Complete                                       |
-|       | Fix 1: Speaker cache → `speaker.vec()` (DBAP-internal) | ✅ `Spatializer.hpp` `init()`                     |
-|       | Fix 2: Guard flip/push/unflip in DBAP-internal space   | ✅ `Spatializer.hpp` `renderBlock()`              |
-|       | Fix 3: AutoComp disabled (stub returns 1.0f)           | ✅ `Spatializer.hpp` `computeFocusCompensation()` |
-|       | Position smoothing                                     | ⏸ Deferred                                        |
-|       | Scene loop / `resetForLoop()`                          | ⏸ Deferred                                        |
-|       | AutoComp redesign (correct ref position + power model) | ⏸ Deferred                                        |
-| 14    | **Channel Relocation Diagnostic**                      | ✅ Complete                                       |
-|       | Pre-copy render-bus active-channel mask                | ✅ `Spatializer.hpp` `renderBlock()` (before Ph 7)|
-|       | Post-copy device-output active-channel mask            | ✅ `Spatializer.hpp` `renderBlock()` (after Ph 7) |
-|       | Relocation event latches (render + device)             | ✅ `EngineState` + monitoring loop in `main.cpp`  |
-|       | Main/sub RMS totals                                    | ✅ `EngineState` `mainRmsTotal` / `subRmsTotal`   |
-|       | Corrected wall-clock CPU meter                         | ✅ `RealtimeBackend.hpp` `processBlock()`         |
+| Phase | Agent(s)                                               | Status                                             |
+| ----- | ------------------------------------------------------ | -------------------------------------------------- |
+| 1–12  | _(as above)_                                           | ✅ Complete                                        |
+| 13    | **Coordinate Space + AutoComp Correctness**            | ✅ Complete                                        |
+|       | Fix 1: Speaker cache → `speaker.vec()` (DBAP-internal) | ✅ `Spatializer.hpp` `init()`                      |
+|       | Fix 2: Guard flip/push/unflip in DBAP-internal space   | ✅ `Spatializer.hpp` `renderBlock()`               |
+|       | Fix 3: AutoComp disabled (stub returns 1.0f)           | ✅ `Spatializer.hpp` `computeFocusCompensation()`  |
+|       | Position smoothing                                     | ⏸ Deferred                                         |
+|       | Scene loop / `resetForLoop()`                          | ⏸ Deferred                                         |
+|       | AutoComp redesign (correct ref position + power model) | ⏸ Deferred                                         |
+| 14    | **Channel Relocation Diagnostic**                      | ✅ Complete                                        |
+|       | Pre-copy render-bus active-channel mask                | ✅ `Spatializer.hpp` `renderBlock()` (before Ph 7) |
+|       | Post-copy device-output active-channel mask            | ✅ `Spatializer.hpp` `renderBlock()` (after Ph 7)  |
+|       | Relocation event latches (render + device)             | ✅ `EngineState` + monitoring loop in `main.cpp`   |
+|       | Main/sub RMS totals                                    | ✅ `EngineState` `mainRmsTotal` / `subRmsTotal`    |
+|       | Corrected wall-clock CPU meter                         | ✅ `RealtimeBackend.hpp` `processBlock()`          |
 |       | Phase 14 channel-relocation root cause                 | ⏳ Pending listener test                           |
 
 ---
@@ -1576,33 +1561,33 @@ Two lightweight measurement points are added in `Spatializer::renderBlock()`:
 
 ### Diagnostic key
 
-| Observation | Conclusion |
-|---|---|
-| `[RELOC-RENDER]` fires | Active channel set changing inside `mRenderIO` — render/DBAP layer origin |
+| Observation                                           | Conclusion                                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `[RELOC-RENDER]` fires                                | Active channel set changing inside `mRenderIO` — render/DBAP layer origin           |
 | `[RELOC-DEVICE]` fires, `[RELOC-RENDER]` does **not** | Device/output-layer origin only (OutputRemap, channel-count mismatch, AlloLib copy) |
-| Both fire | Render-bus change propagated through copy — consistent with render-layer origin |
-| Neither fires | Threshold 1e-8 too high, or event masked by 500 ms poll window |
+| Both fire                                             | Render-bus change propagated through copy — consistent with render-layer origin     |
+| Neither fires                                         | Threshold 1e-8 too high, or event masked by 500 ms poll window                      |
 
 ### New `EngineState` fields
 
-| Field | Type | Writer | Meaning |
-|---|---|---|---|
-| `renderActiveMask` | `atomic<uint64_t>` | audio | Bitmask of render-bus channels with signal, latest block |
-| `deviceActiveMask` | `atomic<uint64_t>` | audio | Bitmask of device-output channels with signal, latest block |
-| `renderRelocPrev/Next/Event` | `atomic<uint64_t/bool>` | audio (set) / main (clear) | One-shot latch: render mask before/after a change |
-| `deviceRelocPrev/Next/Event` | `atomic<uint64_t/bool>` | audio (set) / main (clear) | One-shot latch: device mask before/after a change |
-| `mainRmsTotal` | `atomic<float>` | audio | sqrt(mean-square sum across main channels), latest block |
-| `subRmsTotal` | `atomic<float>` | audio | sqrt(mean-square sum across sub channels), latest block |
-| `callbackCpuLoad` | `atomic<float>` | audio | Wall-clock callback duration / block budget |
+| Field                        | Type                    | Writer                     | Meaning                                                     |
+| ---------------------------- | ----------------------- | -------------------------- | ----------------------------------------------------------- |
+| `renderActiveMask`           | `atomic<uint64_t>`      | audio                      | Bitmask of render-bus channels with signal, latest block    |
+| `deviceActiveMask`           | `atomic<uint64_t>`      | audio                      | Bitmask of device-output channels with signal, latest block |
+| `renderRelocPrev/Next/Event` | `atomic<uint64_t/bool>` | audio (set) / main (clear) | One-shot latch: render mask before/after a change           |
+| `deviceRelocPrev/Next/Event` | `atomic<uint64_t/bool>` | audio (set) / main (clear) | One-shot latch: device mask before/after a change           |
+| `mainRmsTotal`               | `atomic<float>`         | audio                      | sqrt(mean-square sum across main channels), latest block    |
+| `subRmsTotal`                | `atomic<float>`         | audio                      | sqrt(mean-square sum across sub channels), latest block     |
+| `callbackCpuLoad`            | `atomic<float>`         | audio                      | Wall-clock callback duration / block budget                 |
 
 ### Files changed
 
-| File | Change |
-|---|---|
-| `RealtimeTypes.hpp` | New `EngineState` fields above |
-| `Spatializer.hpp` | Pre-copy and post-copy measurement blocks; `numRenderChannels()` getter |
+| File                  | Change                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `RealtimeTypes.hpp`   | New `EngineState` fields above                                                                  |
+| `Spatializer.hpp`     | Pre-copy and post-copy measurement blocks; `numRenderChannels()` getter                         |
 | `RealtimeBackend.hpp` | `#include <chrono>`; `mCallbackStart` member; `callbackCpuLoad` store at Step 6 and paused path |
-| `main.cpp` | Pre-loop channel count print; relocation event consumption and print; updated status line |
+| `main.cpp`            | Pre-loop channel count print; relocation event consumption and print; updated status line       |
 
 ### Invariant 15 — Phase 14 diagnostic measurements are additive
 
