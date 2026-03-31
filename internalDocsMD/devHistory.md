@@ -59,7 +59,7 @@ In Phase 3 of the project (March 2026), the ADM extraction functionality was tra
 
 ---
 
-### Phase 4: C++ Refactor and ImGui GUI
+### Phase 6: C++ Refactor and ImGui GUI
 
 - **Date**: March 31, 2026
 - **Description**: Python build system replaced by `init.sh` and `build.sh`. `EngineSessionCore` static library hardened with V1.1 API, adding runtime setters, a typed `ElevationMode`, and an `oscPort=0` guard. Python PySide6 GUI replaced by a Dear ImGui + GLFW GUI linking `EngineSessionCore` directly. Python GUI, entry points, LUSID library, and Python virtual environment all removed.

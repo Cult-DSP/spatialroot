@@ -185,11 +185,11 @@ CMake link targets: `al` + `Gamma`.
 **Objective:** Add a profile adaptation layer inside LUSID to accept a wider range of ADM variants (Sony 360RA, edge-case Atmos exports, etc.).
 Planned work:
 
-- Add folder: `LUSID/src/adm_profiles/`
-  - `detect_profile.py`
-  - `atmos_adapter.py`
-  - `sony360_adapter.py`
-  - `common.py` (ID handling, time parsing incl. `S48000`, polar→cart, block compaction, mute gating)
+- Add C++ classes inside `cult-transcoder/src/adm_profiles/`
+  - `detect_profile.cpp`
+  - `atmos_adapter.cpp`
+  - `sony360_adapter.cpp`
+  - `common.cpp` (ID handling, time parsing incl. `S48000`, polar→cart, block compaction, mute gating)
 - Sony 360RA needs:
   - Opaque string IDs (hex-like suffixes such as `...0a`)
   - `rtime/duration` parsing with `S####` suffix
@@ -309,13 +309,11 @@ The C++ renderer reads LUSID directly — no intermediate format conversion.
 
 ### 1. ADM Metadata Extraction & Parsing
 
-#### `spatialroot_adm_extract` (embedded)
+#### `spatialroot_adm_extract` (ARCHIVED)
 
+- **Note**: Replaced by `cult-transcoder` in Phase 3. Kept here for historical context only.
 - **Purpose**: Extract ADM XML from BWF WAV file using the EBU libbw64 library
-- **Type**: Embedded C++ CLI tool, built by `./init.sh` + `./build.sh`
-- **Source**: `src/adm_extract/`
-- **Output**: `processedData/currentMetaData.xml`
-- **Error handling**: Raises `FileNotFoundError` with instructions to run `./init.sh` if binary not built
+- **Type**: Embedded C++ CLI tool (Removed)
 
 #### `cult-transcoder` — ADM → LUSID (+ stems) Tool
 
@@ -803,19 +801,8 @@ Build and run via `init.sh` / `build.sh` / `run.sh` and the C++ binaries.
 **Issue:** `ModuleNotFoundError: No module named 'lxml'`  
 **Solution:** `lxml` is no longer required by the active pipeline. If you still see this, you're running archived code; stop and use the current C++ toolchain.
 
-**Issue:** `spatialroot_adm_extract` binary not found
-**Solution:** Run `./init.sh` to build the embedded ADM extractor.
-
-**Issue:** Empty scene / no frames after parsing  
-**Solution:** Check ADM XML format. Some ADM files have non-standard structure. Use the debug `scene.summary()` output for diagnostics.
-
-### Stem Splitting
-
-**Issue:** Sspatialroot_adm_extract`binary not found
-**Solution:** Run`./init.sh` to build the embedded ADM extractor.
-
-**Issue:** Empty scene / no frames after parsing  
-**Solution:** Check ADM XML format. Some ADM files have non-standard structure. Use the debug `scene.summary()` output for diagnostics.
+**Issue:** Empty scene / no frames after transcoding  
+**Solution:** Check ADM XML format. Some ADM files have non-standard structure. Check the `cult-transcoder` log output for diagnostics.
 
 ### Stem Splitting
 
