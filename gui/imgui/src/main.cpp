@@ -27,6 +27,11 @@
 #include <cstring>
 #include <string>
 
+#ifdef __APPLE__
+// Defined in FileDialog_macOS.mm — sets the Dock/app-switcher icon from a PNG.
+void setMacOSAppIcon(const std::string& pngPath);
+#endif
+
 // ── GLFW error callback ───────────────────────────────────────────────────────
 static void glfwErrorCallback(int error, const char* description) {
     fprintf(stderr, "[GLFW] Error %d: %s\n", error, description);
@@ -66,6 +71,12 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "[main] glfwInit() failed\n");
         return 1;
     }
+
+#ifdef __APPLE__
+    // Set the Dock / app-switcher icon. Must be called after glfwInit() which
+    // initialises NSApplication. The icon is the same PNG used in the header bar.
+    setMacOSAppIcon(projectRoot + "/gui/imgui/src/miniLogo.png");
+#endif
 
     // OpenGL 3.3 Core Profile
     // macOS requires GLFW_OPENGL_FORWARD_COMPAT for core profile.

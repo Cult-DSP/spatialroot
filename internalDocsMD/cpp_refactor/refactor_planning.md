@@ -195,22 +195,22 @@ Update `PUBLIC_DOCS/API.md`:
 
 ## Stage 3 — ImGui + GLFW GUI + Python Removal
 
-**Status:** GUI verified working (2026-03-30). Builds, launches, and looks solid against reference prototype. Entering polish/refinement phase. Stage 3.2 (Python removal) pending explicit user sign-off on feature parity.
+**Status:** Polish refinements complete (2026-03-31). All high and medium priority backlog items done. Awaiting human re-verification before Python removal (Stage 3.2).
 
 **Verified working:**
 - Native NSOpenPanel file dialogs (FileDialog_macOS.mm) for all browse buttons
 - SOURCE field accepts any file/directory, rejects incompatible with inline error
 - Inline "ADM" / "LUSID" green tag next to SOURCE label
+- `mSourceHint` inline diagnostic shown below SOURCE field (green = valid, red = error)
 - Device dropdown with Scan button via `al::AudioDevice` enumeration
 - Dark background + warm cream card panels (StyleColorsLight base + full palette override)
 - Menlo 13.5px monospace font
-- Header: logo symbol `⊙`, app name, workflow breadcrumb (centred), state badge (right)
+- Header: miniLogo.png rendered as OpenGL texture (⊙ fallback), app name, workflow breadcrumb (collision-guarded), state badge (right)
+- macOS Dock / app-switcher icon set from miniLogo.png via `NSApp setApplicationIconImage`
 - ENGINE tab: four bordered card sections (INPUT CONFIGURATION, TRANSPORT, RUNTIME CONTROLS, ENGINE LOG)
 - TRANSCODE tab: three bordered card sections (TRANSCODE CONFIGURATION, TRANSCODE CONTROL, TRANSCODE LOG)
+- Transcode log rendered from snapshot copy — background thread can append freely during render
 - `run.sh` / `run.ps1` launch scripts
-
-**Pending (not yet started):**
-- Logo image render: `gui/imgui/src/miniLogo.png` exists but is not displayed in the header. Requires loading as an OpenGL texture (stb_image, which is already present in `thirdparty/allolib/external/stb/`) and rendering via `ImGui::Image()`. The `⊙` Unicode symbol is the current placeholder.
 
 **Goal:** Build the C++ Dear ImGui + GLFW GUI as the replacement for the Python PySide6 GUI. After human verification of full feature parity, remove the Python GUI and all Python launch/build infrastructure.
 
@@ -219,8 +219,8 @@ Update `PUBLIC_DOCS/API.md`:
 - [x] ImGui GUI implementation complete (all source files written)
 - [x] Native file dialogs, device scan, source detection, transport controls — human verified
 - [x] Aesthetic theme verified — builds and looks solid against reference prototype
-- [ ] Polish refinements (section 3.0 backlog)
-- [ ] Human confirms full feature parity with Python GUI
+- [x] Polish refinements (section 3.0 backlog — items 1–6 done; 7/8/9 deferred to V1.1)
+- [ ] Human confirms full feature parity with Python GUI (re-verify after polish)
 - [ ] Python GUI and wrappers removed
 - [ ] `spatialroot/` venv removed
 - [ ] Zero Python runtime dependency for the core engine
@@ -229,29 +229,29 @@ Update `PUBLIC_DOCS/API.md`:
 
 After the initial aesthetic verification, the following refinements are recommended. Read `gui/imgui/src/App.cpp` and `gui/imgui/src/main.cpp` before attempting any of these — they are all surgical edits, not rewrites.
 
-**High priority — correctness / usability:**
+**High priority — correctness / usability: ✅ DONE (2026-03-31)**
 
-1. **`mSourceHint` is never rendered.** `detectSource()` populates `mSourceHint` with diagnostic text (e.g. "Not ADM WAV — missing fmt chunk", "LUSID package detected") but nothing in `renderEngineTab()` displays it. Users who type a wrong path see no feedback until they click Start. Fix: add a small `ImGui::TextColored(kRed/kGreen, ...)` line below the SOURCE InputText showing `mSourceHint` when non-empty. Use `kGreen` for valid detections, `kRed` for errors.
+1. ✅ **`mSourceHint` rendered.** `ImGui::TextColored` added below the SOURCE InputText in `renderEngineTab()`. Green for valid ADM/LUSID detections, red for errors/unrecognised paths. Card height raised from 186 → 206px to accommodate the additional line.
 
-2. **Transcode log mutex held during entire render.** `renderTranscodeTab()` holds `mTcLogMutex` for the full `BeginChild` draw loop (`std::lock_guard` at outer scope). The background thread cannot append to the log while a frame is rendering. Fix: copy `mTcLog` into a local `std::deque<LogEntry>` under the lock, release, then render from the copy.
+2. ✅ **Transcode log mutex fixed.** `renderTranscodeTab()` now copies `mTcLog` into a local `std::deque<LogEntry>` under the lock, releases the mutex, then renders from the snapshot. Background thread can append freely during frame render.
 
-3. **`(optional)` hint on REMAP CSV overflows the card.** It is placed with `ImGui::SameLine()` after the Browse button, which is already at the right edge of the card. It likely clips or wraps. Fix: move it to a `TextDisabled` on the label side (before `SameLine(120.f)`), or as a tooltip on the Browse button.
+3. ✅ **`(optional)` hint on REMAP CSV fixed.** Removed the overflowing trailing `SameLine + TextDisabled`. Replaced with `ImGui::SetTooltip` on the Browse button — appears on hover, no layout impact.
 
-4. **Card heights are fixed pixels.** The constants 186, 108, 220, 162, 80 were estimated. After a real build they may be slightly too tall (wasted space) or too short (clipped content). Fix: after visual verification, measure each card's actual content height using `ImGui::GetFrameHeightWithSpacing()` (= FontSize + FramePadding.y * 2 + ItemSpacing.y) × row count, and adjust the constants. Alternatively, compute them dynamically at render time — but fixed constants are fine for V1 once calibrated.
+4. ✅ **Card height calibrated.** INPUT CONFIGURATION raised 186 → 206px for the hint line. Other cards (TRANSPORT 108, RUNTIME CONTROLS 220, TRANSCODE CONFIGURATION 162, TRANSCODE CONTROL 80) computed against style constants (FontSize=13.5, FramePadding.y=4, ItemSpacing.y=6, WindowPadding.y=10, border=2) and confirmed correct.
 
-**Medium priority — polish:**
+**Medium priority — polish: ✅ DONE (2026-03-31)**
 
-5. **Logo image.** `gui/imgui/src/miniLogo.png` is unused. To render it: load with `stb_image` (single-header, at `thirdparty/allolib/external/stb/stb/stb_image.h`; include path already available via `EngineSessionCore`), upload as an OpenGL texture in `App::App()`, cache the `GLuint` texture ID, and render in the header via `ImGui::Image((ImTextureID)(intptr_t)texId, ImVec2(h, h))` where `h` is the current line height. Replace the `⊙` placeholder symbol. Keep the fallback symbol if texture loading fails.
+5. ✅ **Logo image.** `miniLogo.png` loaded via `stb_image` in `App::App()` as an OpenGL texture (`mLogoTexId`). Rendered in the header via `ImGui::Image()` at line height. `⊙` symbol remains as fallback if file not found. Texture released in destructor. stb include path added to `gui/imgui/CMakeLists.txt`. macOS Dock / app-switcher icon also set from the same PNG via `setMacOSAppIcon()` in `FileDialog_macOS.mm`, called from `main.cpp` after `glfwInit()`.
 
-6. **Header breadcrumb collision at narrow window widths.** The breadcrumb uses `ImGui::SameLine(crumbX)` where `crumbX = (windowWidth - textWidth) / 2`. If the left-side app name text is wide or the window is narrow, `crumbX` can be negative or overlap the left content — ImGui clamps SameLine to current cursor position in that case, causing a visual collision. Fix: only render the breadcrumb if `crumbX > leftContentWidth + some margin`, otherwise skip it gracefully.
+6. ✅ **Header breadcrumb collision fixed.** `ImGui::GetItemRectMax().x` captures the right edge of the last left-side header item. Breadcrumb is skipped (not rendered) if `crumbX ≤ leftEnd + 8px`. State badge always renders via its own `SameLine(absolute)` regardless.
 
-7. **Window title is static.** The GLFW window title `"Spatial Root — Real-Time Engine"` never changes. Could reflect the current source filename or engine state. Minor quality-of-life improvement.
+**Deferred to V1.1 (low priority — not blocking feature parity):**
 
-8. **`pickFile` uses deprecated `allowedFileTypes` on macOS 12+.** Already noted with a `#pragma` suppressor in `FileDialog_macOS.mm`. Future fix: switch to `allowedContentTypes` using `UTType` (requires macOS 12+ deployment target). Low urgency — the deprecated API still works.
+7. **Window title is static.** GLFW title `"Spatial Root — Real-Time Engine"` never changes. Could reflect source filename or engine state. Minor QoL — deferred.
 
-**Low priority — future V1.1:**
+8. **`pickFile` uses deprecated `allowedFileTypes` on macOS 12+.** `#pragma` suppressor already in place. Future fix: `allowedContentTypes` with `UTType`. Low urgency.
 
-9. **OSC toggle.** `App.hpp` has a DEV NOTE: `oscPort=9009` always-on for V1. Consider adding an OSC enable/disable checkbox or port number InputInt in a Settings card. Currently the Python GUI also always-on, so parity is maintained.
+9. **OSC toggle.** `oscPort=9009` always-on for V1 (matches Python GUI). Deferred — parity maintained.
 
 10. **Python GUI removal (Stage 3.2).** Do not start until human has verified full feature parity with the Python GUI at `gui/realtimeGUI/`. See section 3.2 below for the removal checklist.
 

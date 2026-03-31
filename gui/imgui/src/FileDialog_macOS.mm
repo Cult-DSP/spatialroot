@@ -57,3 +57,14 @@ std::string pickFileOrDirectory(const std::string& title) {
         return std::string(panel.URL.path.UTF8String ?: "");
     return {};
 }
+
+// Set the macOS Dock and application switcher icon from a PNG file.
+// Must be called after NSApplication is initialised (i.e. after glfwInit()).
+// No-op if the file is not found.
+void setMacOSAppIcon(const std::string& pngPath) {
+    @autoreleasepool {
+        NSString* path = [NSString stringWithUTF8String:pngPath.c_str()];
+        NSImage* icon  = [[NSImage alloc] initWithContentsOfFile:path];
+        if (icon) [NSApp setApplicationIconImage:icon];
+    }
+}
