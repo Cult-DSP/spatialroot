@@ -49,6 +49,90 @@ WavUtils::loadSources(const std::string &folder,
     return out;
 }
 
+// Parse source name to ADM channel index (0-based)
+// "1.1" → 0, "2.1" → 1, "LFE" → 3 (if >= 4 channels)
+static int parseChannelIndex(const std::string& sourceName, int numChannels) {
+    // Handle LFE special case
+    if (sourceName == "LFE") {
+        return (numChannels >= 4) ? 3 : -1;
+    }
+
+    // Parse "N.1" pattern: extract the integer N before the dot
+    size_t dotPos = sourceName.find('.');
+    if (dotPos == std::string::npos || dotPos == 0) {
+        return -1;  // No dot found or starts with dot
+    }
+
+    try {
+        int trackNum = std::stoi(sourceName.substr(0, dotPos));
+        int index = trackNum - 1;  // 1-based → 0-based
+        if (index >= 0 && index < numChannels) {
+            return index;
+        }
+    } catch (...) {
+        // Not a valid integer prefix
+    }
+
+    return -1;
+}
+
+std::map<std::string, MonoWavData>
+WavUtils::loadSourcesFromADM(const std::string &admFile,
+                             const std::map<std::string, std::vector<struct Keyframe>> &sourceKeys,
+                             int expectedSR)
+{
+    std::map<std::string, MonoWavData> out;
+
+    // Open the ADM file
+    SF_INFO info;
+    SNDFILE *snd = sf_open(admFile.c_str(), SFM_READ, &info);
+    if (!snd) {
+        throw std::runtime_error("Failed to open ADM WAV: " + admFile);
+    }
+
+    if (info.samplerate != expectedSR) {
+        sf_close(snd);
+        throw std::runtime_error("Sample rate mismatch in ADM file: " + admFile);
+    }
+
+    if (info.channels < 2) {
+        sf_close(snd);
+        throw std::runtime_error("ADM file must have at least 2 channels: " + admFile);
+    }
+
+    // Read all frames from the multichannel file
+    std::vector<float> interleavedBuffer(info.frames * info.channels);
+    sf_count_t framesRead = sf_readf_float(snd, interleavedBuffer.data(), info.frames);
+    sf_close(snd);
+
+    if (framesRead != info.frames) {
+        throw std::runtime_error("Failed to read all frames from ADM file: " + admFile);
+    }
+
+    // Extract channels for each source
+    for (auto &[name, kf] : sourceKeys) {
+        int channelIndex = parseChannelIndex(name, info.channels);
+        if (channelIndex < 0) {
+            std::cerr << "Warning: Cannot map source '" << name << "' to ADM channel — skipping\n";
+            continue;
+        }
+
+        MonoWavData d;
+        d.sampleRate = info.samplerate;
+        d.samples.resize(info.frames);
+
+        // De-interleave: extract the specific channel
+        for (sf_count_t frame = 0; frame < info.frames; ++frame) {
+            d.samples[frame] = interleavedBuffer[frame * info.channels + channelIndex];
+        }
+
+        out[name] = d;
+        std::cout << "  ✓ " << name << " → ADM ch " << (channelIndex + 1) << "\n";
+    }
+
+    return out;
+}
+
 void WavUtils::writeMultichannelWav(const std::string &path,
                                     const MultiWavData &mw)
 {

@@ -1,40 +1,37 @@
 # TO DO
 
-**DURATION FIX STATUS (Feb 16, 2026)**: LUSID duration field implemented and working in C++ renderer. Direct calls produce correct 566s output. Full pipeline still shows truncated output (~2:47 vs 9+ min) - issue isolated to pipeline execution, not core rendering logic. Debug prints added to SpatialRenderer.cpp and WavUtils.cpp for investigation.
+## immediate
 
--FIX CHANNEL REMAPPING - on the player end -- update atmos player
--FIX PYTHON / PYTHON 3 VENV ISSUE --
+- merge devel to main
+- clean up old branches
+- clean up old documentation and consolidate
+- autocomp math
+- minimal allolib fork
 
-    -MAKE SURE ALL SUBMODULE / PIP INSTALL / BREW INSTALL ARE INSTALLING A SPECIFIC STABLE BUILD
+## tasks
 
-- FIX ATMOS MIXES
+- use fork of allolib that only has necessary components
+  - adjust main build to not use all of allolib build components
 
-- fix commenting prints at the end of pipeline
+- clean up documentation
+  - public facing
+  - consolidate dev history and testing docs
+- clean up repo
+  - move offline render code [spatial_engine/src] into spatial_engine/spatialRender and adjust cmake and other code
+  - clean up the random run files and shell scripts at project root
+- bugs to fix:
+  - main engine playback (reloc and pops)
+  - auto comp and overal runtime debug focus
 
-- ~~transition to render without stem splitting, shouldnt be necessary~~ ✅ Done (ADM direct streaming in real-time engine — `MultichannelReader.hpp`, `--adm` flag, 2026-02-24)
+- windows support
 
-- switch to internal datastructures instead of many json's, but keep a single debugging json with info
+# Crucial CLI / GUI Features:
 
-* change everything to be stable build and git submodules instead of libraries?
+- add more volume decrease support
+- select output at run time - seems to work
+- limit buffer size selectiom - potentially dangerous / produce warnings
+- add render tab, dont bundle with transcoder
 
-- only clone parts of submodules / libs that we are actually using?
+# Transcoder
 
-- fix hardcoded paths of procesed dir in parser.py and packageForRender, will have to update notebook and runPipeline potentially
-
-# Less Immediate
-
-\*change all instances of deleting a file(s) before writing to use one helper function from utils
-
-- this is relevant in checkAudioChannels, extractMetaData, and others
-  \*deal with static objects in LUSID scene (direct_speaker nodes at t=0)
-
-# to consider
-
-- start testing examples from https://zenodo.org/records/15268471
-- width parameter - relevant for dbap or reverb considerations
-
-- bundle as one nice tool that can be accessed from command line
-
-- build player in allolib that can cleanly handle these
-
-- package the whole decoder into 1 alloapp - uses speaker layout json
+- update transcoder to reflect paper status

@@ -1,5 +1,6 @@
+# TODO: Convert to C++ — this script is retained for reference only. Python is no longer a project dependency.
 #!/usr/bin/env python3
-# command line tool to download basic example files 
+# command line tool to download basic example files
 
 import subprocess
 import sys

@@ -1,0 +1,105 @@
+{
+  "speakers": [
+    {
+      "channel": 1,
+      "az": 0.0,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 2,
+      "az": 0.5235987755982988,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 3,
+      "az": 1.0471975511965976,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 4,
+      "az": 1.5707963267948966,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 5,
+      "az": 2.0943951023931953,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 6,
+      "az": 2.6179938779914944,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 7,
+      "az": -3.141592653589793,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 8,
+      "az": -2.6179938779914944,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 9,
+      "az": -2.0943951023931953,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 10,
+      "az": -1.5707963267948966,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 11,
+      "az": -1.0471975511965976,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 12,
+      "az": -0.5235987755982988,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 13,
+      "az": 0.7853981633974483,
+      "el": 0.7853981633974483,
+      "radius": 1.0
+    },
+    {
+      "channel": 14,
+      "az": -0.7853981633974483,
+      "el": 0.7853981633974483,
+      "radius": 1.0
+    },
+    {
+      "channel": 15,
+      "az": -2.356194490192345,
+      "el": 0.7853981633974483,
+      "radius": 1.0
+    },
+    {
+      "channel": 16,
+      "az": 2.356194490192345,
+      "el": 0.7853981633974483,
+      "radius": 1.0
+    }
+  ],
+  "subwoofers": [],
+  "notes": [
+    "Canonical example layout for Spatial Root. az/el are in radians. Front = 0 az. Positive az rotates toward listener-left, negative az toward listener-right. el = 0 is horizontal plane. radius is normalized to 1.0 for example layouts.",
+    "12-speaker horizontal ring plus 4 overheads at 45 degree elevation. Channels 1-12 ring, 13-16 top layer."
+  ]
+}

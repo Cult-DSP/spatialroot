@@ -42,12 +42,14 @@
 #pragma once
 
 #include <cmath>    // std::exp (used for per-block smoothing in processBlock)
+#include <chrono>   // std::chrono::steady_clock (wall-clock CPU meter)
 #include <iostream>
 #include <string>
 #include <functional>
 #include <cstring>  // memset, memcpy
 #include <vector>
-#include <algorithm> // std::min
+#include <algorithm> // std::min, std::transform
+#include <cctype>   // std::tolower (device-name comparison)
 
 #include "al/io/al_AudioIO.hpp"
 
@@ -66,7 +68,19 @@ public:
     // ── Constructor / Destructor ─────────────────────────────────────────
 
     RealtimeBackend(RealtimeConfig& config, EngineState& state)
-        : mConfig(config), mState(state) {}
+        : mConfig(config), mState(state)
+    {
+        // Fix 5: pre-seed smoother from actual config atomics so the very first
+        // audio block uses the CLI-specified values (gain, focus, mix trims)
+        // instead of the struct defaults (all 1.0f). Without this, the first
+        // ~200 ms ramps from wrong initial values regardless of --gain/--focus.
+        mSmooth.smoothed.masterGain     = config.masterGain.load(std::memory_order_relaxed);
+        mSmooth.smoothed.focus          = config.dbapFocus.load(std::memory_order_relaxed);
+        mSmooth.smoothed.loudspeakerMix = config.loudspeakerMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.subMix         = config.subMix.load(std::memory_order_relaxed);
+        mSmooth.smoothed.autoComp       = config.focusAutoCompensation.load(std::memory_order_relaxed);
+        mSmooth.target                  = mSmooth.smoothed;
+    }
 
     ~RealtimeBackend() {
         shutdown();
@@ -82,6 +96,81 @@ public:
         std::cout << "  Buffer size:      " << mConfig.bufferSize << " frames" << std::endl;
         std::cout << "  Output channels:  " << mConfig.outputChannels << std::endl;
         std::cout << "  Input channels:   " << mConfig.inputChannels << std::endl;
+
+        // ── Explicit output device selection ─────────────────────────────
+        // If --device was provided, resolve the name to a specific AudioDevice
+        // before opening. AlloLib/RtAudio will then open exactly that device
+        // rather than whatever the OS currently has as default output.
+        //
+        // Matching: exact full-name comparison, case-insensitive.
+        // If no exact match is found, the error message lists all available
+        // output devices so the user can correct the name.
+        //
+        // If no device name was given (empty string), fall through and let
+        // RtAudio use the system default — same behaviour as before this patch.
+        if (!mConfig.outputDeviceName.empty()) {
+            const int nDev = al::AudioDevice::numDevices();
+
+            // Build a lowercased version of the target name for comparison.
+            std::string targetLower = mConfig.outputDeviceName;
+            std::transform(targetLower.begin(), targetLower.end(),
+                           targetLower.begin(),
+                           [](unsigned char c){ return std::tolower(c); });
+
+            int foundIdx = -1;
+            for (int i = 0; i < nDev; ++i) {
+                al::AudioDevice dev(i);
+                if (!dev.valid()) continue;
+                std::string devName = dev.name();
+                std::string devLower = devName;
+                std::transform(devLower.begin(), devLower.end(),
+                               devLower.begin(),
+                               [](unsigned char c){ return std::tolower(c); });
+                if (devLower == targetLower) {
+                    foundIdx = i;
+                    break;
+                }
+            }
+
+            if (foundIdx < 0) {
+                std::cerr << "[Backend] FATAL: Output device not found: \""
+                          << mConfig.outputDeviceName << "\"\n"
+                          << "  Available output devices (run --list-devices for full list):\n";
+                for (int i = 0; i < nDev; ++i) {
+                    al::AudioDevice dev(i);
+                    if (dev.valid() && dev.channelsOutMax() > 0) {
+                        std::cerr << "    [" << i << "] \""
+                                  << dev.name() << "\""
+                                  << "  (" << dev.channelsOutMax() << " out ch)\n";
+                    }
+                }
+                std::cerr << "  → Aborting." << std::endl;
+                return false;
+            }
+
+            al::AudioDevice selectedDev(foundIdx);
+            const int devMaxOut = selectedDev.channelsOutMax();
+            if (devMaxOut < mConfig.outputChannels) {
+                std::cerr << "[Backend] FATAL: Device \""
+                          << mConfig.outputDeviceName << "\" has only "
+                          << devMaxOut << " output channel(s), but the "
+                          << "speaker layout requires "
+                          << mConfig.outputChannels << ".\n"
+                          << "  → Check that the correct device and speaker "
+                          << "layout are selected." << std::endl;
+                return false;
+            }
+
+            std::cout << "[Backend] Output device selected: ["
+                      << foundIdx << "] \""
+                      << selectedDev.name() << "\"  ("
+                      << devMaxOut << " ch available, "
+                      << mConfig.outputChannels << " required)." << std::endl;
+            mAudioIO.deviceOut(selectedDev);
+        } else {
+            std::cout << "[Backend] No --device specified — using system "
+                      << "default output device." << std::endl;
+        }
 
         // Register the static callback with 'this' as userData so we can
         // dispatch into the member function processBlock().
@@ -100,13 +189,47 @@ public:
             return false;
         }
 
-        mInitialized = true;
         std::cout << "[Backend] Audio device opened successfully." << std::endl;
 
-        // Report actual device parameters (may differ from requested)
-        std::cout << "  Actual output channels: " << mAudioIO.channelsOut() << std::endl;
+        // Report actual device parameters (may differ from requested).
+        // AlloLib/RtAudio negotiates with the OS default device; the actual
+        // channel count may be lower than requested if the wrong device is
+        // selected (e.g., MacBook built-in instead of MOTU).
+        // NOTE: channelsOutDevice() reads oParams.nChannels — the value RtAudio
+        // clamped to min(requested, deviceMax) during open(). This is the true
+        // negotiated count. channelsOut() returns mNumO (the requested count) and
+        // must NOT be used here — it makes the guard always false.
+        const int actualOutChannels = static_cast<int>(mAudioIO.channelsOutDevice());
+        std::cout << "  Actual output channels: " << actualOutChannels << std::endl;
         std::cout << "  Actual buffer size:     " << mAudioIO.framesPerBuffer() << std::endl;
 
+        // ── Post-open channel count validation ────────────────────────────
+        // The layout requires exactly mConfig.outputChannels output channels.
+        // If the device opened with fewer, any render channel ≥ actualOutChannels
+        // would be silently dropped by the Spatializer copy step, producing
+        // missing speakers / wrong-channel output. This is never acceptable.
+        // Refuse to start rather than run with an incorrect channel mapping.
+        if (actualOutChannels < mConfig.outputChannels) {
+            std::cerr << "[Backend] FATAL: Audio device opened with only "
+                      << actualOutChannels << " output channel(s), but the "
+                      << "speaker layout requires " << mConfig.outputChannels
+                      << " channel(s).\n"
+                      << "  → Check macOS System Settings > Sound: is the correct "
+                      << "output device (e.g., MOTU) set as default?\n"
+                      << "  → Aborting — refusing to start with incorrect channel "
+                      << "count (silent speaker drops are not acceptable)."
+                      << std::endl;
+            mAudioIO.close();
+            return false;
+        }
+
+        if (actualOutChannels > mConfig.outputChannels) {
+            std::cout << "  [Backend] INFO: Device provides " << actualOutChannels
+                      << " channels; layout uses " << mConfig.outputChannels
+                      << ". Extra hardware channels will be unused." << std::endl;
+        }
+
+        mInitialized = true;
         return true;
     }
 
@@ -236,6 +359,11 @@ private:
 
     void processBlock(al::AudioIOData& io) {
 
+        // ── Wall-clock timer: captured at the very top so the full callback
+        // cost — including all rendering and state updates — is measured.
+        // Stored as a member so it's accessible at the early-return paths too.
+        mCallbackStart = std::chrono::steady_clock::now();
+
         const unsigned int numFrames  = static_cast<unsigned int>(io.framesPerBuffer());
         const unsigned int numChannels= static_cast<unsigned int>(io.channelsOut());
         // Use mConfig.sampleRate (int) cast to double for per-block time math.
@@ -314,10 +442,13 @@ private:
             std::memset(io.outBuffer(ch), 0, numFrames * sizeof(float));
 
         // ── Step 2: Compute source positions for this block ───────────────────
+        // Fix 2: pass block start and end times so Pose can compute positionStart
+        // and positionEnd for the fast-mover sub-stepping path in the Spatializer.
         if (mPose) {
-            const uint64_t curFrame    = mState.frameCounter.load(std::memory_order_relaxed);
-            const double   blockCtrSec = static_cast<double>(curFrame + numFrames / 2) / sampleRate;
-            mPose->computePositions(blockCtrSec);
+            const uint64_t curFrame     = mState.frameCounter.load(std::memory_order_relaxed);
+            const double   blockStartSec = static_cast<double>(curFrame)             / sampleRate;
+            const double   blockEndSec   = static_cast<double>(curFrame + numFrames) / sampleRate;
+            mPose->computePositions(blockStartSec, blockEndSec);
         }
 
         // ── Step 3: Spatialize all sources via DBAP ───────────────────────────
@@ -340,6 +471,7 @@ private:
             ctrl.focus          = mSmooth.smoothed.focus;
             ctrl.loudspeakerMix = mSmooth.smoothed.loudspeakerMix;
             ctrl.subMix         = mSmooth.smoothed.subMix;
+            ctrl.autoComp       = mSmooth.smoothed.autoComp;  // Phase 11: Fix 1
 
             const uint64_t currentFrame = mState.frameCounter.load(std::memory_order_relaxed);
             mSpatializer->renderBlock(io, *mStreamer, mPose->getPoses(),
@@ -370,10 +502,15 @@ private:
         if (pausedNow && mPauseFadeFramesLeft == 0 && mPauseFade <= 0.0f) {
             for (unsigned int ch = 0; ch < numChannels; ++ch)
                 std::memset(io.outBuffer(ch), 0, numFrames * sizeof(float));
-            // Update only CPU load — do NOT advance frameCounter.
-            mState.cpuLoad.store(
-                std::max(0.0f, std::min(1.0f, static_cast<float>(mAudioIO.cpu()))),
-                std::memory_order_relaxed);
+            // Update CPU load even in paused state (paused overhead is still real).
+            {
+                auto t1 = std::chrono::steady_clock::now();
+                double us = std::chrono::duration<double, std::micro>(t1 - mCallbackStart).count();
+                double budget = (static_cast<double>(numFrames) / sampleRate) * 1e6;
+                mState.callbackCpuLoad.store(
+                    std::max(0.0f, static_cast<float>(us / budget)),
+                    std::memory_order_relaxed);
+            }
             return;
         }
 
@@ -385,6 +522,19 @@ private:
             static_cast<double>(newFrames) / sampleRate, std::memory_order_relaxed);
 
         // ── Step 6: CPU load monitoring ───────────────────────────────────────
+        // Wall-clock measurement: elapsed callback time / block budget.
+        // Values > 1.0 indicate overload (callback took longer than its budget).
+        // Capped at 2.0 to avoid absurd values from scheduler jitter on first block.
+        // The legacy mAudioIO.cpu() is left in mState.cpuLoad for comparison;
+        // the correct reading is mState.callbackCpuLoad.
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            double us = std::chrono::duration<double, std::micro>(t1 - mCallbackStart).count();
+            double budget = (static_cast<double>(numFrames) / sampleRate) * 1e6;
+            mState.callbackCpuLoad.store(
+                std::max(0.0f, std::min(2.0f, static_cast<float>(us / budget))),
+                std::memory_order_relaxed);
+        }
         mState.cpuLoad.store(
             std::max(0.0f, std::min(1.0f, static_cast<float>(mAudioIO.cpu()))),
             std::memory_order_relaxed);
@@ -486,5 +636,13 @@ private:
 
     std::vector<float> mPrevChannelGains; // gains at start of current block (end of last block)
     std::vector<float> mNextChannelGains; // gains at end of current block (computed each block)
+
+    // ── Phase 14: wall-clock CPU meter ───────────────────────────────────────
+    // Captured at the very top of processBlock(); compared at the bottom (and
+    // at the paused early-return) to compute wall-clock callback duration / block
+    // budget. Stored as mState.callbackCpuLoad (0.0 = idle, 1.0 = full budget,
+    // >1.0 = overload). Replaces the untrustworthy mAudioIO.cpu() reading.
+    // THREADING: audio thread only.
+    std::chrono::steady_clock::time_point mCallbackStart;
 };
 

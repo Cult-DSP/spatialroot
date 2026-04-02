@@ -91,7 +91,9 @@
 
 struct SourcePose {
     std::string name;                // Source key (e.g., "1.1", "LFE")
-    al::Vec3f   position;            // DBAP-ready position (coord-transformed)
+    al::Vec3f   position;            // DBAP position at block center (coord-transformed)
+    al::Vec3f   positionStart;       // DBAP position at block start  (Fix 2 — fast-mover)
+    al::Vec3f   positionEnd;         // DBAP position at block end    (Fix 2 — fast-mover)
     bool        isLFE     = false;   // True → route to subwoofer, skip DBAP
     bool        isValid   = true;    // False → source had no usable position
 };
@@ -196,7 +198,20 @@ public:
     //
     // REAL-TIME SAFE: no allocation (after first block), no I/O, no locks.
 
-    void computePositions(double blockCenterTimeSec) {
+    // Fix 2 — signature extended to carry block start and end times so that
+    // positionStart / positionEnd can be computed for fast-mover sub-stepping.
+    // blockCenterTimeSec is derived internally as the midpoint.
+    //
+    // Ordering contract (important for mLastGoodDir correctness):
+    //   1. Center position is computed FIRST via the normal mutating path
+    //      (safeDirForSource writes mLastGoodDir when it sees a valid direction).
+    //   2. positionStart and positionEnd are computed via computePositionAtTimeReadOnly(),
+    //      which reads mLastGoodDir but never writes it.
+    // This guarantees that mLastGoodDir reflects the center-time direction and is
+    // not overwritten by start/end evaluations that are only ~5 ms away.
+    void computePositions(double blockStartTimeSec, double blockEndTimeSec) {
+        const double blockCenterTimeSec = (blockStartTimeSec + blockEndTimeSec) * 0.5;
+
         // Read elevation mode once per block (relaxed — stale-by-one-block is fine).
         ElevationMode elMode = static_cast<ElevationMode>(
             mConfig.elevationMode.load(std::memory_order_relaxed));
@@ -207,7 +222,8 @@ public:
 
             // LFE doesn't need a spatial position — it goes straight to subs
             if (pose.isLFE) {
-                pose.position = al::Vec3f(0.0f, 0.0f, 0.0f);
+                pose.position = pose.positionStart = pose.positionEnd =
+                    al::Vec3f(0.0f, 0.0f, 0.0f);
                 pose.isValid = true;
                 continue;
             }
@@ -219,19 +235,24 @@ public:
                 continue;
             }
 
+            // ── Center position (mutating path — updates mLastGoodDir) ───────
             // Step 1: Interpolate raw direction from keyframes (SLERP)
             al::Vec3f rawDir = interpolateDirRaw(it->second, blockCenterTimeSec);
-
-            // Step 2: Validate and apply fallback if degenerate
+            // Step 2: Validate and apply fallback if degenerate (writes mLastGoodDir)
             al::Vec3f safeDir = safeDirForSource(name, it->second,
                                                   rawDir, blockCenterTimeSec);
-
             // Step 3: Sanitize elevation for speaker layout
             al::Vec3f sanitized = sanitizeDirForLayout(safeDir, elMode);
-
             // Step 4: Convert to DBAP position (coord transform + radius)
             pose.position = directionToDBAPPosition(sanitized);
             pose.isValid = true;
+
+            // ── Start / End positions (read-only path — mLastGoodDir untouched) ─
+            // Uses mLastGoodDir (set just above) as the fallback but never writes it.
+            pose.positionStart = computePositionAtTimeReadOnly(
+                name, it->second, blockStartTimeSec, elMode);
+            pose.positionEnd   = computePositionAtTimeReadOnly(
+                name, it->second, blockEndTimeSec, elMode);
         }
     }
 
@@ -461,6 +482,39 @@ private:
         return al::Vec3f(pos.x, pos.z, -pos.y);
     }
 
+
+    // ── Fix 2: Read-only position helper ─────────────────────────────────
+    // Computes a DBAP position at time t using the full pipeline, but NEVER
+    // writes to mLastGoodDir. Used for positionStart / positionEnd so that
+    // only the center-time evaluation mutates the last-good-direction cache.
+    //
+    // Fallback priority (same as safeDirForSource, read-only version):
+    //   1. rawDir is valid → normalize → sanitize → convert
+    //   2. rawDir is degenerate → read mLastGoodDir (const find, no insert)
+    //   3. Not in cache → use safeNormalize(rawDir) or front direction
+    //
+    // THREADING: audio thread only (reads mLastGoodDir which is audio-thread-owned).
+    // This method is const so the compiler enforces no writes to member state.
+    al::Vec3f computePositionAtTimeReadOnly(const std::string& name,
+                                             const std::vector<Keyframe>& kfs,
+                                             double t,
+                                             ElevationMode elMode) const {
+        al::Vec3f rawDir = interpolateDirRaw(kfs, t);
+        al::Vec3f dir;
+        float m2 = rawDir.magSqr();
+        if (finite3(rawDir) && std::isfinite(m2) && m2 >= 1e-8f) {
+            dir = rawDir.normalized();
+        } else {
+            // Read-only fallback: use whatever mLastGoodDir has (set by center pass)
+            auto it = mLastGoodDir.find(name);
+            if (it != mLastGoodDir.end()) {
+                dir = it->second;
+            } else {
+                dir = al::Vec3f(0.0f, 1.0f, 0.0f);  // absolute last resort: front
+            }
+        }
+        return directionToDBAPPosition(sanitizeDirForLayout(dir, elMode));
+    }
 
     // ── Member data ──────────────────────────────────────────────────────
 

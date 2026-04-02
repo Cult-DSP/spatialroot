@@ -1,3 +1,4 @@
+# TODO: Convert to C++ — this script is retained for reference only. Python is no longer a project dependency.
 #small file for deleting processed data files
 import os
 import shutil

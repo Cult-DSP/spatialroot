@@ -1,0 +1,45 @@
+{
+  "speakers": [
+    {
+      "channel": 1,
+      "az": 0.0,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 2,
+      "az": 1.0471975511965976,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 3,
+      "az": 2.0943951023931953,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 4,
+      "az": -3.141592653589793,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 5,
+      "az": -2.0943951023931953,
+      "el": 0.0,
+      "radius": 1.0
+    },
+    {
+      "channel": 6,
+      "az": -1.0471975511965976,
+      "el": 0.0,
+      "radius": 1.0
+    }
+  ],
+  "subwoofers": [],
+  "notes": [
+    "Canonical example layout for Spatial Root. az/el are in radians. Front = 0 az. Positive az rotates toward listener-left, negative az toward listener-right. el = 0 is horizontal plane. radius is normalized to 1.0 for example layouts.",
+    "Regular 6-speaker ring. Channel 1 is front; numbering proceeds counterclockwise."
+  ]
+}

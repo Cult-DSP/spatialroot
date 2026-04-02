@@ -146,6 +146,14 @@ struct RealtimeConfig {
     int    bufferSize       = 512;     // Frames per audio callback buffer
     int    inputChannels    = 0;       // Input channels (0 = output only)
 
+    // Explicit output device name. Empty string = system default (not
+    // recommended for hardware installations with specific output devices).
+    // Set via --device CLI flag. Matched by exact full-name comparison
+    // at RealtimeBackend::init(); see that method for the error path that
+    // prints all available devices on mismatch.
+    // Run --list-devices to see what names the engine can see.
+    std::string outputDeviceName;
+
     // ── Layout-derived channel count ─────────────────────────────────────
     // COMPUTED from the speaker layout at load time — never set by the user.
     // Formula (matches offline SpatialRenderer.cpp):
@@ -226,9 +234,101 @@ struct EngineState {
     std::atomic<float>    cpuLoad{0.0f};    // Audio thread CPU usage (0.0–1.0)
     std::atomic<uint64_t> xrunCount{0};     // Buffer underrun count
 
+    // ── Phase 11: diagnostic counters ────────────────────────────────────
+    // nanGuardCount: incremented once per audio block in which the post-render
+    //   clamp pass in Spatializer::renderBlock() found a NaN, Inf, or sample
+    //   outside [-4.0f, +4.0f]. Non-zero = DBAP distance/position bug.
+    //   Written by the audio thread (sole writer); read by main thread for display.
+    std::atomic<uint64_t> nanGuardCount{0};
+
+    // speakerProximityCount: incremented each time the per-speaker minimum-
+    //   distance guard in Spatializer::renderBlock() fires — i.e. a source
+    //   position was within kMinSpeakerDist of a speaker and was pushed away.
+    //   Non-zero values indicate trajectory segments that would otherwise
+    //   produce DBAP gain spikes and audible clicks.
+    //   Written by the audio thread (sole writer); read by main thread for display.
+    std::atomic<uint64_t> speakerProximityCount{0};
+
     // ── Scene info (set once at load time) ───────────────────────────────
     std::atomic<int>      numSources{0};    // Number of active audio sources
     std::atomic<int>      numSpeakers{0};   // Number of speakers in layout
     std::atomic<double>   sceneDuration{0.0}; // Total scene duration in seconds
+
+    // ── Channel relocation diagnostics (Phase 14) ─────────────────────────
+    //
+    // Two bitmasks are snapshotted per block on the audio thread and read by
+    // the main thread every 500 ms:
+    //
+    //   renderActiveMask  – channels with signal in mRenderIO, BEFORE the
+    //                       Phase 7 OutputRemap copy ("pre-copy").
+    //   deviceActiveMask  – channels with signal in io.outBuffer(), AFTER the
+    //                       Phase 7 copy ("post-copy").
+    //
+    // If renderActiveMask is stable but deviceActiveMask changes, relocation
+    // is occurring at the output/device layer only.
+    // If renderActiveMask itself changes, relocation is happening in mRenderIO
+    // (upstream of the copy — a more fundamental problem).
+    //
+    // One-shot relocation event latches: set by the audio thread when a mask
+    // changes materially, cleared by the main thread after printing. The Prev/
+    // Next pair captures the before and after masks at the moment of change.
+    //
+    // mainRmsTotal / subRmsTotal are sqrt(mean-square) sums across main and sub
+    // channels respectively in the render bus, latest block.
+    //
+    // callbackCpuLoad replaces the untrustworthy mAudioIO.cpu(): it is the
+    // ratio of wall-clock callback duration to the block budget (0.0–2.0+).
+    //
+    // All fields: single writer (audio thread), relaxed stores/loads acceptable
+    // (display lag of one block is fine, same contract as cpuLoad / xrunCount).
+
+    std::atomic<uint64_t> renderActiveMask{0};    // render-bus active channel bitmask
+    std::atomic<uint64_t> deviceActiveMask{0};    // device-output active channel bitmask
+
+    std::atomic<uint64_t> renderRelocPrev{0};     // render mask before most-recent change
+    std::atomic<uint64_t> renderRelocNext{0};     // render mask after most-recent change
+    std::atomic<bool>     renderRelocEvent{false};// latch: audio sets, main clears
+
+    std::atomic<uint64_t> deviceRelocPrev{0};
+    std::atomic<uint64_t> deviceRelocNext{0};
+    std::atomic<bool>     deviceRelocEvent{false};
+
+    // Dominant-channel relocation (Phase 14 upgrade).
+    // A channel is dominant if its block mean-square ≥ kDomRelThresh × max(ms).
+    // kDomRelThresh = 0.01 (−20 dBFS relative to loudest channel). Filters
+    // far-field DBAP bleed that crosses the absolute kRmsThresh but carries no
+    // meaningful spatial energy. Changes in the dominant set are the stronger
+    // signal for audible channel relocation.
+    std::atomic<uint64_t> renderDomMask{0};
+    std::atomic<uint64_t> deviceDomMask{0};
+
+    std::atomic<uint64_t> renderDomRelocPrev{0};
+    std::atomic<uint64_t> renderDomRelocNext{0};
+    std::atomic<bool>     renderDomRelocEvent{false};
+
+    std::atomic<uint64_t> deviceDomRelocPrev{0};
+    std::atomic<uint64_t> deviceDomRelocNext{0};
+    std::atomic<bool>     deviceDomRelocEvent{false};
+
+    std::atomic<float>    mainRmsTotal{0.0f};     // sqrt(sum of per-main-ch mean-square)
+    std::atomic<float>    subRmsTotal{0.0f};      // sqrt(sum of per-sub-ch mean-square)
+    std::atomic<float>    callbackCpuLoad{0.0f};  // wall-clock callback / block budget
+
+    // Top-4 main-channel cluster tracking (Phase 14 refinement).
+    // Each block the 4 mains with highest mean-square are recorded as a bitmask.
+    // A [CLUSTER] event fires when fewer than 3 of the 4 channels are shared with
+    // the previous block's top-4 (i.e. 2+ channels changed). This is a tighter
+    // signal for audible spatial-cluster movement than domMask alone, and is not
+    // affected by sub threshold crossings or far-field DBAP bleed.
+    // Single writer (audio thread), relaxed stores — same contract as domMask fields.
+    std::atomic<uint64_t> renderClusterMask{0};   // current top-4 mains bitmask
+    std::atomic<uint64_t> renderClusterPrev{0};   // top-4 before last significant shift
+    std::atomic<uint64_t> renderClusterNext{0};   // top-4 after last significant shift
+    std::atomic<bool>     renderClusterEvent{false};
+
+    std::atomic<uint64_t> deviceClusterMask{0};
+    std::atomic<uint64_t> deviceClusterPrev{0};
+    std::atomic<uint64_t> deviceClusterNext{0};
+    std::atomic<bool>     deviceClusterEvent{false};
 };
 

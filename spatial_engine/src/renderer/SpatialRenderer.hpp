@@ -2,8 +2,8 @@
 //
 // Supports multiple panning algorithms via --spatializer flag:
 // - DBAP (Distance-Based Amplitude Panning) - DEFAULT, robust for all layouts
-// - VBAP (Vector-Based Amplitude Panning) - best for dense, well-triangulated arrays
 // - LBAP (Layer-Based Amplitude Panning) - designed for multi-ring layouts
+// - VBAP removed (requires 3D speaker arrangements for triangulation)
 //
 // IMPORTANT NOTES FOR DEBUGGING:
 // 
@@ -60,7 +60,6 @@
 // Panner/Spatializer type selection
 enum class PannerType {
     DBAP,   // Distance-Based Amplitude Panning (DEFAULT - robust for all layouts)
-    VBAP,   // Vector-Based Amplitude Panning (best for dense speaker arrays)
     LBAP    // Layer-Based Amplitude Panning (designed for multi-ring layouts)
 };
 
@@ -160,7 +159,6 @@ private:
     
     // Spatializer instances (created via unique_ptr due to LBAP copy issues)
     // Note: al::Lbap's internal LdapRing class has broken copy semantics in AlloLib
-    std::unique_ptr<al::Vbap> mVBAP;
     std::unique_ptr<al::Dbap> mDBAP;
     std::unique_ptr<al::Lbap> mLBAP;
     
@@ -294,9 +292,6 @@ private:
     
     void renderPerSample(MultiWavData &out, const RenderConfig &config,
                          size_t startSample, size_t endSample);
-    
-    // Compute VBAP gains for a direction (for diagnostics)
-    void computeVBAPGains(const al::Vec3f& dir, std::vector<float>& gains);
     
     // Spherical linear interpolation between two directions
     // t=0 returns 'a', t=1 returns 'b', intermediate values smoothly interpolate on sphere

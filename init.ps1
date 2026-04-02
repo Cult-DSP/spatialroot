@@ -1,174 +1,130 @@
-### NEEDS TO BE UPDATED BASED ON INIT.SH WITH REALTIME ENGINE CHANGES
-# init.ps1 - Native Windows setup for spatialroot (PowerShell)
-# Mirrors init.sh steps:
-# 1) Create Python venv
-# 2) Install Python deps
-# 3) Run setupCppTools() from src.config.configCPP (OS-specific router)
-# 4) Write .init_complete
+# init.ps1 — One-time dependency setup for spatialroot (Windows / PowerShell)
+#
+# Run once after cloning to initialize all git submodules and build all
+# C++ components. Subsequent builds can use build.ps1 directly.
 #
 # Usage:
 #   Set-ExecutionPolicy -Scope Process Bypass
 #   .\init.ps1
 #
-# To activate venv in current shell automatically, dot-source:
-#   . .\init.ps1
+# No Python toolchain required.
 
 [CmdletBinding()]
 param(
-  [string]$VenvDir = "spatialroot"
+    [switch]$Help
 )
 
-$ErrorActionPreference = "Continue"  # Don't stop on errors, handle them explicitly
-
-function Section($title) {
-  Write-Host "============================================================"
-  Write-Host $title
-  Write-Host "============================================================"
-  Write-Host ""
-}
+$ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
 
-# Detect OS and set appropriate paths
-$IsWindowsOS = $PSVersionTable.Platform -eq "Win32NT" -or $env:OS -eq "Windows_NT"
-if ($IsWindowsOS) {
-    $ScriptsDir = "Scripts"
-    $PythonExe = "python.exe"
-    $PipExe = "pip.exe"
-    $ActivateScript = "Activate.ps1"
-} else {
-    $ScriptsDir = "bin"
-    $PythonExe = "python"
-    $PipExe = "pip"
-    $ActivateScript = "activate"
+if ($Help) {
+    Write-Host "Usage: .\init.ps1"
+    Write-Host ""
+    Write-Host "Initializes git submodules and builds all C++ components."
+    Write-Host "Run once after cloning. Subsequent builds: .\build.ps1"
+    exit 0
 }
 
-$venvScripts = Join-Path (Join-Path $ProjectRoot $VenvDir) $ScriptsDir
-$venvPython = Join-Path $venvScripts $PythonExe
-$venvPip = Join-Path $venvScripts $PipExe
+function Section($title) {
+    Write-Host "============================================================"
+    Write-Host $title
+    Write-Host "============================================================"
+    Write-Host ""
+}
 
-$pythonCmd = $null
-if (Get-Command python3 -ErrorAction SilentlyContinue) { $pythonCmd = "python3" }
-elseif (Get-Command python -ErrorAction SilentlyContinue) { $pythonCmd = "python" }
-elseif (Get-Command py -ErrorAction SilentlyContinue) { $pythonCmd = "py" }
-else { throw "Python not found. Install Python 3 and ensure it's on PATH." }
+Section "spatialroot Initialization (Windows)"
 
-if (Test-Path $venvPython) {
-  Write-Host "✓ Virtual environment already exists at $VenvDir/"
+# ── Step 1: Check build tools ─────────────────────────────────────────────────
+Write-Host "Step 1: Checking build tools..."
+
+if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+    Write-Host "✗ cmake not found. Install CMake 3.20+ and add it to PATH." -ForegroundColor Red
+    Write-Host "  https://cmake.org/download/"
+    exit 1
+}
+$cmakeVersion = (cmake --version | Select-Object -First 1).Split(" ")[2]
+Write-Host "✓ cmake $cmakeVersion found"
+
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "✗ git not found. Install Git for Windows." -ForegroundColor Red
+    exit 1
+}
+Write-Host "✓ git found"
+Write-Host ""
+
+# ── Step 2: Initialize allolib submodule ──────────────────────────────────────
+Write-Host "Step 2: Initializing allolib submodule..."
+
+$AlloInclude = Join-Path $ProjectRoot "thirdparty\allolib\include"
+if (Test-Path $AlloInclude) {
+    Write-Host "✓ thirdparty/allolib already initialized"
 } else {
-  Write-Host "Creating virtual environment..."
-  & $pythonCmd -m venv $VenvDir
-  if (-not (Test-Path $venvPython)) {
-    throw "✗ Failed to create virtual environment at $VenvDir/"
-  }
-  Write-Host "✓ Virtual environment created"
+    Write-Host "Fetching thirdparty/allolib (shallow, depth=1)..."
+    git submodule update --init --recursive --depth 1 thirdparty/allolib
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "✗ Failed to initialize thirdparty/allolib" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✓ thirdparty/allolib initialized"
 }
 Write-Host ""
 
-Write-Host "Step 2: Installing Python dependencies..."
+# ── Step 3: Initialize cult_transcoder submodule ──────────────────────────────
+Write-Host "Step 3: Initializing cult_transcoder submodule..."
 
-$reqPath = Join-Path $ProjectRoot "requirements.txt"
-if (-not (Test-Path $reqPath)) {
-  throw "✗ requirements.txt not found in repo root."
-}
-
-try {
-  & $venvPip install -r $reqPath | Out-Host
-  Write-Host "✓ Python dependencies installed"
-} catch {
-  Write-Host "✗ Error installing Python dependencies" -ForegroundColor Red
-  throw
-}
-Write-Host ""
-
-Write-Host "Step 3: Setting up C++ tools (allolib, embedded ADM extractor, spatial renderers)..."
-Write-Host "  Project root: $ProjectRoot"
-Write-Host "  Venv Python: $venvPython"
-Write-Host "  Venv exists: $(Test-Path $venvPython)"
-
-$cppOk = $true
-try {
-  Write-Host "  Running: $venvPython -c 'from src.config.configCPP import setupCppTools; ...'"
-  Push-Location $ProjectRoot
-  $args = @("-c", "from src.config.configCPP import setupCppTools; import sys; result = setupCppTools(); sys.exit(0 if result else 1)")
-  & $venvPython $args
-  $exitCode = $LASTEXITCODE
-  Pop-Location
-  Write-Host "  Exit code: $exitCode"
-  if ($exitCode -ne 0) {
-    $cppOk = $false
-    Write-Host "  C++ setup failed with exit code $exitCode" -ForegroundColor Yellow
-  }
-} catch {
-  $cppOk = $false
-  Write-Host "  Exception during C++ setup: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-if ($cppOk) {
-  Write-Host "✓ C++ tools setup complete"
+$CultCMake = Join-Path $ProjectRoot "cult_transcoder\CMakeLists.txt"
+if (Test-Path $CultCMake) {
+    Write-Host "✓ cult_transcoder already initialized"
 } else {
-  Write-Host "⚠ Warning: C++ tools setup had issues — run .\init.ps1 again or check CMake logs" -ForegroundColor Yellow
+    Write-Host "Fetching cult_transcoder..."
+    git submodule update --init --depth 1 cult_transcoder
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "✗ Failed to initialize cult_transcoder" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✓ cult_transcoder initialized"
 }
-Write-Host ""
 
-Write-Host "Step 4: Creating initialization flag..."
-
-if ($cppOk) {
-  $flagPath = Join-Path $ProjectRoot ".init_complete"
-  $timestamp = Get-Date
-
-  @"
-# spatialroot initialization complete
-# Generated: $timestamp
-# Python venv: $VenvDir/
-# Delete this file to force re-initialization.
-"@ | Set-Content -Path $flagPath -Encoding UTF8
-
-  Write-Host "✓ Initialization flag created (.init_complete)"
+# cult_transcoder owns its own libbw64 submodule (required before CMake configure)
+$Libbw64Header = Join-Path $ProjectRoot "cult_transcoder\thirdparty\libbw64\include\bw64\bw64.hpp"
+if (Test-Path $Libbw64Header) {
+    Write-Host "✓ cult_transcoder/thirdparty/libbw64 already initialized"
 } else {
-  Write-Host "⚠ Initialization incomplete: not creating .init_complete" -ForegroundColor Yellow
-  Write-Host "Run .\init.ps1 again after resolving the errors above." -ForegroundColor Yellow
-  exit 1
+    Write-Host "Fetching cult_transcoder/thirdparty/libbw64..."
+    Push-Location (Join-Path $ProjectRoot "cult_transcoder")
+    git submodule update --init --depth 1 thirdparty/libbw64
+    $exitCode = $LASTEXITCODE
+    Pop-Location
+    if ($exitCode -ne 0) {
+        Write-Host "✗ Failed to initialize cult_transcoder/thirdparty/libbw64" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✓ cult_transcoder/thirdparty/libbw64 initialized"
 }
 Write-Host ""
 
+# ── Step 4: Build all C++ components ─────────────────────────────────────────
+Write-Host "Step 4: Building all C++ components..."
+Write-Host ""
+
+$buildScript = Join-Path $ProjectRoot "build.ps1"
+& $buildScript
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "✗ Build failed. Check CMake output above." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host ""
 Section "✓ Initialization complete!"
 
-Write-Host "Activating virtual environment..."
-
-# Try to find the activation script - check both Windows (Scripts/) and Unix (bin/) paths
-$activateScript = $null
-$possiblePaths = @(
-    (Join-Path $venvScripts $ActivateScript),  # Windows path: Scripts/Activate.ps1
-    (Join-Path $venvScripts "../bin/Activate.ps1")  # Unix path: bin/Activate.ps1
-)
-
-foreach ($path in $possiblePaths) {
-    if (Test-Path $path) {
-        $activateScript = $path
-        break
-    }
-}
-
-if ($activateScript) {
-    Write-Host "Found activation script at: $activateScript"
-    . $activateScript
-    Write-Host "✓ Virtual environment activated in current PowerShell session"
-} else {
-    Write-Host "⚠ Warning: Could not find activation script at any expected location" -ForegroundColor Yellow
-    Write-Host "  Checked paths:" -ForegroundColor Yellow
-    $possiblePaths | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
-}
-
+Write-Host "Binaries:"
+Write-Host "  spatialroot_realtime       : build\spatial_engine\realtimeEngine\Release\spatialroot_realtime.exe"
+Write-Host "  spatialroot_spatial_render : build\spatial_engine\spatialRender\Release\spatialroot_spatial_render.exe"
+Write-Host "  cult-transcoder            : build\cult_transcoder\Release\cult-transcoder.exe"
 Write-Host ""
-Write-Host "You can now run:"
-Write-Host "  python utils/getExamples.py          # Download example files"
-Write-Host "  python runPipeline.py <file.wav>     # Run the pipeline"
-Write-Host ""
-Write-Host "To reactivate the environment later, run:"
-Write-Host "  .\spatialroot\bin\Activate.ps1"
-Write-Host ""
-Write-Host "If you encounter dependency errors, delete .init_complete and re-run:"
-Write-Host "  Remove-Item .init_complete; .\init.ps1"
+Write-Host "For subsequent full builds:"
+Write-Host "  .\build.ps1"
 Write-Host ""

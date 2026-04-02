@@ -22,6 +22,11 @@ public:
                 const std::map<std::string, std::vector<struct Keyframe>> &sourceKeys,
                 int expectedSR);
 
+    static std::map<std::string, MonoWavData>
+    loadSourcesFromADM(const std::string &admFile,
+                       const std::map<std::string, std::vector<struct Keyframe>> &sourceKeys,
+                       int expectedSR);
+
     static void writeMultichannelWav(const std::string &path,
                                      const MultiWavData &mw);
 };

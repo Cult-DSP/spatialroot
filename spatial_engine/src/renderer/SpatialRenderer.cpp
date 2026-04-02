@@ -23,7 +23,6 @@ static inline float remapClamped(float x, float inMin, float inMax, float outMin
 std::string SpatialRenderer::pannerTypeName(PannerType type) {
     switch (type) {
         case PannerType::DBAP: return "DBAP";
-        case PannerType::VBAP: return "VBAP";
         case PannerType::LBAP: return "LBAP";
         default: return "Unknown";
     }
@@ -36,7 +35,7 @@ SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
                                  const SpatialData &spatial,
                                  const std::map<std::string, MonoWavData> &sources)
     : mLayout(layout), mSpatial(spatial), mSources(sources),
-      mSpeakers(), mVBAP(nullptr), mDBAP(nullptr), mLBAP(nullptr)
+      mSpeakers(), mDBAP(nullptr), mLBAP(nullptr)
 {
     // CRITICAL FIX 1: AlloLib's al::Speaker expects angles in DEGREES not radians
     // The AlloSphere layout JSON stores angles in radians but al::Speaker internally
@@ -127,18 +126,19 @@ SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
     
     // Create spatializers using unique_ptr (LBAP has broken copy semantics in AlloLib)
     
-    // VBAP - builds the speaker triplet mesh for triangulation
-    // This finds all valid triangles of 3 speakers that can spatialize sound
-    mVBAP = std::make_unique<al::Vbap>(mSpeakers, true);
-    mVBAP->compile();
+    // VBAP removed from offline engine - requires 3D speaker arrangements for triangulation
+    // Use DBAP (default) or LBAP for 2D layouts
+    std::cout << "VBAP removed from offline engine (requires 3D layouts)\n";
     
     // DBAP - distance-based amplitude panning
     // Note: DBAP doesn't need compile() - it uses distance-based calculations
     mDBAP = std::make_unique<al::Dbap>(mSpeakers);
+    std::cout << "DBAP initialized with " << mSpeakers.size() << " speakers\n";
     
     // LBAP - layer-based panning for multi-ring layouts
     mLBAP = std::make_unique<al::Lbap>(mSpeakers);
     mLBAP->compile();
+    std::cout << "LBAP initialized with " << mSpeakers.size() << " speakers\n";
 }
 
 // Reset per-render state (call at start of each render)
@@ -163,9 +163,6 @@ void SpatialRenderer::initializeSpatializer(const RenderConfig& config) {
             mActiveSpatializer = mDBAP.get();
             mDBAP->setFocus(config.dbapFocus);
             break;
-        case PannerType::VBAP:
-            mActiveSpatializer = mVBAP.get();
-            break;
         case PannerType::LBAP:
             mActiveSpatializer = mLBAP.get();
             mLBAP->setDispersionThreshold(config.lbapDispersion);
@@ -187,9 +184,6 @@ void SpatialRenderer::printSpatializerInfo(const RenderConfig& config) {
             std::cout << " (focus=" << config.dbapFocus << ")";
             // Print coordinate transform warning once per render
             std::cout << "\n  NOTE: DBAP uses coordinate transform (x,y,z)->(x,z,-y) for AlloLib compatibility";
-            break;
-        case PannerType::VBAP:
-            // No extra params to show
             break;
         case PannerType::LBAP:
             std::cout << " (dispersion=" << config.lbapDispersion << ")";
@@ -438,33 +432,6 @@ al::Vec3f SpatialRenderer::slerpDir(const al::Vec3f& a, const al::Vec3f& b, floa
     float wb = std::sin(t * theta) / sinTheta;
     
     return a * wa + b * wb;
-}
-
-// Compute VBAP gains for a direction by injecting a unit sample
-// This uses AlloLib's VBAP implementation to get the speaker gains
-void SpatialRenderer::computeVBAPGains(const al::Vec3f& dir, std::vector<float>& gains) {
-    int numSpeakers = mLayout.speakers.size();
-    int numSubwoofers = mLayout.subwoofers.size();
-    gains.resize(numSpeakers, 0.0f);
-    
-    // Use a small AudioIOData buffer with a unit sample to extract gains
-    al::AudioIOData tempAudio;
-    tempAudio.framesPerBuffer(1);
-    tempAudio.framesPerSecond(mSpatial.sampleRate);
-    tempAudio.channelsIn(0);
-    tempAudio.channelsOut(numSpeakers + numSubwoofers); // ensure enough channels
-    tempAudio.zeroOut();
-    
-    // Render a single unit sample at the given direction
-    float unitSample = 1.0f;
-    tempAudio.frame(0);
-    mVBAP->renderBuffer(tempAudio, dir, &unitSample, 1);
-    
-    // Extract gains from output channels
-    tempAudio.frame(0);
-    for (int ch = 0; ch < numSpeakers; ch++) {
-        gains[ch] = tempAudio.out(ch, 0);
-    }
 }
 
 // Main safe direction getter - wraps interpolation with fallback logic
@@ -847,12 +814,13 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     if (config.renderResolution == "block") {
         renderPerBlock(out, config, startSample, endSample);
     } else if (config.renderResolution == "sample") {
-        std::cout << "  NOTE: 'sample' mode is very slow. Use 'block' with small blockSize for most cases.\n";
-        renderPerSample(out, config, startSample, endSample);
+        std::cerr << "  ERROR: 'sample' mode is DISABLED (VBAP removed). Use 'block' mode instead.\n";
+        std::cerr << "         For per-sample accuracy, use 'block' mode with --block_size 1.\n";
+        return {};  // Return empty result
     } else if (config.renderResolution == "smooth") {
-        std::cerr << "  WARNING: 'smooth' mode is DEPRECATED and may cause artifacts.\n";
-        std::cerr << "           Use 'block' mode with --block_size 64 instead.\n";
-        renderSmooth(out, config, startSample, endSample);
+        std::cerr << "  ERROR: 'smooth' mode is DISABLED (VBAP removed). Use 'block' mode instead.\n";
+        std::cerr << "         For smooth interpolation, use 'block' mode with small --block_size.\n";
+        return {};  // Return empty result
     } else {
         std::cerr << "  ERROR: Unknown render resolution '" << config.renderResolution << "', using 'block'\n";
         renderPerBlock(out, config, startSample, endSample);
@@ -1225,9 +1193,11 @@ void SpatialRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config
             al::Vec3f dirStart = sanitizeDirForLayout(rawDirStart, config.elevationMode);
             al::Vec3f dirEnd = sanitizeDirForLayout(rawDirEnd, config.elevationMode);
             
-            // Compute VBAP gains at both ends (always uses VBAP for smooth mode)
-            computeVBAPGains(dirStart, gainsStart);
-            computeVBAPGains(dirEnd, gainsEnd);
+            // Compute gains at both ends (VBAP removed - smooth mode disabled)
+            // computeVBAPGains(dirStart, gainsStart);
+            // computeVBAPGains(dirEnd, gainsEnd);
+            // Smooth mode is disabled, so this code should not be reached
+            assert(false && "Smooth mode should be disabled");
             
             // Process each sample with interpolated gains
             for (size_t i = 0; i < blockLen; i++) {
@@ -1292,7 +1262,9 @@ void SpatialRenderer::renderPerSample(MultiWavData &out, const RenderConfig &con
             al::Vec3f dir = sanitizeDirForLayout(rawDir, config.elevationMode);
             
             // For per-sample mode, always use VBAP gains (most accurate per-sample)
-            computeVBAPGains(dir, gains);
+            // computeVBAPGains(dir, gains);
+            // Sample mode is disabled, so this code should not be reached
+            assert(false && "Sample mode should be disabled");
             
             // Accumulate into output
             for (int ch = 0; ch < numSpeakers; ch++) {
