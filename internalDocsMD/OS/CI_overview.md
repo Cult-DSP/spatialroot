@@ -92,6 +92,21 @@ libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` (no FLAC/Ogg/Vorbis/Opus) an
 
 ---
 
+## Known CI build fixes
+
+Bugs caught by the first CI runs and their resolutions:
+
+### Fix 1 — `sndfile.h` not found (macOS + Ubuntu)
+`spatial_engine/src/WavUtils.cpp` and the realtime engine include `<sndfile.h>` but libsndfile was never installed by CI and was not vendored. Fixed by adding `thirdparty/libsndfile` as a git submodule and wiring it into the root CMake build before AlloLib (see Vendored dependencies above).
+
+### Fix 2 — `std::strcmp` not in `std` (Ubuntu / gcc)
+`cult_transcoder/src/adm_to_lusid.cpp` called `std::strcmp` without including `<cstring>`. On macOS/clang this resolves transitively; on gcc it does not. Fixed by adding `#include <cstring>` to `adm_to_lusid.cpp`.
+
+### Fix 3 — `libbw64` header warning promoted to error under `-Werror` (Ubuntu)
+`cult_transcoder/CMakeLists.txt` declared libbw64 as a plain `INTERFACE` library, so gcc treated its headers as project headers and applied `-Werror`. `libbw64/include/bw64/parser.hpp:58` has a signed/unsigned comparison that became a hard error. Fixed by changing `target_include_directories(libbw64 INTERFACE ...)` to `target_include_directories(libbw64 SYSTEM INTERFACE ...)`, which marks the include path as a system header directory and suppresses third-party warnings.
+
+---
+
 ## Scope and limitations (v1)
 
 - **No audio device testing** — the realtime engine is built but not run; hardware I/O is untestable on headless runners.
