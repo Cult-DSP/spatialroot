@@ -2,14 +2,17 @@
 
 ## immediate
 
-- fix cpp gui session restarting issue and test
-- get back to work on realtime engine fixes
+- merge devel to main
+- clean up old branches
+- clean up old documentation and consolidate
+- autocomp math
+- minimal allolib fork
 
 ## tasks
 
 - use fork of allolib that only has necessary components
   - adjust main build to not use all of allolib build components
-- move entirely to cpp, figure how system / gui will be orchestrated. alloapp? external gui lib?
+
 - clean up documentation
   - public facing
   - consolidate dev history and testing docs
