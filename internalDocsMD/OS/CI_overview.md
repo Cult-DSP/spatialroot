@@ -62,7 +62,7 @@ cmake --build build --parallel
 
 ## Ubuntu system packages
 
-AlloLib compiles OpenGL and audio I/O code unconditionally even when examples and tests are disabled.
+AlloLib compiles OpenGL and audio I/O code unconditionally even when examples and tests are disabled. libsndfile is vendored so no system install is needed for it.
 
 | Package | Reason |
 |---|---|
@@ -74,6 +74,20 @@ AlloLib compiles OpenGL and audio I/O code unconditionally even when examples an
 macOS needs none of these — CoreAudio and OpenGL are system frameworks.
 
 CMake 3.25+ is pre-installed on both runner images, satisfying the project's 3.20 minimum.
+
+## Vendored dependencies
+
+All C++ dependencies are git submodules — no system package manager installs are required for the core build:
+
+| Library | Path | Purpose |
+|---|---|---|
+| AlloLib | `thirdparty/allolib` | Audio I/O, DBAP, OSC |
+| libsndfile | `thirdparty/libsndfile` | WAV file I/O (`sndfile.h`); built static, no external codecs |
+| libbw64 | `cult_transcoder/thirdparty/libbw64` | BW64 container reader (transcoder) |
+| pugixml | FetchContent (transcoder) | XML parsing |
+| LUSID | `LUSID/` | Scene schema |
+
+libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` (no FLAC/Ogg/Vorbis/Opus) and `BUILD_PROGRAMS/EXAMPLES/TESTING=OFF`. It exports a `SndFile::sndfile` CMake target that both engine targets link against explicitly. The vendored build is also detected by AlloLib's bundled Gamma via pre-set `SNDFILE_INCLUDE_DIR`/`SNDFILE_LIBRARY` cache variables.
 
 ---
 

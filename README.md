@@ -182,6 +182,8 @@ Each component can also be built standalone from its own CMakeLists.txt.
 - **make / ninja** (macOS/Linux) or **MSBuild / Ninja** (Windows)
 - **git** (for submodule initialization)
 
+All C++ dependencies (AlloLib, libsndfile, libbw64, pugixml, LUSID) are vendored as git submodules. No system package manager installs are required for the core build.
+
 ---
 
 ## Rebuilding after C++ source changes
@@ -236,7 +238,8 @@ spatialroot/
 │   └── src/                # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
 ├── cult_transcoder/        # cult-transcoder (git submodule, standalone)
 ├── thirdparty/
-│   └── allolib/            # AlloLib (audio I/O, DBAP, OSC; git submodule)
+│   ├── allolib/            # AlloLib (audio I/O, DBAP, OSC; git submodule)
+│   └── libsndfile/         # libsndfile (WAV I/O; git submodule, vendored)
 ├── gui/
 │   ├── imgui/              # C++ Dear ImGui + GLFW desktop GUI (primary)
 ├── PUBLIC_DOCS/API.md      # EngineSession C++ embedding API documentation

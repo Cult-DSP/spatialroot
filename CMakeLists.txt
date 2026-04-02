@@ -19,6 +19,28 @@ option(SPATIALROOT_BUILD_CULT     "Build cult-transcoder CLI"            ON)
 option(SPATIALROOT_BUILD_GUI      "Build ImGui + GLFW desktop GUI"       OFF)
 # SPATIALROOT_BUILD_GUI is OFF by default until gui/imgui/ is created in Stage 3.
 
+# ── libsndfile — vendored, built before AlloLib so Gamma's find module picks it up ──
+# AlloLib's bundled Gamma uses find_package(LibSndFile QUIET) with old-style
+# find variables (SNDFILE_INCLUDE_DIR, SNDFILE_LIBRARY). Pre-setting these as
+# cache variables before add_subdirectory(allolib) causes Gamma's find_library
+# call to short-circuit and use the vendored build instead of a system install.
+set(BUILD_PROGRAMS       OFF CACHE BOOL "Don't build libsndfile programs")
+set(BUILD_EXAMPLES       OFF CACHE BOOL "Don't build libsndfile examples")
+set(BUILD_TESTING        OFF CACHE BOOL "Don't build libsndfile tests")
+set(ENABLE_EXTERNAL_LIBS OFF CACHE BOOL "No FLAC/Ogg/Vorbis/Opus in libsndfile")
+set(ENABLE_MPEG          OFF CACHE BOOL "No MPEG in libsndfile")
+add_subdirectory(
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libsndfile
+    ${CMAKE_CURRENT_BINARY_DIR}/libsndfile-build
+)
+# Pre-populate the find variables so Gamma resolves to our vendored target.
+set(SNDFILE_INCLUDE_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libsndfile/include"
+    CACHE PATH "libsndfile include dir (vendored)" FORCE)
+set(SNDFILE_LIBRARY   SndFile::sndfile CACHE STRING "libsndfile library (vendored)" FORCE)
+set(SNDFILE_LIBRARIES SndFile::sndfile CACHE STRING "libsndfile libraries (vendored)" FORCE)
+set(SNDFILE_FOUND     TRUE CACHE BOOL "libsndfile found (vendored)" FORCE)
+
 # ── AlloLib — shared dependency for ENGINE and OFFLINE ───────────────────────
 # Added once at the root level so that both add_subdirectory(realtimeEngine)
 # and add_subdirectory(spatialRender) can use the same `al` CMake target

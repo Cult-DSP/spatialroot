@@ -42,6 +42,7 @@ target_include_directories(EngineSessionCore PUBLIC
 target_link_libraries(EngineSessionCore
     al
     Gamma
+    SndFile::sndfile
 )
 
 add_executable(spatialroot_realtime

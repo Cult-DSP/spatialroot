@@ -41,4 +41,5 @@ target_include_directories(spatialroot_spatial_render PRIVATE
 target_link_libraries(spatialroot_spatial_render
     al
     Gamma
+    SndFile::sndfile
 )
