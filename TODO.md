@@ -2,8 +2,6 @@
 
 ## immediate
 
-- merge devel to main
-- clean up old branches
 - clean up old documentation and consolidate
 - autocomp math
 - minimal allolib fork
@@ -19,6 +17,7 @@
 - clean up repo
   - move offline render code [spatial_engine/src] into spatial_engine/spatialRender and adjust cmake and other code
   - clean up the random run files and shell scripts at project root
+  - clean up old branches
 - bugs to fix:
   - main engine playback (reloc and pops)
   - auto comp and overal runtime debug focus
