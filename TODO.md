@@ -2,7 +2,8 @@
 
 ## immediate
 
-- fix ubuntu ci build issues and move onto windows: remove all problematic dependencies
+- windows ci
+- windows dependencies and build
 - clean up old documentation and consolidate
 - autocomp math
 

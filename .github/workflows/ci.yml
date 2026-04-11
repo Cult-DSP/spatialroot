@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14]
+        os: [ubuntu-22.04, macos-14, windows-latest]
 
     steps:
       - name: Checkout with submodules
@@ -42,4 +42,4 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSPATIALROOT_BUILD_GUI=OFF
 
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --parallel --config Release

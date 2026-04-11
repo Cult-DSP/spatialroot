@@ -30,7 +30,7 @@ if ($Help) {
 $BuildEngine  = if ($OfflineOnly -or $CultOnly)  { "OFF" } else { "ON" }
 $BuildOffline = if ($EngineOnly  -or $CultOnly)   { "OFF" } else { "ON" }
 $BuildCult    = if ($EngineOnly  -or $OfflineOnly) { "OFF" } else { "ON" }
-$BuildGUI     = "OFF"  # OFF until Qt is confirmed and Stage 3 GUI is implemented
+$BuildGUI     = "OFF"  # OFF until gui/imgui/ is implemented
 
 $NumCores = [Environment]::ProcessorCount
 

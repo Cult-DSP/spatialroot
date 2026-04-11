@@ -52,6 +52,25 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     exit 1
 }
 Write-Host "✓ git found"
+
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsPath = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+    if ($vsPath) {
+        Write-Host "✓ Visual Studio with C++ tools found"
+    } else {
+        Write-Host "✗ Visual Studio found but C++ workload is missing." -ForegroundColor Red
+        Write-Host "  Open Visual Studio Installer and add 'Desktop development with C++'"
+        exit 1
+    }
+} elseif (Get-Command cl -ErrorAction SilentlyContinue) {
+    Write-Host "✓ C++ compiler (cl.exe) found"
+} else {
+    Write-Host "✗ No C++ compiler found." -ForegroundColor Red
+    Write-Host "  Install Visual Studio 2019+ with 'Desktop development with C++'"
+    Write-Host "  https://visualstudio.microsoft.com/downloads/"
+    exit 1
+}
 Write-Host ""
 
 # ── Step 2: Initialize allolib submodule ──────────────────────────────────────
