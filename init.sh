@@ -84,7 +84,20 @@ else
 fi
 echo ""
 
-# ── Step 4: Initialize Dear ImGui submodule (optional — needed for GUI build) ─
+# ── Step 4: Initialize libsndfile submodule ──────────────────────────────────
+echo "Step 4: Initializing libsndfile submodule..."
+
+LIBSNDFILE_CMAKE="${PROJECT_ROOT}/thirdparty/libsndfile/CMakeLists.txt"
+if [ -f "${LIBSNDFILE_CMAKE}" ]; then
+    echo "✓ thirdparty/libsndfile already initialized"
+else
+    echo "Fetching thirdparty/libsndfile (shallow, depth=1)..."
+    git submodule update --init --depth 1 thirdparty/libsndfile
+    echo "✓ thirdparty/libsndfile initialized"
+fi
+echo ""
+
+# ── Step 5: Initialize Dear ImGui submodule (optional — needed for GUI build) ─
 # Only initialized when thirdparty/imgui has been added via:
 #   git submodule add https://github.com/ocornut/imgui.git thirdparty/imgui
 IMGUI_DIR="${PROJECT_ROOT}/thirdparty/imgui"
@@ -101,7 +114,7 @@ else
 fi
 echo ""
 
-# ── Step 5: Initialize GLFW submodule (optional — needed for GUI build) ───────
+# ── Step 6: Initialize GLFW submodule (optional — needed for GUI build) ───────
 # Only initialized when thirdparty/glfw has been added via:
 #   git submodule add https://github.com/glfw/glfw.git thirdparty/glfw
 GLFW_DIR="${PROJECT_ROOT}/thirdparty/glfw"
@@ -118,8 +131,8 @@ else
 fi
 echo ""
 
-# ── Step 6: Build all C++ components ─────────────────────────────────────────
-echo "Step 6: Building all C++ components..."
+# ── Step 7: Build all C++ components ─────────────────────────────────────────
+echo "Step 7: Building all C++ components..."
 echo ""
 "${PROJECT_ROOT}/build.sh" "$@"
 

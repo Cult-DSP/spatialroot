@@ -105,8 +105,25 @@ if (Test-Path $Libbw64Header) {
 }
 Write-Host ""
 
-# ── Step 4: Build all C++ components ─────────────────────────────────────────
-Write-Host "Step 4: Building all C++ components..."
+# ── Step 4: Initialize libsndfile submodule ──────────────────────────────────
+Write-Host "Step 4: Initializing libsndfile submodule..."
+
+$LibSndFileCMake = Join-Path $ProjectRoot "thirdparty\libsndfile\CMakeLists.txt"
+if (Test-Path $LibSndFileCMake) {
+    Write-Host "✓ thirdparty/libsndfile already initialized"
+} else {
+    Write-Host "Fetching thirdparty/libsndfile (shallow, depth=1)..."
+    git submodule update --init --depth 1 thirdparty/libsndfile
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "✗ Failed to initialize thirdparty/libsndfile" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✓ thirdparty/libsndfile initialized"
+}
+Write-Host ""
+
+# ── Step 5: Build all C++ components ─────────────────────────────────────────
+Write-Host "Step 5: Building all C++ components..."
 Write-Host ""
 
 $buildScript = Join-Path $ProjectRoot "build.ps1"
