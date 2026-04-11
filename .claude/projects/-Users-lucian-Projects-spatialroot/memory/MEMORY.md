@@ -1,2 +1,0 @@
-- [spatialroot C++ refactor state](project_refactor_state.md) — Stage 1 done, Stage 2 in progress; OSC guard done, setters+type fix+test remain
-- [spatialroot GUI framework decision](project_gui_decision.md) — Dear ImGui + GLFW (not Qt); all deps must be open-source submodules
