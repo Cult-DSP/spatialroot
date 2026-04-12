@@ -32,6 +32,8 @@
 - select output at run time - seems to work
 - limit buffer size selectiom - potentially dangerous / produce warnings
 - add render tab, dont bundle with transcoder
+- add gui for creating speaker layout
+- add binueral mixdown using ear
 
 # Transcoder
 
