@@ -33,7 +33,7 @@ The engine follows a sequential agent model. Each agent owns one stage of the pr
 
 ## Bug Audit (April 1, 2026)
 
-> `4_1_bug_audit.md` — All bugs closed as of this date.
+> Consolidated from prior bug-audit docs; all bugs closed as of this date.
 
 ### Bug numbering convention
 
@@ -145,7 +145,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Backend Adapter
 
-> `agent_backend_adapter.md` — Agent 8, Phase 1 through Phase 10 polish.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Responsibilities:** Audio device initialization, callback registration, buffer format conversion, latency tuning, error recovery, backend selection.
 
@@ -166,7 +166,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Streaming
 
-> `agent_streaming.md` — Fully implemented in `Streaming.hpp`.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Two input modes:**
 
@@ -188,7 +188,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## ADM Direct Streaming
 
-> `agent_adm_direct_streaming.md` — Status: ✅ Complete, Feb 24, 2026.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Problem solved:** Stem splitting took 30–60 seconds and wrote ~2.9 GB to disk for typical ADM files.
 
@@ -204,7 +204,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Pose and Control
 
-> `agent_pose_and_control.md` — Agent 2, Phase 3.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Responsibilities:** Source position interpolation, elevation sanitization, DBAP coordinate transform.
 
@@ -223,7 +223,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Spatializer (DBAP)
 
-> `agent_spatializer_dbap.md` — Agent 3, Phase 4.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Hard real-time constraints:** Deterministic execution, no locks/allocations in `renderBuffer()`, cache-friendly memory layout, RT-safe math.
 
@@ -246,7 +246,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Compensation and Gain
 
-> `agent_compensation_and_gain.md` — Agent 6, Phase 6.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Problem:** Increasing DBAP focus concentrates energy on fewer speakers → perceived loudness drops. LFE routing uses `masterGain × 0.95 / numSubs` independently, creating sub-to-mains imbalance.
 
@@ -268,7 +268,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## LFE Router
 
-> `agent_lfe_router.md` — Phase 5 was skipped; LFE routing is fully handled inside `Spatializer.hpp`.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Current implementation (Phase 4):** LFE sources identified by `pose.isLFE`. Bypass DBAP routing. Route directly to all subwoofer channels: `subGain = masterGain * 0.95 / numSubwoofers`. Matches offline renderer behavior exactly.
 
@@ -278,7 +278,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Output Remap
 
-> `agent_output_remap.md` — Agent 7, Phase 7.
+> Consolidated from prior agent docs (subfolders removed).
 
 **Purpose:** Map internal "layout channel order" → physical device channel order at the end of `processBlock()`.
 
@@ -294,7 +294,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ## Threading and Safety
 
-> `agent_threading_and_safety.md` — Phase 8, threading audit.
+> Consolidated from prior agent docs (subfolders removed).
 
 ### Thread Model
 
@@ -378,7 +378,7 @@ Key architectural decisions (locked for v1):
 
 ## DBAP Render Path (One Source, One Block)
 
-> From `4_1_bug_audit.md` — reference for anyone touching `Spatializer.hpp`.
+> Consolidated from prior bug-audit docs; reference for anyone touching `Spatializer.hpp`.
 
 ```
 getBlock() → onset-fade ramp (Bug 1.1) → masterGain multiply

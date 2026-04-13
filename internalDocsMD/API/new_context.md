@@ -18,11 +18,11 @@ With the structural contract verified in code, the next priority is transitionin
 ### Immediate Action Items
 
 1. **Drafting `PUBLIC_DOCS/API.md`**
-   - Translate the internal `api_internal_contract.md` into external, public-ready tutorials/walkthroughs. should be documented in PUBLIC_DOCS/API.md
-    - Outline the primary `<spatial::EngineSession>` workflow:
-       - Component configurations (`EngineConfig`, `SceneConfig`, etc.)
+   - Translate the internal `api_internal_contract.md` into external, public-ready tutorials/walkthroughs. Document in `PUBLIC_DOCS/API.md`.
+   - Outline the primary `<spatial::EngineSession>` workflow:
+     - Component configurations (`EngineConfig`, `SceneConfig`, etc.)
      - Configuration pipeline (`configureEngine` -> `loadScene` -> `applyLayout` -> `configureRuntime` -> `start`)
-     - Threading/Polling lifecycle (`update`, querying status/diagnostics)
+     - Threading/polling lifecycle (`update`, querying status/diagnostics)
      - Safe termination (`shutdown`)
 2. **Code Examples**
    - We now have a battle-tested example runner. Use the code within `internal_validation_runner.cpp` as the foundation for the "Quick Start" code blocks inside public documentation.

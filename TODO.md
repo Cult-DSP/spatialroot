@@ -6,6 +6,7 @@
 - deprecate remap csv - use internal mapping logic (virtual linear channels array remapped to input channels at the end) - redocument and test
 - test runtime now that everything builds via ci
 - autocomp math
+- move spatial transformation math into seperate file potentially
 
 - minimal allolib fork - and test builds
 

@@ -7,7 +7,7 @@
 
 ## Phase 6 — C++ Refactor Complete (March 29–31, 2026)
 
-> Sources: `cpp_refactor/refactor_planning.md`, `cpp_refactor/refactor_log.md`, `cpp_refactor/third_audit.md`, `cpp_refactor/secondary_audit.md`, `cpp_refactor/initial_audit.md`
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed.
 
 **Status:** All three stages complete as of 2026-03-31. Python removed from primary workflow.
 
@@ -81,7 +81,7 @@
 
 ## Python Offline Pipeline v3.9 (March 9, 2026)
 
-> Sources: `Offline_Rendering/3_9_offline_plan.md`, `Offline_Rendering/offline_pipeline.md`. **Removed in Phase 6 (2026-03-31).**
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. **Removed in Phase 6 (2026-03-31).**
 
 **Status at removal:** Python orchestration layer (`runPipeline.py`) was modernized to use cult-transcoder preprocessing and gained `--adm` flag for direct ADM input. Both ADM and LUSID package input modes were functional. Removed along with all Python tooling in Phase 6.
 
@@ -128,7 +128,7 @@ spatialroot_spatial_render --adm <file> --positions <json> --layout <json> --out
 
 ## Python GUI (PySide6) — Phase 10 (February 2026)
 
-> Source: `Realtime_Engine/agentDocsv1/agent_gui_UPDATED_v3.md`. **Removed in Phase 6 (2026-03-31), replaced by Dear ImGui + GLFW GUI.**
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. **Removed in Phase 6 (2026-03-31), replaced by Dear ImGui + GLFW GUI.**
 
 ### Architecture
 
@@ -159,7 +159,7 @@ gui/realtimeGUI/
 
 | Parameter | OSC Address | Range | Default |
 |---|---|---|---|
-| Master Gain | `/realtime/gain` | 0.0–1.0 | 0.5 |
+| Master Gain | `/realtime/gain` | 0.0–1.0 (legacy PySide6 GUI range) | 0.5 |
 | DBAP Focus | `/realtime/focus` | 0.2–5.0 | 1.5 |
 | Speaker Mix dB | `/realtime/speaker_mix_db` | -10–+10 | 0.0 |
 | Sub Mix dB | `/realtime/sub_mix_db` | -10–+10 | 0.0 |
@@ -193,7 +193,7 @@ gui/realtimeGUI/
 
 ## Python Build System Migration (February 23, 2026)
 
-> Source: `OS/2-23-OS-updates.md`. **Superseded by `init.sh`/`build.sh` in Stage 1 of Phase 6.**
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. **Superseded by `init.sh`/`build.sh` in Stage 1 of Phase 6.**
 
 Added cross-platform C++ tool building via Python OS-detection router.
 
@@ -247,7 +247,7 @@ All of `src/config/configCPP*.py` removed in Phase 6.
 
 ## Rendering Development Notes (January 27–28, 2026)
 
-> Sources: `Spatialization/1-27-rendering-dev.md`, `Spatialization/1-28-vertical-dev.md`. Core fixes are now part of the renderer — see [SPATIALIZATION.md](SPATIALIZATION.md) for current docs.
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. Core fixes are now part of the renderer — see [SPATIALIZATION.md](SPATIALIZATION.md) for current docs.
 
 ### Issue 1: VBAP Zero Blocks
 
@@ -273,7 +273,7 @@ All of `src/config/configCPP*.py` removed in Phase 6.
 
 ## Old Realtime Design Sketches (Early 2026)
 
-> Sources: `Realtime_Engine/references/old_realtime_notes.md`, `Realtime_Engine/references/old_realtime_sketch.md`, `Realtime_Engine/references/streamingWAV.md`
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed.
 
 ### Original Sample Loop Sketch
 
@@ -314,7 +314,7 @@ Locked v1 design decisions documented at the time:
 
 ## API Agent Session History (Early 2026)
 
-> Source: `API/api_agent_log.md`, `API/api_implementation_handoff.md`. Historical record of the EngineSession API extraction.
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. Historical record of the EngineSession API extraction.
 
 ### Phase 1 — Session Architecture Extraction
 
@@ -360,7 +360,7 @@ Locked v1 design decisions documented at the time:
 
 ## Initial GUI Prototype Notes (Early 2026)
 
-> Source: `cpp_refactor/phase3notes.md`. Notes from the very first ImGui GUI prototype before aesthetic iteration.
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. Notes from the very first ImGui GUI prototype before aesthetic iteration.
 
 **Engine issues found:**
 - Engine doesn't restart when stopped or source file changed — time continues from previous instance
@@ -376,7 +376,7 @@ Locked v1 design decisions documented at the time:
 
 ## Python Source Reference (usefulPyInfo.md)
 
-> Source: `cpp_refactor/usefulPyInfo.md`. Reference document capturing Python source details before removal. All described files removed in Phase 6.
+> Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. Reference document capturing Python source details before removal. All described files removed in Phase 6.
 
 ### Removed Python Files
 
