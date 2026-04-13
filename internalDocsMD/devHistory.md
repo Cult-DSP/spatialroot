@@ -12,12 +12,14 @@
 **Status:** All three stages complete as of 2026-03-31. Python removed from primary workflow.
 
 **What was built:**
+
 - `init.sh` / `build.sh` replace the Python build system entirely
 - `spatialroot_realtime` C++ binary is the primary engine CLI
 - `EngineSessionCore` static library exposes the full V1.1 API (runtime setters, `oscPort=0` guard, typed `ElevationMode`)
 - `spatialroot_gui` — Dear ImGui + GLFW desktop GUI — builds, launches, and links `EngineSessionCore` directly (no subprocess, no OSC dependency for local control)
 
 **Deferred items:**
+
 - macOS Dock icon: in-app Dock tile icon via `[NSApp setApplicationIconImage:]` works while running. The desktop/Finder file icon does not update — requires packaging as a `.app` bundle. Deferred to a future phase.
 - `SPATIALROOT_BUILD_GUI=ON` flag: GUI build disabled in CI until `gui/imgui/CMakeLists.txt` integration is verified.
 
@@ -26,6 +28,7 @@
 **Key entries from `refactor_log.md`:**
 
 **Native file dialogs (NSOpenPanel) + Browse buttons + device dropdown** (03-30):
+
 - Replaced broken `osascript + popen` file dialog with `NSOpenPanel` Objective-C++ (`FileDialog_macOS.mm`)
 - Browse buttons on SOURCE, LAYOUT, REMAP CSV, TRANSCODE INPUT fields
 - Inline "ADM"/"LUSID" green tag next to SOURCE label
@@ -71,6 +74,7 @@
 **`secondary_audit.md`**: Pre-refactor assessment. "The three surfaces (library API, CLI, GUI) are not cleanly separated at the process boundary." GUI launches Python which launches the binary. No top-level CMake. Build system lives in Python. OSC port discrepancy: README says 12345, code uses 9009 — code is authoritative.
 
 **`initial_audit.md`**: Original baseline audit. Python stack assessment:
+
 - `runRealtime.py` — top-level launcher; calls `setupCppTools()` then invokes cult-transcoder + `spatialroot_realtime` as subprocesses
 - Python GUI (`gui/realtimeGUI/`) — PySide6, 3 process-hops from audio thread: GUI → Python QProcess → runRealtime.py → C++ binary
 - Python LUSID library (`LUSID/src/`) — parallel Python implementation of what JSONLoader.cpp does; maintenance liability
@@ -86,6 +90,7 @@
 **Status at removal:** Python orchestration layer (`runPipeline.py`) was modernized to use cult-transcoder preprocessing and gained `--adm` flag for direct ADM input. Both ADM and LUSID package input modes were functional. Removed along with all Python tooling in Phase 6.
 
 **Old pipeline flow:**
+
 ```
 ADM WAV → extractMetaData() → XML → parse_adm_xml_to_lusid_scene() → LUSID object
     ↓
@@ -97,6 +102,7 @@ runSpatialRender() → spatialroot_spatial_render --sources <folder>
 ```
 
 **Phase 3.9 modernized flow:**
+
 ```
 ADM WAV → cult-transcoder transcode → scene.lusid.json
     ↓
@@ -157,14 +163,14 @@ gui/realtimeGUI/
 
 ### Runtime Controls (OSC)
 
-| Parameter | OSC Address | Range | Default |
-|---|---|---|---|
-| Master Gain | `/realtime/gain` | 0.0–1.0 (legacy PySide6 GUI range) | 0.5 |
-| DBAP Focus | `/realtime/focus` | 0.2–5.0 | 1.5 |
-| Speaker Mix dB | `/realtime/speaker_mix_db` | -10–+10 | 0.0 |
-| Sub Mix dB | `/realtime/sub_mix_db` | -10–+10 | 0.0 |
-| Auto-Comp | `/realtime/auto_comp` | 0/1 | 0 |
-| Pause/Play | `/realtime/paused` | 0/1 | 0 |
+| Parameter      | OSC Address                | Range                              | Default |
+| -------------- | -------------------------- | ---------------------------------- | ------- |
+| Master Gain    | `/realtime/gain`           | 0.0–1.0 (legacy PySide6 GUI range) | 0.5     |
+| DBAP Focus     | `/realtime/focus`          | 0.2–5.0                            | 1.5     |
+| Speaker Mix dB | `/realtime/speaker_mix_db` | -10–+10                            | 0.0     |
+| Sub Mix dB     | `/realtime/sub_mix_db`     | -10–+10                            | 0.0     |
+| Auto-Comp      | `/realtime/auto_comp`      | 0/1                                | 0       |
+| Pause/Play     | `/realtime/paused`         | 0/1                                | 0       |
 
 ### Important Implementation Notes
 
@@ -177,6 +183,7 @@ gui/realtimeGUI/
 **Exit code handling:** 0, -2, 130 all treated as clean exits.
 
 **Source type detection (`_detect_source`):**
+
 1. Not exists → error
 2. File ending `.wav` → ADM source
 3. Directory containing `scene.lusid.json` → LUSID package
@@ -198,6 +205,7 @@ gui/realtimeGUI/
 Added cross-platform C++ tool building via Python OS-detection router.
 
 **`src/config/configCPP.py`** — OS detection router:
+
 ```python
 import os
 if os.name == "nt":
@@ -208,18 +216,18 @@ else:
 
 **Build commands at the time:**
 
-| Platform | Tool | Build command |
-|---|---|---|
-| POSIX | `cult-transcoder` | `cmake --build` |
-| POSIX | `spatialroot_spatial_render` | `make -jN` (generator-specific, replaced by cmake --build in Phase 6) |
-| POSIX | `spatialroot_realtime` | `make -jN` (same) |
-| Windows | all | `cmake --build --config Release` |
+| Platform | Tool                         | Build command                                                         |
+| -------- | ---------------------------- | --------------------------------------------------------------------- |
+| POSIX    | `cult-transcoder`            | `cmake --build`                                                       |
+| POSIX    | `spatialroot_spatial_render` | `make -jN` (generator-specific, replaced by cmake --build in Phase 6) |
+| POSIX    | `spatialroot_realtime`       | `make -jN` (same)                                                     |
+| Windows  | all                          | `cmake --build --config Release`                                      |
 
 **Executable paths at the time:**
 
-| Tool | POSIX | Windows |
-|---|---|---|
-| ADM Extractor | `src/adm_extract/build/spatialroot_adm_extract` | `...spatialroot_adm_extract.exe` |
+| Tool             | POSIX                                                           | Windows                             |
+| ---------------- | --------------------------------------------------------------- | ----------------------------------- |
+| ADM Extractor    | `src/adm_extract/build/spatialroot_adm_extract`                 | `...spatialroot_adm_extract.exe`    |
 | Spatial Renderer | `spatial_engine/spatialRender/build/spatialroot_spatial_render` | `...spatialroot_spatial_render.exe` |
 
 All of `src/config/configCPP*.py` removed in Phase 6.
@@ -230,16 +238,17 @@ All of `src/config/configCPP*.py` removed in Phase 6.
 
 > From AGENTS.md §0. All items resolved.
 
-| # | Status | Severity | Issue | Location |
-|---|---|---|---|---|
-| 1 | ✅ FIXED | Critical | WAV 4 GB header overflow — `SF_FORMAT_WAV` wraps 32-bit size field | `WavUtils.cpp` |
-| 2 | ✅ FIXED | High | Legacy script trusted corrupted WAV header without cross-check (script removed Phase 6) | (historical) |
-| 3 | ✅ FIXED | Low | Stale `DEBUG` print statements left in renderer | `SpatialRenderer.cpp` |
-| 4 | ✅ FIXED | Medium | `masterGain` default mismatch — now consistently `0.5` | `SpatialRenderer.hpp`, `main.cpp`, docs |
-| 5 | ✅ FIXED | Medium | `dbap_focus` not forwarded for plain `"dbap"` mode (archived, pre-Phase 6) | (historical) |
-| 6 | ✅ FIXED | Medium | Legacy Python wrapper exposed `master_gain` (wrapper removed Phase 6) | (historical) |
+| #   | Status   | Severity | Issue                                                                                   | Location                                |
+| --- | -------- | -------- | --------------------------------------------------------------------------------------- | --------------------------------------- |
+| 1   | ✅ FIXED | Critical | WAV 4 GB header overflow — `SF_FORMAT_WAV` wraps 32-bit size field                      | `WavUtils.cpp`                          |
+| 2   | ✅ FIXED | High     | Legacy script trusted corrupted WAV header without cross-check (script removed Phase 6) | (historical)                            |
+| 3   | ✅ FIXED | Low      | Stale `DEBUG` print statements left in renderer                                         | `SpatialRenderer.cpp`                   |
+| 4   | ✅ FIXED | Medium   | `masterGain` default mismatch — now consistently `0.5`                                  | `SpatialRenderer.hpp`, `main.cpp`, docs |
+| 5   | ✅ FIXED | Medium   | `dbap_focus` not forwarded for plain `"dbap"` mode (archived, pre-Phase 6)              | (historical)                            |
+| 6   | ✅ FIXED | Medium   | Legacy Python wrapper exposed `master_gain` (wrapper removed Phase 6)                   | (historical)                            |
 
 **Future items (tracked separately):**
+
 - #9 (Info): Large interleaved buffer ~11.3 GB peak for 56ch × 566s. Mitigation: chunked streaming write.
 - #10 (Info): Test files only exercise `audio_object` + `LFE` paths; `direct_speaker` untested at render level.
 
@@ -254,6 +263,7 @@ All of `src/config/configCPP*.py` removed in Phase 6.
 **Root cause:** VBAP requires source direction to be within a valid speaker triplet. Outside triplets → zero output, source becomes inaudible.
 
 **Solution:** Zero-block detection + nearest-speaker fallback:
+
 - Input energy test → render to temp buffer → measure output energy → detect failure
 - Retarget: direction 90% toward nearest speaker (90/10 blend)
 - Threshold: `kPannerZeroThreshold = 1e-6`
@@ -263,6 +273,7 @@ All of `src/config/configCPP*.py` removed in Phase 6.
 **Root cause:** Single direction per 64-sample block. Fast motion can cross triplet/gap boundaries within one block → audible dropout.
 
 **Solution:** Fast-mover detection + sub-stepping:
+
 - Sample directions at 25%/75% through block
 - Angular threshold: ~14° (0.25 rad)
 - Sub-step at 16-sample hops when threshold exceeded
@@ -291,6 +302,7 @@ Inside Sample loop:
 **Problem:** Memory limitation for large multichannel files (2.5 GB+ for 56ch ADM), startup delays, audio dropouts.
 
 **Solution:** Double buffering with background pre-loading (later implemented as `Streaming.hpp`):
+
 - Two pre-allocated buffers alternate PLAYING/LOADING
 - Background thread loads chunks asynchronously
 - `animate()` monitors 50% consumption, signals next chunk load
@@ -303,6 +315,7 @@ Inside Sample loop:
 ### Deep Research Context Notes
 
 Locked v1 design decisions documented at the time:
+
 - 48kHz sample rate, hard real-time constraints
 - Target hardware: AlloSphere (54 speakers), TransLAB (various)
 - `framesPerBuffer` TBD (later: 64 default, user-configurable)
@@ -321,6 +334,7 @@ Locked v1 design decisions documented at the time:
 **Goal:** Extract orchestration logic from `main.cpp` into `EngineSession.hpp/.cpp`.
 
 **Key changes:**
+
 1. Created `EngineSession.hpp/.cpp` with lifecycle API: `configureEngine()` → `loadScene()` → `applyLayout()` → `configureRuntime()` → `start()` → `update()` → `shutdown()`
 2. Refactored `main.cpp` — removed all heavy agent instantiation; reduced to arg parsing + polling loop
 3. Resolved `RealtimeConfig` compilation issue: `std::atomic` fields delete implicit copy constructors — solved by making `EngineSession` default-constructible and populating config via `session.config()` directly
@@ -331,7 +345,8 @@ Locked v1 design decisions documented at the time:
 **Goal:** Evolve past `void` arguments, resolve Mismatch 5 (Error Handlers).
 
 **Key changes:**
-1. Defined typed structs: `EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams` *(These structs were renamed to `EngineConfig`, `SceneConfig`, `LayoutConfig`, `RuntimeConfig` before handoff — see "Completed milestones" below.)*
+
+1. Defined typed structs: `EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams` _(These structs were renamed to `EngineConfig`, `SceneConfig`, `LayoutConfig`, `RuntimeConfig` before handoff — see "Completed milestones" below.)_
 2. Updated all lifecycle method signatures to use const-ref struct injection
 3. Added `std::string getLastError() const` for explicit error propagation
 4. `main.cpp`: removed all `session.config()` direct mutations; documented struct grouping inline
@@ -341,17 +356,20 @@ Locked v1 design decisions documented at the time:
 ### Phase 2 → Phase 3 Transition
 
 **Decisions:**
+
 1. Created `api_internal_contract.md` to stop future agents hallucinating features based on aspirational Phase 1 texts
 2. Formalized `setPaused(bool)` as sole transport control — abandoned `stop()` and `seek()` due to state-corruption risks in mismatch ledger
 3. Enforced `update()` as required main-thread tick (compromise to get `computeFocusCompensation()` safely off audio thread without a complex worker pool)
 
 **Completed milestones (as of handoff):**
+
 - `EngineConfig`, `SceneConfig`, `LayoutConfig` extracted
 - AlloLib parameter lifetimes isolated into OSC context
 - `getLastError()` implemented
 - Shutdown sequence ordered: `mParamServer` → `mBackend` → `mStreaming`
 
 **Demoted/retired concepts:**
+
 - Dynamic scene reloading — unsafe with current buffer architecture
 - Arbitrary playhead seeking — unsafe with ring buffers
 - CLI-only debugging flags — left in `main.cpp`, not ported to `EngineSession`
@@ -363,11 +381,13 @@ Locked v1 design decisions documented at the time:
 > Historical sources were consolidated into this file; pre-consolidation subfolder files were removed. Notes from the very first ImGui GUI prototype before aesthetic iteration.
 
 **Engine issues found:**
+
 - Engine doesn't restart when stopped or source file changed — time continues from previous instance
 - Engine needs to be fully reset between tracks — tracks don't play after the first track
 - These led to the `unique_ptr<EngineSession>` restart fix in Stage 3
 
 **v2 requirements:**
+
 - ADM/LUSID detected green text should be displayed next to "source"
 - Device still needs dropdown menu and scanning logic
 - Aesthetic: "could be sleeker"
@@ -380,20 +400,20 @@ Locked v1 design decisions documented at the time:
 
 ### Removed Python Files
 
-| File | Role |
-|---|---|
-| `runRealtime.py` | Top-level launcher — called cult-transcoder then spatialroot_realtime |
-| `realtimeMain.py` | Alternate CLI entry point |
-| `runPipeline.py` | Offline pipeline orchestrator |
-| `src/config/configCPP.py` | OS detection router |
-| `src/config/configCPP_posix.py` | POSIX CMake/make orchestration |
-| `src/config/configCPP_windows.py` | Windows CMake orchestration |
-| `gui/realtimeGUI/` | PySide6 desktop GUI |
-| `gui/realtimeGUI/realtime_runner.py` | QProcess wrapper + OSC sender |
-| `src/analyzeADM/checkAudioChannels.py` | Per-channel audio activity scan |
-| `src/packageADM/splitStems.py` | Mono WAV stem splitter |
-| `src/analyzeRender.py` | PDF render analysis |
-| `LUSID/src/` | Python LUSID library (scene.py, xml_etree_parser.py, parser.py) |
+| File                                   | Role                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `runRealtime.py`                       | Top-level launcher — called cult-transcoder then spatialroot_realtime |
+| `realtimeMain.py`                      | Alternate CLI entry point                                             |
+| `runPipeline.py`                       | Offline pipeline orchestrator                                         |
+| `src/config/configCPP.py`              | OS detection router                                                   |
+| `src/config/configCPP_posix.py`        | POSIX CMake/make orchestration                                        |
+| `src/config/configCPP_windows.py`      | Windows CMake orchestration                                           |
+| `gui/realtimeGUI/`                     | PySide6 desktop GUI                                                   |
+| `gui/realtimeGUI/realtime_runner.py`   | QProcess wrapper + OSC sender                                         |
+| `src/analyzeADM/checkAudioChannels.py` | Per-channel audio activity scan                                       |
+| `src/packageADM/splitStems.py`         | Mono WAV stem splitter                                                |
+| `src/analyzeRender.py`                 | PDF render analysis                                                   |
+| `LUSID/src/`                           | Python LUSID library (scene.py, xml_etree_parser.py, parser.py)       |
 
 ### cult-transcoder CLI Invocation (historical reference)
 
@@ -428,6 +448,7 @@ Mono WAV naming: `{chanNumber}.1.wav` (1-indexed), LFE → `LFE.wav`. LFE detect
 ### processedData Directory Structure (at time of Python pipeline)
 
 Directories created before any subprocess launch:
+
 ```
 processedData/                   — output root for all pipeline artifacts
 processedData/stageForRender/    — cult-transcoder writes scene.lusid.json here
@@ -437,11 +458,11 @@ processedData/stageForRender/    — cult-transcoder writes scene.lusid.json her
 
 ## Key Milestones
 
-| Phase | Date | Description |
-|---|---|---|
-| Phase 1 | January 2026 | Initial ADM extraction pipeline using `spatialroot_adm_extract` |
-| Phase 2 | February 2026 | Codebase audit; `spatialroot_adm_extract` deprecated |
-| Phase 3 | March 4, 2026 | Transitioned to `cult-transcoder`; removed per-channel audio scan |
-| Phase 4 | March 7, 2026 | `cult-transcoder` gains `--lfe-mode` flag; ADM profile detection (Atmos, Sony360RA) |
-| Phase 5 | March 7, 2026 | TRANSCODE UI added to PySide6 GUI (superseded by ImGui GUI in Phase 6) |
+| Phase   | Date           | Description                                                                                 |
+| ------- | -------------- | ------------------------------------------------------------------------------------------- |
+| Phase 1 | January 2026   | Initial ADM extraction pipeline using `spatialroot_adm_extract`                             |
+| Phase 2 | February 2026  | Codebase audit; `spatialroot_adm_extract` deprecated                                        |
+| Phase 3 | March 4, 2026  | Transitioned to `cult-transcoder`; removed per-channel audio scan                           |
+| Phase 4 | March 7, 2026  | `cult-transcoder` gains `--lfe-mode` flag; ADM profile detection (Atmos, Sony360RA)         |
+| Phase 5 | March 7, 2026  | TRANSCODE UI added to PySide6 GUI (superseded by ImGui GUI in Phase 6)                      |
 | Phase 6 | March 31, 2026 | C++ refactor complete. Python GUI/entrypoints/build/venv removed. ImGui + GLFW GUI shipped. |

@@ -17,11 +17,11 @@ File: `.github/workflows/ci.yml`
 
 **Platforms:**
 
-| Runner | OS | Compiler | Notes |
-|---|---|---|---|
-| `ubuntu-22.04` | Ubuntu 22.04 LTS | gcc | Pinned — won't silently upgrade |
-| `macos-14` | macOS 14 Sonoma | Apple Clang | Apple Silicon (M1). Pinned. |
-| `windows-latest` | Windows | MSVC | Added April 2026 |
+| Runner           | OS               | Compiler    | Notes                           |
+| ---------------- | ---------------- | ----------- | ------------------------------- |
+| `ubuntu-22.04`   | Ubuntu 22.04 LTS | gcc         | Pinned — won't silently upgrade |
+| `macos-14`       | macOS 14 Sonoma  | Apple Clang | Apple Silicon (M1). Pinned.     |
+| `windows-latest` | Windows          | MSVC        | Added April 2026                |
 
 `fail-fast: false` — all legs run to completion independently.
 
@@ -35,6 +35,7 @@ cmake --build build --parallel
 ```
 
 **Targets built (all ON by default):**
+
 - `spatialroot_realtime` — realtime spatial audio engine
 - `spatialroot_spatial_render` — offline batch renderer
 - `cult-transcoder` — ADM → LUSID transcoder
@@ -44,6 +45,7 @@ cmake --build build --parallel
 ### Submodules
 
 `actions/checkout@v4` with `submodules: recursive`:
+
 - `thirdparty/allolib` (shallow)
 - `cult_transcoder` → `thirdparty/libbw64`, `thirdparty/libadm`
 - `LUSID`
@@ -53,12 +55,12 @@ cmake --build build --parallel
 
 AlloLib compiles OpenGL and audio I/O code unconditionally even when examples/tests are disabled. libsndfile is vendored.
 
-| Package | Reason |
-|---|---|
-| `build-essential` | gcc, g++, make |
-| `libasound2-dev`, `libpulse-dev` | ALSA/PulseAudio (RtAudio backend) |
-| `libgl1-mesa-dev`, `libglu1-mesa-dev` | OpenGL headers (AlloLib links GL) |
-| `libx11-dev`, `libxrandr-dev`, `libxi-dev`, `libxinerama-dev`, `libxcursor-dev` | X11 headers (AlloLib + GLFW) |
+| Package                                                                         | Reason                            |
+| ------------------------------------------------------------------------------- | --------------------------------- |
+| `build-essential`                                                               | gcc, g++, make                    |
+| `libasound2-dev`, `libpulse-dev`                                                | ALSA/PulseAudio (RtAudio backend) |
+| `libgl1-mesa-dev`, `libglu1-mesa-dev`                                           | OpenGL headers (AlloLib links GL) |
+| `libx11-dev`, `libxrandr-dev`, `libxi-dev`, `libxinerama-dev`, `libxcursor-dev` | X11 headers (AlloLib + GLFW)      |
 
 macOS needs none of these — CoreAudio and OpenGL are system frameworks.
 
@@ -66,13 +68,13 @@ macOS needs none of these — CoreAudio and OpenGL are system frameworks.
 
 All C++ dependencies are git submodules — no package manager installs required:
 
-| Library | Path | Purpose |
-|---|---|---|
-| AlloLib | `thirdparty/allolib` | Audio I/O, DBAP, OSC |
-| libsndfile | `thirdparty/libsndfile` | WAV file I/O; built static, no external codecs |
-| libbw64 | `cult_transcoder/thirdparty/libbw64` | BW64 container reader (transcoder) |
-| pugixml | FetchContent (transcoder) | XML parsing |
-| LUSID | `LUSID/` | Scene schema |
+| Library    | Path                                 | Purpose                                        |
+| ---------- | ------------------------------------ | ---------------------------------------------- |
+| AlloLib    | `thirdparty/allolib`                 | Audio I/O, DBAP, OSC                           |
+| libsndfile | `thirdparty/libsndfile`              | WAV file I/O; built static, no external codecs |
+| libbw64    | `cult_transcoder/thirdparty/libbw64` | BW64 container reader (transcoder)             |
+| pugixml    | FetchContent (transcoder)            | XML parsing                                    |
+| LUSID      | `LUSID/`                             | Scene schema                                   |
 
 libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` and `BUILD_PROGRAMS/EXAMPLES/TESTING=OFF`. Exports `SndFile::sndfile` CMake target. The vendored build is also detected by AlloLib's Gamma via pre-set `SNDFILE_INCLUDE_DIR`/`SNDFILE_LIBRARY` cache variables.
 
@@ -94,6 +96,7 @@ libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` and `BUILD_PROGRAMS/EXAMPLES
 ### Extending CI
 
 Natural next steps in priority order:
+
 1. Add build caching (`actions/cache` on `build/` or ccache)
 2. Add GUI build (CMakeLists exists; verify integration and runner requirements)
 3. Add smoke tests if binaries gain `--help`/`--version` flags
@@ -108,6 +111,7 @@ Natural next steps in priority order:
 ### System Dependencies by Platform
 
 **macOS** — all provided by Xcode CLT + system frameworks. No `brew` installs required for non-GUI build.
+
 - Xcode Command Line Tools (`clang++`, `make`, `libtool`)
 - CoreAudio, CoreFoundation (rtaudio)
 - CoreMIDI, CoreServices (rtmidi)
@@ -116,6 +120,7 @@ Natural next steps in priority order:
 **Linux** — see Ubuntu system packages table above. All CI-verified.
 
 **Windows** — Required toolchain:
+
 - Visual Studio 2019+ with "Desktop development with C++" workload
 - CMake 3.20+
 - Git
@@ -135,6 +140,7 @@ No `windows-latest` runner existed. `cmake --build` lacked `--config Release` (M
 
 **4. `__builtin_popcountll` not available on MSVC**
 `__builtin_popcountll` is GCC/Clang only. MSVC uses `__popcnt64` from `<intrin.h>`. Two call sites in `Spatializer.hpp` (lines 809, 928). Fixed: compat shim at top of `Spatializer.hpp`:
+
 ```cpp
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -148,6 +154,7 @@ MSVC requires explicit `.string()` call. Five call sites in `main.cpp` (lines 23
 
 **6. `M_PI` not defined on MSVC without `_USE_MATH_DEFINES`**
 `test_360ra.cpp` used `M_PI` in three `const double` initializers. Fixed: added before `#include <cmath>`:
+
 ```cpp
 #ifdef _MSC_VER
 #  define _USE_MATH_DEFINES
@@ -173,10 +180,10 @@ MSVC requires explicit `.string()` call. Five call sites in `main.cpp` (lines 23
 
 ### CMake FetchContent Dependencies (cult-transcoder)
 
-| Dependency | Version | Source |
-|---|---|---|
-| Catch2 | v3.5.3 | `https://github.com/catchorg/Catch2.git` |
-| pugixml | v1.14 | `https://github.com/zeux/pugixml.git` |
+| Dependency | Version | Source                                   |
+| ---------- | ------- | ---------------------------------------- |
+| Catch2     | v3.5.3  | `https://github.com/catchorg/Catch2.git` |
+| pugixml    | v1.14   | `https://github.com/zeux/pugixml.git`    |
 
 Fetched into `cult_transcoder/build/_deps/` at configure time. Network required on first run.
 
