@@ -33,9 +33,12 @@
 - select output at run time - seems to work
 - limit buffer size selectiom - potentially dangerous / produce warnings
 - add fetch examples to gui - using examples .sh - update to using hugging face links
+- update available example audio files
 - add render tab, dont bundle with transcoder
 - add gui for creating speaker layout
 - add binueral mixdown using ear
+
+- make sure all layouts are available from gui dropdown
 
 # Transcoder
 
