@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# command line tool to download basic example files
+# Downloads basic example files from HuggingFace
 
 set -euo pipefail
 
-FILE_ID_1="16Z73gODkZzCWjYy313FZc6ScG-CCXL4h"
-OUTPUT_NAME_1="driveExample1.wav"
-FILE_ID_2="1-oh0tixJV3C-odKdcM7Ak-ziCv5bNKJB"
-OUTPUT_NAME_2="driveExample2.wav"
-FILE_ID_3="1NsW8xj4wFGhGtSKRIuPL4E2yoEJEIq4X"
-OUTPUT_NAME_3="driveExampleSpruce.wav"
+HF_BASE="https://huggingface.co/datasets/lucianparisi/atmos-data/resolve/main"
+
+URL_1="$HF_BASE/driveExample1.wav"
+OUTPUT_NAME_1="Each_Example_1.wav"
+URL_2="$HF_BASE/driveExample2.wav"
+OUTPUT_NAME_2="Echo_Example_2.wav"
+URL_3="$HF_BASE/SWALE-ATMOS-LFE.wav"
+OUTPUT_NAME_3="LucianParisi_Swale_Atmos_Mix.wav"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DATA_DIR="$SCRIPT_DIR/sourceData"
 
-download_from_google_drive() {
-    local file_id="$1"
+download_from_hf() {
+    local url="$1"
     local output_name="$2"
     local output_path="$SOURCE_DATA_DIR/$output_name"
-    local url="https://drive.usercontent.google.com/download?id=${file_id}&export=download&confirm=t"
 
     mkdir -p "$SOURCE_DATA_DIR"
 
@@ -41,6 +42,6 @@ download_from_google_drive() {
     fi
 }
 
-download_from_google_drive "$FILE_ID_1" "$OUTPUT_NAME_1"
-download_from_google_drive "$FILE_ID_2" "$OUTPUT_NAME_2"
-download_from_google_drive "$FILE_ID_3" "$OUTPUT_NAME_3"
+download_from_hf "$URL_1" "$OUTPUT_NAME_1"
+download_from_hf "$URL_2" "$OUTPUT_NAME_2"
+download_from_hf "$URL_3" "$OUTPUT_NAME_3"
