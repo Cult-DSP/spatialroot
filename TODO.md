@@ -2,9 +2,11 @@
 
 ## immediate
 
+- deprecate remap csv - use internal mapping logic (virtual linear channels array remapped to input channels at the end) - redocument and test -- planning in md doc currently
+
 - merge transcoder with spatial seed version
 - debug windows build
-- deprecate remap csv - use internal mapping logic (virtual linear channels array remapped to input channels at the end) - redocument and test
+
 - test runtime now that everything builds via ci
 - autocomp math
 - move spatial transformation math into seperate file potentially
