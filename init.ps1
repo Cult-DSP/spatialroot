@@ -146,7 +146,7 @@ Write-Host "Step 5: Building all C++ components..."
 Write-Host ""
 
 $buildScript = Join-Path $ProjectRoot "build.ps1"
-& $buildScript
+& $buildScript -GuiBuild
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "✗ Build failed. Check CMake output above." -ForegroundColor Red

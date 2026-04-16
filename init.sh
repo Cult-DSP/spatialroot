@@ -134,7 +134,7 @@ echo ""
 # ── Step 7: Build all C++ components ─────────────────────────────────────────
 echo "Step 7: Building all C++ components..."
 echo ""
-"${PROJECT_ROOT}/build.sh" "$@"
+"${PROJECT_ROOT}/build.sh" --gui "$@"
 
 echo ""
 echo "============================================================"
