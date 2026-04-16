@@ -31,6 +31,8 @@ echo ""
 # ── Step 1: Check build tools ─────────────────────────────────────────────────
 echo "Step 1: Checking build tools..."
 
+PLATFORM="$(uname -s)"
+
 if ! command -v cmake &>/dev/null; then
     echo "✗ cmake not found. Install CMake 3.20+ and try again."
     echo "  macOS:  brew install cmake"
@@ -46,6 +48,83 @@ if ! command -v git &>/dev/null; then
     exit 1
 fi
 echo "✓ git found"
+
+# ── C++ compiler + platform system deps ──────────────────────────────────────
+if [ "${PLATFORM}" = "Darwin" ]; then
+    # On macOS all required frameworks (CoreAudio, OpenGL, etc.) ship with the OS.
+    # The only prerequisite is Xcode Command Line Tools.
+    if xcode-select -p &>/dev/null 2>&1; then
+        echo "✓ Xcode Command Line Tools found"
+    elif command -v c++ &>/dev/null || command -v clang++ &>/dev/null; then
+        echo "✓ C++ compiler found"
+    else
+        echo "✗ Xcode Command Line Tools not found."
+        echo "  Install: xcode-select --install"
+        echo "  Then re-run ./init.sh"
+        exit 1
+    fi
+else
+    # Linux — collect all missing system deps before exiting so the user sees
+    # everything in one pass and can install with a single apt command.
+    MISSING_DEPS=()
+
+    # C++ compiler
+    if command -v g++ &>/dev/null; then
+        echo "✓ g++ found"
+    elif command -v clang++ &>/dev/null; then
+        echo "✓ clang++ found"
+    else
+        echo "✗ C++ compiler not found (g++ / clang++)"
+        MISSING_DEPS+=("build-essential")
+    fi
+
+    # OpenGL dev headers — required by AlloLib (find_package(OpenGL REQUIRED))
+    if pkg-config --exists gl 2>/dev/null || [ -f /usr/include/GL/gl.h ]; then
+        echo "✓ OpenGL headers found"
+    else
+        echo "✗ OpenGL headers not found"
+        MISSING_DEPS+=("libgl-dev")
+    fi
+
+    # ALSA dev headers — required by rtaudio / rtmidi
+    if pkg-config --exists alsa 2>/dev/null || [ -f /usr/include/alsa/asoundlib.h ]; then
+        echo "✓ ALSA headers found"
+    else
+        echo "✗ ALSA headers not found"
+        MISSING_DEPS+=("libasound2-dev")
+    fi
+
+    # X11 base headers — required by GLFW
+    if [ -f /usr/include/X11/Xlib.h ]; then
+        echo "✓ X11 headers found"
+    else
+        echo "✗ X11 headers not found"
+        MISSING_DEPS+=("libx11-dev")
+    fi
+
+    # X11 extension headers — Xrandr, Xinerama, Xcursor, Xi (all required by GLFW)
+    X11_EXT_OK=1
+    [ -f /usr/include/X11/extensions/Xrandr.h ]   || X11_EXT_OK=0
+    [ -f /usr/include/X11/extensions/Xinerama.h ] || X11_EXT_OK=0
+    [ -f /usr/include/X11/Xcursor/Xcursor.h ]     || X11_EXT_OK=0
+    [ -f /usr/include/X11/extensions/XInput.h ]   || X11_EXT_OK=0
+    if [ "${X11_EXT_OK}" -eq 1 ]; then
+        echo "✓ X11 extension headers found (Xrandr, Xinerama, Xcursor, Xi)"
+    else
+        echo "✗ X11 extension headers missing (Xrandr / Xinerama / Xcursor / Xi)"
+        MISSING_DEPS+=("libxrandr-dev" "libxinerama-dev" "libxcursor-dev" "libxi-dev")
+    fi
+
+    if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+        echo ""
+        echo "Missing system dependencies. Install with:"
+        echo "  sudo apt install ${MISSING_DEPS[*]}"
+        echo "  (or the equivalent package names for your distro)"
+        echo ""
+        echo "Then re-run ./init.sh"
+        exit 1
+    fi
+fi
 echo ""
 
 # ── Step 2: Initialize allolib submodule ──────────────────────────────────────

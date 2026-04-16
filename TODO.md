@@ -2,10 +2,10 @@
 
 ## immediate
 
+- autocomp math
+
 - debug windows build
 
-- test runtime now that everything builds via ci
-- autocomp math
 - move spatial transformation math into seperate file potentially
 
 - minimal allolib fork - and test builds - remove shallow clone scripts
@@ -52,6 +52,8 @@
 - allow for setting dbap focus metadata in layout or lusid
 
 - make im gui look nicer
+
+- potentially queue multiple files
 
 # Transcoder
 
