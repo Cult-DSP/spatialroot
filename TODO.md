@@ -38,6 +38,7 @@
 
 # Crucial CLI / GUI Features:
 
+- add more info to engine log - terminal output should be similar - option to expand engine log
 - add more volume decrease and increase support
 - select output at run time - seems to work
 - allow for setting runtime params prior to starting engine
