@@ -30,6 +30,7 @@
 
 - bugs to fix:
   - auto comp and overal runtime debug focus
+    - focus high can cause artifacts
 
 - code signing
 
