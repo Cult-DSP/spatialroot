@@ -80,7 +80,7 @@ target_include_directories(spatialroot_gui PRIVATE
     ${IMGUI_DIR}/backends
     ${IMGUI_DIR}/misc/cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/thirdparty/allolib/external/stb/stb  # stb_image.h for logo texture
+    ${CMAKE_SOURCE_DIR}/internal/cult-allolib/external/stb/stb  # stb_image.h for logo texture
     ${CMAKE_CURRENT_BINARY_DIR}                               # miniLogo_data.h (generated)
 )
 

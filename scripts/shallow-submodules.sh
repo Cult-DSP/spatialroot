@@ -6,10 +6,11 @@
 #   Re-initialize all spatialroot git submodules as shallow clones (--depth 1)
 #   to reduce the clone/build footprint.
 #
-#   The primary target is thirdparty/allolib, whose full git history currently
-#   occupies ~511 MB in .git/modules/thirdparty/allolib while the working tree
-#   itself is only ~38 MB.  After running this script the history store shrinks
-#   to a few MB of pack objects while the pinned commit on disk is unchanged.
+#   The primary target is internal/cult-allolib, whose full git history can
+#   occupy significant space in .git/modules/internal/cult-allolib while the
+#   working tree itself is much smaller.  After running this script the history
+#   store shrinks to a few MB of pack objects while the pinned commit on disk
+#   is unchanged.
 #
 # WHAT IT DOES
 #   For each submodule:
@@ -191,7 +192,7 @@ echo "Notes:"
 echo "  • Future clones will be shallow if .gitmodules has 'shallow = true'"
 echo "    for each submodule (see companion change)."
 echo "  • To deepen a submodule later:"
-echo "      git -C thirdparty/allolib fetch --unshallow"
+echo "      git -C internal/cult-allolib fetch --unshallow"
 echo "  • To verify shallow status:"
-echo "      git -C thirdparty/allolib rev-parse --is-shallow-repository"
+echo "      git -C internal/cult-allolib rev-parse --is-shallow-repository"
 echo ""

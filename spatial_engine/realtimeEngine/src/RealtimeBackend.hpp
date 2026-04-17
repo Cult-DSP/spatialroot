@@ -31,7 +31,7 @@
 // - SmoothedState::tauSec is tunable at construction time (default 50 ms).
 // - The callback must NEVER allocate, lock, or do I/O.
 //
-// REFERENCE: AlloLib AudioIO API (thirdparty/allolib/include/al/io/al_AudioIO.hpp)
+// REFERENCE: AlloLib AudioIO API (internal/cult-allolib/include/al/io/al_AudioIO.hpp)
 //   AudioIO::init(callback, userData, framesPerBuf, framesPerSec, outChans, inChans)
 //   AudioIO::open() / start() / stop() / close()
 //   AudioIO::cpu() → current audio thread CPU load

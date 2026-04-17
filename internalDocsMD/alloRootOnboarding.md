@@ -32,7 +32,7 @@ Full plan: `internalDocsMD/alloRootPlan.md`
 Phases:
 1. Create `cult-allolib` fork — **DONE** (`internal/cult-allolib` submodule, `heads/main`)
 2. Add L2 normalization to DBAP in-place — **NEXT**
-3. Switch Spatial Root build to use `cult-allolib` instead of `thirdparty/allolib` — **NEXT (Phase 1.5 in plan)**
+3. Switch Spatial Root build to use `cult-allolib` instead of `thirdparty/allolib` — **DONE 2026-04-17**
 4. Runtime validation
 5. Remove auto-compensation
 6. Prune unused AlloLib parts

@@ -5,21 +5,25 @@
 # ⚠️  OPT-IN ONLY — DO NOT RUN IN CI OR init.sh ⚠️
 #
 # PURPOSE
-#   Apply a sparse-checkout filter inside thirdparty/allolib to limit the
+#   Apply a sparse-checkout filter inside internal/cult-allolib to limit the
 #   working tree to the paths spatialroot actually uses (Keep list) plus the
 #   components retained for near-term real-time audio development (Likely-
 #   Future list).  This removes ~14 MB of graphics/UI/window source files
 #   from disk while leaving all audio, math, spatial, system, OSC, and
 #   app-domain files intact.
 #
+#   NOTE: Phase 6 of the cult-allolib plan will prune unneeded files from the
+#   fork permanently.  This script is the interim option for developers who
+#   want a smaller working tree before that pruning pass runs.
+#
 # WHY OPT-IN ONLY
 #   Sparse checkout state lives inside the submodule's git store
-#   (.git/modules/thirdparty/allolib/info/sparse-checkout).  If the pinned
+#   (.git/modules/internal/cult-allolib/info/sparse-checkout).  If the pinned
 #   commit is bumped via `git submodule update`, git will re-materialize the
 #   full tree UNLESS the sparse patterns are reapplied.  AlloLib's own
 #   CMakeLists.txt unconditionally lists every source file, so a trimmed tree
 #   will cause a CMake configure error unless you either:
-#     (a) patch AlloLib's CMakeLists.txt to skip missing files, OR
+#     (a) patch cult-allolib's CMakeLists.txt to skip missing files, OR
 #     (b) accept that build will be limited to the spatialroot subset only.
 #
 #   Default init.sh and CI use a FULL working-tree checkout.  This script is
@@ -41,7 +45,7 @@
 #   • external/dr_libs/       — Audio file decoding alt (744 KB)
 #   • Window/ImGui IO sources  — al_Window*, al_Imgui*
 #
-# WHAT IT KEEPS (Keep + Likely-Future lists from allolib-audit.md)
+# WHAT IT KEEPS (Keep + Likely-Future lists)
 #   • include/al/sound/       — spatializers (DBAP, VBAP, LBAP, Speaker…)
 #   • include/al/math/        — Vec, Mat, Quat, Spherical…
 #   • include/al/spatial/     — Pose, HashSpace
@@ -75,7 +79,7 @@
 #
 # RESTORE FULL CHECKOUT
 #   To undo and restore all files:
-#     cd thirdparty/allolib
+#     cd internal/cult-allolib
 #     git sparse-checkout disable
 #   Or from repo root:
 #     ./scripts/sparse-allolib.sh --reset
@@ -85,7 +89,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ALLOLIB_DIR="$REPO_ROOT/thirdparty/allolib"
+ALLOLIB_DIR="$REPO_ROOT/internal/cult-allolib"
 
 MODE="${1:-apply}"   # "apply" or "--reset"
 
@@ -93,8 +97,8 @@ MODE="${1:-apply}"   # "apply" or "--reset"
 # Guard: submodule must be initialized
 # ---------------------------------------------------------------------------
 if [ ! -f "$ALLOLIB_DIR/CMakeLists.txt" ]; then
-    echo "ERROR: thirdparty/allolib does not appear to be initialized."
-    echo "Run:  git submodule update --init thirdparty/allolib"
+    echo "ERROR: internal/cult-allolib does not appear to be initialized."
+    echo "Run:  git submodule update --init --recursive internal/cult-allolib"
     exit 1
 fi
 
@@ -102,7 +106,7 @@ fi
 # Reset mode — restore full working tree
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "--reset" ]; then
-    echo "Restoring full working tree in thirdparty/allolib..."
+    echo "Restoring full working tree in internal/cult-allolib..."
     git -C "$ALLOLIB_DIR" sparse-checkout disable 2>/dev/null || \
         git -C "$ALLOLIB_DIR" read-tree -mu HEAD
     echo "✓ Full checkout restored."
@@ -221,7 +225,7 @@ echo "git version: $GIT_VERSION"
 git -C "$ALLOLIB_DIR" sparse-checkout init --no-cone
 
 # Write patterns
-SPARSE_FILE="$REPO_ROOT/.git/modules/thirdparty/allolib/info/sparse-checkout"
+SPARSE_FILE="$REPO_ROOT/.git/modules/internal/cult-allolib/info/sparse-checkout"
 # Fallback location if modules dir layout differs
 if [ ! -d "$(dirname "$SPARSE_FILE")" ]; then
     SPARSE_FILE="$ALLOLIB_DIR/.git/info/sparse-checkout"
@@ -242,19 +246,19 @@ echo ""
 echo "✓ Sparse checkout applied."
 echo ""
 echo "⚠️  IMPORTANT NOTES:"
-echo "   1. AlloLib's CMakeLists.txt lists ALL source files unconditionally."
+echo "   1. cult-allolib's CMakeLists.txt lists ALL source files unconditionally."
 echo "      CMake will error on missing files (graphics/ui/sphere/stb/glad)."
 echo "      To build spatialroot after sparse checkout, you must either:"
 echo "        a) Use ALLOLIB_USE_DUMMY_AUDIO + skip graphics in your cmake flags"
-echo "        b) Or wait for a minimal-fork of AlloLib (see allolib-audit.md §4 Step 3)"
+echo "        b) Or wait for Phase 6 pruning (planned removal of unneeded files)"
 echo "      The current spatialroot CMakeLists.txt does NOT patch this — full"
-echo "      AlloLib checkout is the supported build path."
+echo "      cult-allolib checkout is the supported build path."
 echo ""
-echo "   2. If you update the pinned allolib commit, rerun this script to"
-echo "      reapply sparse patterns after `git submodule update`."
+echo "   2. If you update the pinned cult-allolib commit, rerun this script to"
+echo "      reapply sparse patterns after \`git submodule update\`."
 echo ""
 echo "   To restore a full checkout at any time:"
 echo "     ./scripts/sparse-allolib.sh --reset"
 echo "   Or:"
-echo "     cd thirdparty/allolib && git sparse-checkout disable"
+echo "     cd internal/cult-allolib && git sparse-checkout disable"
 echo ""

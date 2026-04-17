@@ -13,11 +13,11 @@ set(ALLOLIB_BUILD_EXAMPLES OFF CACHE BOOL "Don't build AlloLib examples")
 set(ALLOLIB_BUILD_TESTS OFF CACHE BOOL "Don't build AlloLib tests")
 set(AL_VERBOSE_OUTPUT OFF CACHE BOOL "Disable verbose output")
 
-# AlloLib is in thirdparty at project root (two levels up from spatial_engine/spatialRender)
-# Guard: when built via the root CMakeLists.txt, allolib is already added there.
+# cult-allolib is in internal at project root (two levels up from spatial_engine/spatialRender)
+# Guard: when built via the root CMakeLists.txt, cult-allolib is already added there.
 if(NOT TARGET al)
     add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
     )
 endif()
@@ -32,9 +32,9 @@ add_executable(spatialroot_spatial_render
     ../src/WavUtils.cpp
 )
 
-# Include AlloLib headers and renderer for SpatialRenderer.hpp
+# Include cult-allolib headers and renderer for SpatialRenderer.hpp
 target_include_directories(spatialroot_spatial_render PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/renderer
 )
 

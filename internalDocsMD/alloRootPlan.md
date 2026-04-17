@@ -19,9 +19,9 @@ Source of truth for this motivation: the DBAP Focus Investigation Report. :conte
 ## High-level sequence
 
 1. Create `cult-allolib` (done and added submodule)
-   1.5 - update cmake, init, builds, and anything else to use this submodule
-2. Augment the existing DBAP files in-place rather than rewriting from scratch
-3. Update Spatial Root to build against `cult-allolib`
+   1.5 - update cmake, init, builds, and anything else to use this submodule (**DONE 2026-04-17**)
+2. Augment the existing DBAP files in-place rather than rewriting from scratch (**NEXT**)
+3. Update Spatial Root to build against `cult-allolib` (**DONE 2026-04-17** — see Phase 1.5)
 4. Test realtime runtime behavior thoroughly
 5. Disable and then remove auto-compensation if validation confirms normalized DBAP makes it unnecessary
 6. Prune unused parts of AlloLib only after the fork is stable
@@ -126,7 +126,7 @@ Do not keep this indefinitely unless it proves useful.
 
 ---
 
-## Phase 3 — Update Spatial Root to use `cult-allolib`
+## Phase 3 — Update Spatial Root to use `cult-allolib` ✓ DONE 2026-04-17
 
 ### Objective
 

@@ -14,12 +14,12 @@ set(ALLOLIB_BUILD_EXAMPLES OFF CACHE BOOL "Don't build AlloLib examples")
 set(ALLOLIB_BUILD_TESTS    OFF CACHE BOOL "Don't build AlloLib tests")
 set(AL_VERBOSE_OUTPUT      OFF CACHE BOOL "Disable verbose output")
 
-# AlloLib lives at <project_root>/thirdparty/allolib
-# From realtimeEngine/, that is ../../thirdparty/allolib
-# Guard: when built via the root CMakeLists.txt, allolib is already added there.
+# cult-allolib lives at <project_root>/internal/cult-allolib
+# From realtimeEngine/, that is ../../internal/cult-allolib
+# Guard: when built via the root CMakeLists.txt, cult-allolib is already added there.
 if(NOT TARGET al)
     add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
     )
 endif()
@@ -33,7 +33,7 @@ add_library(EngineSessionCore
 )
 
 target_include_directories(EngineSessionCore PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/allolib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/renderer
     ${CMAKE_CURRENT_SOURCE_DIR}/src

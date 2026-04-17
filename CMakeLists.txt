@@ -41,11 +41,11 @@ set(SNDFILE_LIBRARY   SndFile::sndfile CACHE STRING "libsndfile library (vendore
 set(SNDFILE_LIBRARIES SndFile::sndfile CACHE STRING "libsndfile libraries (vendored)" FORCE)
 set(SNDFILE_FOUND     TRUE CACHE BOOL "libsndfile found (vendored)" FORCE)
 
-# ── AlloLib — shared dependency for ENGINE and OFFLINE ───────────────────────
+# ── cult-allolib — shared dependency for ENGINE and OFFLINE ──────────────────
 # Added once at the root level so that both add_subdirectory(realtimeEngine)
 # and add_subdirectory(spatialRender) can use the same `al` CMake target
 # without a duplicate-target error. Each component CMakeLists guards its own
-# add_subdirectory(allolib) with if(NOT TARGET al).
+# add_subdirectory(cult-allolib) with if(NOT TARGET al).
 if(SPATIALROOT_BUILD_ENGINE OR SPATIALROOT_BUILD_OFFLINE)
     set(ALLOLIB_BUILD_EXAMPLES OFF CACHE BOOL "Don't build AlloLib examples")
     set(ALLOLIB_BUILD_TESTS    OFF CACHE BOOL "Don't build AlloLib tests")
@@ -53,7 +53,7 @@ if(SPATIALROOT_BUILD_ENGINE OR SPATIALROOT_BUILD_OFFLINE)
     # Workaround for AlloLib's old internal cmake_minimum_required usage
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/allolib
+        ${CMAKE_CURRENT_SOURCE_DIR}/internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
     )
 endif()

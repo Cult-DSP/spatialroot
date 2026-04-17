@@ -127,16 +127,16 @@ else
 fi
 echo ""
 
-# ── Step 2: Initialize allolib submodule ──────────────────────────────────────
-echo "Step 2: Initializing allolib submodule..."
+# ── Step 2: Initialize cult-allolib submodule ─────────────────────────────────
+echo "Step 2: Initializing cult-allolib submodule..."
 
-ALLOLIB_INCLUDE="${PROJECT_ROOT}/thirdparty/allolib/include"
-if [ -d "${ALLOLIB_INCLUDE}" ]; then
-    echo "✓ thirdparty/allolib already initialized"
+CULT_ALLOLIB_INCLUDE="${PROJECT_ROOT}/internal/cult-allolib/include"
+if [ -d "${CULT_ALLOLIB_INCLUDE}" ]; then
+    echo "✓ internal/cult-allolib already initialized"
 else
-    echo "Fetching thirdparty/allolib (shallow, depth=1)..."
-    git submodule update --init --recursive --depth 1 thirdparty/allolib
-    echo "✓ thirdparty/allolib initialized"
+    echo "Fetching internal/cult-allolib (shallow, depth=1)..."
+    git submodule update --init --recursive --depth 1 internal/cult-allolib
+    echo "✓ internal/cult-allolib initialized"
 fi
 echo ""
 
