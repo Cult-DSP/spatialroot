@@ -29,6 +29,8 @@ This was confirmed by the DBAP Focus Investigation Report (April 2026). The acad
 
 Full plan: `internalDocsMD/alloRootPlan.md`
 
+Math reference: `internalDocsMD/dbapMath.md` — all DBAP algorithm changes, invariants, and derivations live here. **Any change to DBAP math or algorithm must be documented in `dbapMath.md` before the phase is considered complete.**
+
 Phases:
 1. Create `cult-allolib` fork — **DONE**
 2. Add L2 normalization to DBAP in-place — **DONE 2026-04-17**
@@ -110,13 +112,11 @@ The normalization adds a max-scan pass, a sumSq pass, and a gain-precompute pass
 
 ---
 
-## Known latent safety issue — `mNumSpeakers > DBAP_MAX_NUM_SPEAKERS`
+## Speaker count cap — `DBAP_MAX_NUM_SPEAKERS` (resolved)
 
-`DBAP_MAX_NUM_SPEAKERS = 192` is a compile-time cap. The constructor loops up to `mNumSpeakers` writing into fixed-size arrays `mSpeakerVecs[]` and `mDeviceChannels[]`. The normalization code adds `w[DBAP_MAX_NUM_SPEAKERS]` and `gain[DBAP_MAX_NUM_SPEAKERS]` stack arrays with the same bound.
+`DBAP_MAX_NUM_SPEAKERS = 192` is a compile-time cap. All fixed-capacity arrays (`mSpeakerVecs[]`, `mDeviceChannels[]`, and the per-render `w` / `gain` buffers) are sized to this constant.
 
-If a speaker layout with more than 192 speakers is ever loaded, all of these arrays overflow silently. This is a **pre-existing bug** inherited from the original AlloLib code — no bounds check exists in the constructor.
-
-**Do not add a bounds check during Phase 4.** Flag it in Phase 6 (pruning) when the DBAP file is being cleaned up more broadly. The current test layouts are all well under 192 speakers.
+**Fixed before Phase 4:** the constructor now throws `std::runtime_error` immediately if `mNumSpeakers > DBAP_MAX_NUM_SPEAKERS`. The per-render arrays are `std::array<float, DBAP_MAX_NUM_SPEAKERS>`. An invariant comment in `al_Dbap.hpp` documents the constraint. Silent overflow is no longer possible.
 
 ---
 
