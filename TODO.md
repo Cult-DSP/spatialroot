@@ -2,6 +2,8 @@
 
 ## immediate
 
+- create new fork of allolib, make custom dbap file
+
 - autocomp math
 
 - debug windows build

@@ -33,3 +33,6 @@
 [submodule "thirdparty/libsndfile"]
 	path = thirdparty/libsndfile
 	url = https://github.com/libsndfile/libsndfile
+[submodule "cult-allolib"]
+	path = cult-allolib
+	url = https://github.com/Cult-DSP/cult-allolib
