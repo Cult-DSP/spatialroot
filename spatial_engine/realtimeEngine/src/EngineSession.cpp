@@ -18,13 +18,11 @@ struct EngineSession::OscParams {
     al::Parameter focus{"focus", "realtime", 1.5f, 0.2f, 5.0f};
     al::Parameter spkMixDb{"speaker_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
     al::Parameter subMixDb{"sub_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
-    al::ParameterBool autoComp{"auto_comp", "realtime", 0.0f};
     al::ParameterBool paused{"paused", "realtime", 0.0f};
     al::Parameter elevMode{"elevation_mode", "realtime", 0.0f, 0.0f, 2.0f};
 };
 
 EngineSession::EngineSession()
-    : mPendingAutoComp(false)
 {
 }
 
@@ -143,15 +141,6 @@ bool EngineSession::configureRuntime(const RuntimeParams& params)
     mConfig.dbapFocus.store(params.dbapFocus, std::memory_order_relaxed);
     mConfig.loudspeakerMix.store(powf(10.0f, params.speakerMixDb / 20.0f), std::memory_order_relaxed);
     mConfig.subMix.store(powf(10.0f, params.subMixDb / 20.0f), std::memory_order_relaxed);
-    mConfig.focusAutoCompensation.store(params.autoCompensation, std::memory_order_relaxed);
-
-    if (mConfig.focusAutoCompensation.load()) {
-        std::cout << "[EngineSession] Focus auto-compensation ON - computing initial autoCompValue..." << std::endl;
-        float comp = mSpatializer->computeFocusCompensation();
-        std::cout << "[EngineSession] Initial auto-compensation: " << comp
-                  << " (" << (20.0f * std::log10(comp)) << " dB)" << std::endl;
-    }
-
     mOutputRemap = std::make_unique<OutputRemap>();
     if (!mRemapCsv.empty()) {
         // DEPRECATED: CSV remap is not a supported user workflow.
@@ -195,7 +184,6 @@ bool EngineSession::start()
         mOscParams->focus.set(mConfig.dbapFocus.load());
         mOscParams->spkMixDb.set((float)(20.0f * std::log10(mConfig.loudspeakerMix.load())));
         mOscParams->subMixDb.set((float)(20.0f * std::log10(mConfig.subMix.load())));
-        mOscParams->autoComp.set(mConfig.focusAutoCompensation.load() ? 1.0f : 0.0f);
         mOscParams->paused.set(mConfig.paused.load() ? 1.0f : 0.0f);
         mOscParams->elevMode.set(static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)));
 
@@ -204,10 +192,7 @@ bool EngineSession::start()
         });
 
         mOscParams->focus.registerChangeCallback([this](float v) {
-            this->mConfig.dbapFocus.store(v, std::memory_order_relaxed);
-            if (this->mConfig.focusAutoCompensation.load(std::memory_order_relaxed)) {
-                this->mPendingAutoComp.store(true, std::memory_order_relaxed);
-            }
+            this->mConfig.dbapFocus.store(std::max(v, 0.1f), std::memory_order_relaxed);
         });
 
         mOscParams->spkMixDb.registerChangeCallback([this](float dB) {
@@ -216,12 +201,6 @@ bool EngineSession::start()
 
         mOscParams->subMixDb.registerChangeCallback([this](float dB) {
             this->mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
-        });
-
-        mOscParams->autoComp.registerChangeCallback([this](float v) {
-            bool enable = (v >= 0.5f);
-            this->mConfig.focusAutoCompensation.store(enable, std::memory_order_relaxed);
-            if (enable) this->mPendingAutoComp.store(true, std::memory_order_relaxed);
         });
 
         mOscParams->paused.registerChangeCallback([this](float v) {
@@ -236,7 +215,7 @@ bool EngineSession::start()
         });
 
         *mParamServer << mOscParams->gain << mOscParams->focus << mOscParams->spkMixDb
-                      << mOscParams->subMixDb << mOscParams->autoComp << mOscParams->paused
+                      << mOscParams->subMixDb << mOscParams->paused
                       << mOscParams->elevMode;
 
         if (!mParamServer->serverRunning()) {
@@ -298,10 +277,7 @@ void EngineSession::setMasterGain(float gain)
 
 void EngineSession::setDbapFocus(float focus)
 {
-    mConfig.dbapFocus.store(focus, std::memory_order_relaxed);
-    if (mConfig.focusAutoCompensation.load(std::memory_order_relaxed)) {
-        mPendingAutoComp.store(true, std::memory_order_relaxed);
-    }
+    mConfig.dbapFocus.store(std::max(focus, 0.1f), std::memory_order_relaxed);
 }
 
 void EngineSession::setSpeakerMixDb(float dB)
@@ -314,12 +290,6 @@ void EngineSession::setSubMixDb(float dB)
     mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
 }
 
-void EngineSession::setAutoCompensation(bool enable)
-{
-    mConfig.focusAutoCompensation.store(enable, std::memory_order_relaxed);
-    if (enable) mPendingAutoComp.store(true, std::memory_order_relaxed);
-}
-
 void EngineSession::setElevationMode(ElevationMode mode)
 {
     mConfig.elevationMode.store(static_cast<int>(mode), std::memory_order_relaxed);
@@ -327,13 +297,7 @@ void EngineSession::setElevationMode(ElevationMode mode)
 
 void EngineSession::update()
 {
-    if (mPendingAutoComp.load(std::memory_order_relaxed)) {
-        mPendingAutoComp.store(false, std::memory_order_relaxed);
-        if (mSpatializer) {
-            float comp = mSpatializer->computeFocusCompensation();
-            std::cout << "\n[EngineSession] Focus compensation recomputed: " << comp << std::endl;
-        }
-    }
+    // No deferred work currently. Retained for API stability.
 }
 
 EngineStatus EngineSession::queryStatus() const

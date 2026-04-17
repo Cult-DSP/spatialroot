@@ -169,7 +169,7 @@ spatialroot/
 
 **Primary (in-process):** ImGui GUI calls direct C++ setters on `EngineSession`:
 
-- `setMasterGain(float)`, `setDbapFocus(float)`, `setSpeakerMixDb(float)`, `setSubMixDb(float)`, `setAutoCompensation(bool)`, `setElevationMode(ElevationMode)`
+- `setMasterGain(float)`, `setDbapFocus(float)`, `setSpeakerMixDb(float)`, `setSubMixDb(float)`, `setElevationMode(ElevationMode)`
 
 **Secondary (optional OSC):** Remains available for external tooling/remote control.
 

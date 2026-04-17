@@ -180,12 +180,6 @@ Sets the subwoofer mix trim in dB (range ±10). The value is converted to linear
 
 ---
 
-### `void setAutoCompensation(bool enable)`
-
-Enables or disables automatic gain compensation as DBAP focus changes. When enabled, schedules a recomputation on the next `update()` call. Safe to call after `start()`.
-
----
-
 ### `void setElevationMode(ElevationMode mode)`
 
 Sets the elevation rescaling mode at runtime. Takes effect on the next audio block. Safe to call after `start()`.
@@ -194,7 +188,7 @@ Sets the elevation rescaling mode at runtime. Takes effect on the next audio blo
 
 ### `void update()`
 
-Processes deferred main-thread work, including auto-compensation state changes. Must be called regularly from the main thread while the session is running.
+Main-thread tick. Must be called regularly from the main thread while the session is running (e.g., once per render loop or on a ~50 ms timer). Reserved for future deferred work.
 
 ---
 
@@ -273,7 +267,6 @@ Passed to `configureRuntime()`.
 | `dbapFocus`        | `float` | `1.5`   | DBAP rolloff exponent, typical range 0.2–5.0              |
 | `speakerMixDb`     | `float` | `0.0`   | Loudspeaker mix trim in dB (±10)                          |
 | `subMixDb`         | `float` | `0.0`   | Subwoofer mix trim in dB (±10)                            |
-| `autoCompensation` | `bool`  | `false` | Enables automatic gain compensation as DBAP focus changes |
 
 ---
 
@@ -329,17 +322,14 @@ The following setter methods allow a host to update parameters while the engine 
 | Method | Parameter | Range |
 |--------|-----------|-------|
 | `setMasterGain(float gain)` | Linear output gain | 0.1–3.0 (OSC range) |
-| `setDbapFocus(float focus)` | DBAP rolloff exponent | 0.2–5.0 |
+| `setDbapFocus(float focus)` | DBAP rolloff exponent; clamped to minimum 0.1 | 0.1–5.0 |
 | `setSpeakerMixDb(float dB)` | Loudspeaker mix trim | ±10 dB |
 | `setSubMixDb(float dB)` | Subwoofer mix trim | ±10 dB |
-| `setAutoCompensation(bool enable)` | Auto gain compensation | — |
 | `setElevationMode(ElevationMode mode)` | Elevation rescaling | `ElevationMode` enum |
-
-`setDbapFocus()` and `setAutoCompensation(true)` both schedule a focus compensation recomputation. The recomputation runs on the next `update()` call from the main thread. Do not call `computeFocusCompensation()` directly while the engine is running — it is main-thread-only and not RT-safe.
 
 **`update()` / polling loop contract for GUI hosts:**
 
-A GUI host (e.g., Dear ImGui + GLFW) must drive `update()`, `queryStatus()`, and `consumeDiagnostics()` from the main thread at regular intervals — e.g., once per render loop iteration or via a timer. A 50 ms polling interval is typical. Failing to call `update()` while auto-compensation is pending will defer the recomputation indefinitely.
+A GUI host (e.g., Dear ImGui + GLFW) must drive `update()`, `queryStatus()`, and `consumeDiagnostics()` from the main thread at regular intervals — e.g., once per render loop iteration or via a timer. A 50 ms polling interval is typical.
 
 **`oscPort = 0` behavior:**
 

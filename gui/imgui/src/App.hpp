@@ -92,7 +92,6 @@ private:
     float mFocus         = 1.5f;
     float mSpkMixDb      = 0.0f;
     float mSubMixDb      = 0.0f;
-    bool  mAutoComp      = false;
     int   mElevationMode = 0;    // 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp
 
     // ── cult-transcoder ADM flow ──────────────────────────────────────────

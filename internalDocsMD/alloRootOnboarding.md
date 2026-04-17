@@ -128,8 +128,7 @@ Comment style for the normalization block:
 - Do not rewrite DBAP from scratch
 - Do not remove the `1+dist` distance floor — it is AlloLib's spatial blur mechanism
 - Do not add a compile-time legacy/normalized switch — not needed (locked decision)
-- Do not touch `computeFocusCompensation()` in `Spatializer.hpp` — that is Phase 5
-- Do not remove auto-compensation UI or plumbing — Phase 5 only
+- Do not modify focus auto-compensation — it has been fully removed (Phase 5 complete)
 - Do not touch `thirdparty/allolib/` — it no longer exists in this repo
 
 ---
@@ -142,5 +141,4 @@ Comment style for the normalization block:
 | `Dbap::renderBuffer()` | `internal/cult-allolib/src/sound/al_Dbap.cpp` | 38 |
 | `Dbap::setFocus()` | `internal/cult-allolib/include/al/sound/al_Dbap.hpp` | 81 |
 | `Spatializer::renderBlock()` | `spatial_engine/realtimeEngine/src/Spatializer.hpp` | 404 |
-| `computeFocusCompensation()` | `spatial_engine/realtimeEngine/src/Spatializer.hpp` | 1092 |
 | Root CMake cult-allolib block | `CMakeLists.txt` | 49–59 |

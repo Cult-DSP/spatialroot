@@ -61,9 +61,6 @@ int main() {
     session.setSubMixDb(0.0f);
     std::cout << "[embedding_test]   setSubMixDb(0.0 dB)        OK\n";
 
-    session.setAutoCompensation(false);
-    std::cout << "[embedding_test]   setAutoCompensation(false) OK\n";
-
     session.setElevationMode(ElevationMode::RescaleFullSphere);
     std::cout << "[embedding_test]   setElevationMode(RescaleFullSphere) OK\n\n";
 

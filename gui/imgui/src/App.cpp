@@ -454,10 +454,6 @@ void App::renderEngineTab() {
         if (ImGui::InputFloat("##submixinput", &mSubMixDb, 0.f, 0.f, "%.1f"))
             if (isRunning) { mSubMixDb = std::clamp(mSubMixDb, -10.f, 10.f); mSession->setSubMixDb(mSubMixDb); }
 
-        // Auto Compensation
-        if (ImGui::Checkbox("FOCUS AUTO-COMPENSATION", &mAutoComp))
-            if (isRunning) mSession->setAutoCompensation(mAutoComp);
-
         // Elevation Mode
         ImGui::TextDisabled("ELEVATION MODE");
         ImGui::SameLine(160.f);
@@ -802,8 +798,6 @@ void App::doLaunchEngine(const std::string& scenePath,
     rp.dbapFocus        = mFocus;
     rp.speakerMixDb     = mSpkMixDb;
     rp.subMixDb         = mSubMixDb;
-    rp.autoCompensation = mAutoComp;
-
     if (!mSession->configureRuntime(rp)) {
         mLastError = mSession->getLastError();
         mState = AppState::Error;
@@ -834,7 +828,6 @@ void App::resetRuntimeToDefaults() {
     mFocus         = 1.5f;
     mSpkMixDb      = 0.0f;
     mSubMixDb      = 0.0f;
-    mAutoComp      = false;
     mElevationMode = 0;
 }
 

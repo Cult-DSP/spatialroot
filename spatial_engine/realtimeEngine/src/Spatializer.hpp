@@ -38,13 +38,6 @@
 //  MAIN thread:
 //    - Calls init() / setRemap() before start(). After start() returns,
 //      all Spatializer members are treated as read-only by the main thread.
-//    - Calls computeFocusCompensation() — MAIN THREAD ONLY, and ONLY when
-//      audio is NOT streaming (i.e., before start() or after stop()).
-//      Reason: computeFocusCompensation() creates a temporary al::AudioIOData,
-//      runs a simulated render pass, and writes mConfig.loudspeakerMix. The
-//      temporary allocation makes it not RT-safe, and the write to the atomic
-//      from main thread while the audio thread reads it is safe (atomic), but
-//      the simulation render itself touches mRenderIO which is audio-thread-owned.
 //
 //  AUDIO thread:
 //    - Calls renderBlock() once per audio block.
@@ -87,7 +80,6 @@
 // - renderBlock() is called on the audio thread. No allocation, no locks,
 //   no I/O. All buffers are pre-allocated at init time.
 // - al::Dbap::renderBuffer() is real-time safe (fixed-size arrays, no alloc).
-// - computeFocusCompensation() is NOT real-time safe. Main thread only.
 
 #pragma once
 
@@ -131,11 +123,8 @@ static inline int sr_popcountll(unsigned long long x) { return static_cast<int>(
 struct ControlsSnapshot {
     float masterGain     = 1.0f;
     float focus          = 1.0f;
-    float loudspeakerMix = 1.0f;  // manual slider value — used only when autoComp is false
+    float loudspeakerMix = 1.0f;
     float subMix         = 1.0f;
-    bool  autoComp       = false;  // Phase 11: forwarded from RealtimeBackend smoothed state
-                                   // When true, renderBlock() uses mAutoCompValue instead of
-                                   // loudspeakerMix (override mode — the two paths never collide)
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -727,15 +716,8 @@ public:
         //   - subMix         → subwoofer channels only
         // Values come from the ControlsSnapshot (smoothed, never from atomics).
         //
-        // Phase 11 — autoComp override (Invariant 8):
-        //   When ctrl.autoComp is true, mAutoCompValue (written by
-        //   computeFocusCompensation() on the main thread) overrides the manual
-        //   loudspeakerMix slider entirely. This prevents the two paths from
-        //   writing the same atomic and silently clobbering each other.
-        //   When ctrl.autoComp is false, the manual slider is used as before.
-        //
         // Unity-guard (== 1.0f) makes the no-op case zero cost.
-        const float spkMix = ctrl.autoComp ? mAutoCompValue : ctrl.loudspeakerMix;
+        const float spkMix = ctrl.loudspeakerMix;
         const float lfeMix = ctrl.subMix;
 
         if (spkMix != 1.0f) {
@@ -1089,32 +1071,6 @@ public:
     // REAL-TIME SAFE: this method runs on the main/control thread only.
     // It temporarily borrows mRenderIO and mSourceBuffer for the impulse
     // test; it must NOT be called while the audio callback is active.
-    float computeFocusCompensation() {
-        if (!mInitialized) return 1.0f;
-
-        // Phase 13: auto-compensation is temporarily disabled.
-        // The previous implementation had two structural bugs:
-        //   1. The reference position (0, radius, 0) was passed directly to
-        //      renderBuffer(), but renderBuffer() applies an internal coord flip
-        //      (pos.x, -pos.z, pos.y) before computing distances. The position
-        //      that was actually tested was (0, 0, radius) — the top of the sphere,
-        //      not the front-center reference intended.
-        //   2. At focus=0, DBAP gain = pow(1/(1+dist), 0) = 1.0 for every speaker,
-        //      so refPower ≈ N (not 1.0), making the ratio refPower/power
-        //      proportional to N² — producing compensation values that hit the
-        //      ±10 dB clamp every time.
-        // Result: autoComp was applying ~+10 dB unconditionally, making artifacts
-        // significantly worse whenever it was enabled.
-        //
-        // Disabled by returning 1.0f (identity). The mAutoCompValue member,
-        // the renderBlock() autoComp branch, and the OSC plumbing are all kept
-        // intact so this can be re-enabled once the math is corrected.
-        // TODO: reimplement with correct reference position and power model.
-        std::cout << "[Spatializer] computeFocusCompensation: disabled (returning 1.0). "
-                     "See Phase 13 notes." << std::endl;
-        mAutoCompValue = 1.0f;
-        return 1.0f;
-    }
 
 private:
 
@@ -1220,9 +1176,7 @@ private:
     std::vector<al::Vec3f>      mSpeakerPositions;
 
     // ── Internal render buffer (sized for layout-derived outputChannels) ──
-    // AUDIO-THREAD-OWNED: only accessed inside renderBlock() and
-    // computeFocusCompensation(). The latter must only be called from the
-    // main thread when audio is NOT running (see threading model above).
+    // AUDIO-THREAD-OWNED: only accessed inside renderBlock().
     al::AudioIOData             mRenderIO;
 
     // Fix 2 — Sub-chunk scratch buffer for fast-mover rendering.
@@ -1244,16 +1198,7 @@ private:
     OutputRemap                 mOutputRouting;
     const OutputRemap*          mRemap = nullptr;
 
-    // ── Phase 11: Focus auto-compensation value ───────────────────────────
-    // Written ONLY by computeFocusCompensation() (main thread, audio stopped).
-    // Read ONLY by renderBlock() when ctrl.autoComp is true.
-    // Separate from mConfig.loudspeakerMix (the manual slider) — the two
-    // paths never write the same variable. See Invariant 8.
-    // Not atomic: written pre-start or via pendingAutoComp main-loop pattern
-    // (audio is effectively synchronised out before the write reaches it).
-    float                       mAutoCompValue = 1.0f;
-
-    // ── Phase 11: Previous block focus (for per-frame interpolation) ──────
+    // ── Previous block focus (for per-frame interpolation) ───────────────
     // Holds the focus value used at the END of the last renderBlock() call.
     // Used as the interpolation start point for the next block so that a
     // focus change produces a smooth ramp rather than a step at the boundary.

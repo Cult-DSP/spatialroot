@@ -187,41 +187,24 @@ During this phase only, log or inspect:
 
 ---
 
-## Phase 5 — Disable then remove auto-compensation
+## Phase 5 — Remove auto-compensation ✓ DONE 2026-04-17
 
-### Objective
+### What was done
 
-Retire the current auto-compensation system once runtime validation confirms it is no longer serving a necessary function.
+`computeFocusCompensation()`, `mAutoCompValue`, the `autoComp` flag, and all
+associated plumbing were removed from the codebase. With L2-normalized DBAP,
+`sum(v_k^2) = 1` is guaranteed at all positions and focus values, making a
+compensation layer structurally meaningless — there is no power variation to
+correct.
 
-### Important note
-
-This should happen **after** validation, not before.
-
-The current findings indicate that the previous compensation logic was built around invalid assumptions about DBAP behavior. If normalized DBAP now preserves the desired invariant, auto-compensation should become unnecessary. But this must be confirmed in runtime testing first. :contentReference[oaicite:3]{index=3}
-
-### Recommended sequence
-
-1. disable auto-compensation by default
-2. keep code temporarily available during verification
-3. confirm normalized DBAP produces stable focus behavior without it
-4. remove:
-   - UI checkbox
-   - engine config plumbing
-   - status reporting hooks
-   - dead helper functions
-   - stale comments based on the old assumptions
-
-### Deliverables
-
-- auto-comp disabled
-- validation confirming it is unnecessary
-- auto-comp code removed cleanly
-
-### Exit criteria
-
-- no focus loudness correction layer is needed anymore
-- Spatial Root behavior is simpler and clearer
-- no dead compensation code remains
+Removed from:
+- `Spatializer.hpp` — method, member, `ControlsSnapshot` field, `renderBlock` branch
+- `RealtimeBackend.hpp` — `ControlSnapshot` field, snapshot and smoothing logic
+- `RealtimeTypes.hpp` — `focusAutoCompensation` atomic, invariant comment
+- `EngineSession.hpp` / `.cpp` — `RuntimeParams` field, `setAutoCompensation()`, `mPendingAutoComp`, OSC param, `update()` deferred-work body
+- `main.cpp` — `--auto_compensation` CLI flag
+- `gui/imgui/src/App.hpp` / `.cpp` — checkbox UI, `mAutoComp` member
+- `embedding_test.cpp` — `setAutoCompensation(false)` call
 
 ---
 

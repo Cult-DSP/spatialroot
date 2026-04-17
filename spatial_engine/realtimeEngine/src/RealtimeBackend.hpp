@@ -78,7 +78,6 @@ public:
         mSmooth.smoothed.focus          = config.dbapFocus.load(std::memory_order_relaxed);
         mSmooth.smoothed.loudspeakerMix = config.loudspeakerMix.load(std::memory_order_relaxed);
         mSmooth.smoothed.subMix         = config.subMix.load(std::memory_order_relaxed);
-        mSmooth.smoothed.autoComp       = config.focusAutoCompensation.load(std::memory_order_relaxed);
         mSmooth.target                  = mSmooth.smoothed;
     }
 
@@ -380,7 +379,6 @@ private:
             t.focus             = mConfig.dbapFocus.load(std::memory_order_relaxed);
             t.loudspeakerMix    = mConfig.loudspeakerMix.load(std::memory_order_relaxed);
             t.subMix            = mConfig.subMix.load(std::memory_order_relaxed);
-            t.autoComp          = mConfig.focusAutoCompensation.load(std::memory_order_relaxed);
         }
 
         // ── B) Exponential smoothing toward snapshot targets (per-block) ─────
@@ -397,7 +395,6 @@ private:
             s.focus          = s.focus          + static_cast<float>(alpha * (tgt.focus          - s.focus));
             s.loudspeakerMix = s.loudspeakerMix + static_cast<float>(alpha * (tgt.loudspeakerMix - s.loudspeakerMix));
             s.subMix         = s.subMix         + static_cast<float>(alpha * (tgt.subMix         - s.subMix));
-            s.autoComp       = tgt.autoComp;  // bool: take target immediately
         }
 
         // ── C) Pause-fade: detect edge on paused flag, arm fade ramp ─────────
@@ -471,7 +468,6 @@ private:
             ctrl.focus          = mSmooth.smoothed.focus;
             ctrl.loudspeakerMix = mSmooth.smoothed.loudspeakerMix;
             ctrl.subMix         = mSmooth.smoothed.subMix;
-            ctrl.autoComp       = mSmooth.smoothed.autoComp;  // Phase 11: Fix 1
 
             const uint64_t currentFrame = mState.frameCounter.load(std::memory_order_relaxed);
             mSpatializer->renderBlock(io, *mStreamer, mPose->getPoses(),
@@ -590,7 +586,6 @@ private:
         float focus          = 1.0f;
         float loudspeakerMix = 1.0f;
         float subMix         = 1.0f;
-        bool  autoComp       = false;
     };
 
     struct SmoothedState {

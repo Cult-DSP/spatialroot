@@ -99,7 +99,6 @@ Optional:
   --focus <float>      DBAP rolloff exponent 0.2–5.0 (default: 1.5)
   --speaker_mix <dB>   Loudspeaker mix trim in dB (±10, default: 0)
   --sub_mix <dB>       Subwoofer mix trim in dB (±10, default: 0)
-  --auto_compensation  Enable focus auto-compensation (default: off)
   --elevation_mode <n> Vertical rescaling: 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp
   --remap <path>       CSV mapping internal layout channels to device channels
   --osc_port <int>     OSC control port (default: 9009; 0 = disable)
@@ -110,7 +109,7 @@ Optional:
 
 ### OSC parameter control
 
-When `--osc_port` is non-zero (default: 9009), the engine accepts OSC messages on `127.0.0.1:<port>` for live parameter updates: `/realtime/gain`, `/realtime/focus`, `/realtime/speaker_mix_db`, `/realtime/sub_mix_db`, `/realtime/auto_comp`, `/realtime/paused`, `/realtime/elevation_mode`.
+When `--osc_port` is non-zero (default: 9009), the engine accepts OSC messages on `127.0.0.1:<port>` for live parameter updates: `/realtime/gain`, `/realtime/focus`, `/realtime/speaker_mix_db`, `/realtime/sub_mix_db`, `/realtime/paused`, `/realtime/elevation_mode`.
 
 ### Quick dev rebuild (engine only)
 

@@ -85,7 +85,6 @@ struct RuntimeParams {
     float dbapFocus = 1.5f;
     float speakerMixDb = 0.0f;
     float subMixDb = 0.0f;
-    bool autoCompensation = false;
 };
 
 class EngineSession {
@@ -109,7 +108,6 @@ public:
     void setDbapFocus(float focus);
     void setSpeakerMixDb(float dB);
     void setSubMixDb(float dB);
-    void setAutoCompensation(bool enable);
     void setElevationMode(ElevationMode mode);
 
     void update();
@@ -136,7 +134,6 @@ private:
     struct OscParams;
     std::unique_ptr<OscParams> mOscParams;
 
-    std::atomic<bool> mPendingAutoComp;
     int mOscPort = 9009;
     std::string mRemapCsv;
 };

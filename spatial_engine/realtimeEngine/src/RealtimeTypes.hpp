@@ -40,7 +40,6 @@
 //  │                             │ OSC listener writes — one-block lag    │
 //  │                             │ is inaudible. Was plain float before,  │
 //  │                             │ which was a data race — now fixed.)    │
-//  │ ::focusAutoCompensation     │ relaxed (same reasoning)               │
 //  │ ::elevationMode             │ relaxed (stale-by-one-block is fine;   │
 //  │                             │ mode switch is not sample-accurate)    │
 //  │ ::playing, ::shouldExit     │ relaxed (polling-only, no dep. data)   │
@@ -81,12 +80,7 @@
 //     mLastGoodDir and mPoses are written only there. getPoses() returns a
 //     const reference safe to read from within the same processBlock() call.
 //
-//  5. Spatializer::computeFocusCompensation() MUST be called from the MAIN
-//     thread only, and ONLY when audio is not streaming (i.e., before start()
-//     or after stop()). It performs temporary allocation and DBAP panning
-//     that are not RT-safe.
-//
-//  6. The loader thread never writes to a buffer that is in PLAYING state.
+//  5. The loader thread never writes to a buffer that is in PLAYING state.
 //     It only writes to EMPTY buffers → sets LOADING → then READY.
 //     The audio thread reads PLAYING state buffers and transitions them to
 //     EMPTY on buffer switch. The acquire/release pairs on stateA/B ensure
@@ -190,10 +184,6 @@ struct RealtimeConfig {
     std::atomic<float> masterGain{0.5f};          // Global output gain (0.0–1.0)
     std::atomic<float> loudspeakerMix{1.0f};      // post-DBAP main-channel trim (±10 dB)
     std::atomic<float> subMix{1.0f};              // post-DBAP sub-channel trim  (±10 dB)
-    std::atomic<bool>  focusAutoCompensation{false}; // auto-update loudspeakerMix on focus change
-                                                     // NOTE: computeFocusCompensation() writes this
-                                                     // from the MAIN thread only (see invariant 5)
-
     // ── File paths (set at startup, read-only after) ─────────────────────
     std::string layoutPath;       // Speaker layout JSON
     std::string scenePath;        // LUSID scene JSON (positions/trajectories)

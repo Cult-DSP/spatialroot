@@ -85,7 +85,6 @@ static void printUsage(const char* progName) {
               << "  --focus <float>     DBAP rolloff exponent 0.2–5.0 (default: 1.5)\n"
               << "  --speaker_mix <dB>  Loudspeaker mix trim in dB (±10, default: 0)\n"
               << "  --sub_mix <dB>      Subwoofer mix trim in dB (±10, default: 0)\n"
-              << "  --auto_compensation Enable focus auto-compensation (default: off)\n"
               << "  --elevation_mode <n> Vertical rescaling mode (default: 0):\n"
               << "                       0 = RescaleAtmosUp, 1 = RescaleFullSphere, 2 = Clamp\n"
               << "  --remap <path>      [DEPRECATED] CSV override for output routing. Not a\n"
@@ -168,7 +167,6 @@ int main(int argc, char* argv[]) {
     rParams.dbapFocus        = getArgFloat(argc, argv, "--focus", 1.5f);
     rParams.speakerMixDb     = getArgFloat(argc, argv, "--speaker_mix", 0.0f);
     rParams.subMixDb         = getArgFloat(argc, argv, "--sub_mix", 0.0f);
-    rParams.autoCompensation = hasArg(argc, argv, "--auto_compensation");
 
     // Validation (was previously scattered, now centralized on inputs):
     bool useADM = !sceneIn.admFile.empty();
