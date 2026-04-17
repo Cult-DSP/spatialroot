@@ -2,9 +2,8 @@
 
 ## immediate
 
-- create new fork of allolib, make custom dbap file
-- autocomp math
-
+- test
+- fix windows build after cult-allolib change
 - re organize custom submodules into internal/ and update cmake and shell scripts
 
 - debug windows build
