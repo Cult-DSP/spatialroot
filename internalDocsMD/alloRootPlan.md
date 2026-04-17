@@ -92,6 +92,8 @@ Modify the existing DBAP implementation to add normalization and corrected focus
   - what invariant is now being preserved
   - what behavior should remain stable as focus changes
 
+  - document revised dbap with citations internalDocsMD/dbap_paper.pdf in internalDocsMD/dbapMath.md
+
 ### Design target
 
 The new implementation should eliminate the current global attenuation behavior caused by raw exponentiation without normalization. The investigation showed that the existing implementation preserves no useful invariant across focus changes. :contentReference[oaicite:2]{index=2}
@@ -314,14 +316,50 @@ This keeps provenance clean and avoids confusion later.
 
 ---
 
+## Locked decisions (2026-04-17)
+
+These were resolved by reading the Lossius et al. 2009 ICMC paper and the investigation report.
+
+### 1. Invariant: `sumG² = 1` (L2 / constant-power normalization)
+
+The paper is explicit: equation (2) states `I = Σ v_i² = 1`. This is the DBAP invariant.
+The normalization coefficient `k = 1 / sqrt(Σ w_i²)` follows algebraically from it.
+Total acoustic power is constant regardless of source position and regardless of focus value.
+
+### 2. Exact semantics of focus in the normalized model
+
+Focus (`a` in the paper, `mFocus` in AlloLib) is a rolloff exponent on the per-speaker inverse-distance weight:
+
+```
+w_k = pow(1.0f / (1.0f + dist_k), focus)   // unnormalized; keeps AlloLib 1+d blur floor
+k   = 1.0f / sqrt(sum_k(w_k * w_k))         // L2 normalizer
+v_k = k * w_k                               // final gain; sum(v_k^2) = 1
+```
+
+Focus controls spatial sharpening only. It has no effect on total power. As focus increases:
+
+- the nearest speaker's gain rises toward 1.0 (single-speaker limit)
+- all other speakers fall correspondingly
+- no global attenuation occurs
+
+### 3. Legacy comparison path
+
+Not required. The normalization is a single `sqrt` + division pass added after the existing per-speaker weight calculation. The original per-speaker distance loop is preserved unchanged. No conditional compile switch needed.
+
+### 4. Acceptance baseline for runtime validation
+
+- 8-speaker ring at focus = 1, 2, 4: loudest speaker must not drop below its focus=1 level
+- Source at front: sp0 gain must be stable across focus sweep
+- Moving source: no pops or gain steps at block boundaries
+- Regression scenes already used in realtime engine debugging (Fix 1–6, Phase 14 logs)
+
+---
+
 ## Final decision points to lock before Phase 2 completes
 
-Before Phase 2 is considered complete, explicitly lock these decisions:
-
-1. What invariant the new DBAP will preserve
-2. Exact semantics of focus in the normalized model
-3. Whether a temporary legacy comparison path will exist during validation
-4. What test scenes will be the acceptance baseline for runtime validation
+~~1. What invariant the new DBAP will preserve~~ — **LOCKED: sumG² = 1**
+~~2. Exact semantics of focus in the normalized model~~ — **LOCKED: see above**
+~~3. Whether a temporary legacy comparison path will exist during validation~~ — **LOCKED: not needed** 4. What test scenes will be the acceptance baseline for runtime validation — **LOCKED: see above**
 
 ---
 
