@@ -37,7 +37,7 @@ The engine enforces a strict, linear initialization sequence:
 | Method                                              | Description                                                                                                            |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `setPaused(bool)`                                   | The only supported transport control. Stop/seek are deferred/unsupported.                                              |
-| `update()`                                          | Main-thread tick. **Must be called regularly** (e.g. 50ms timer). Handles deferred work: `computeFocusCompensation()`. |
+| `update()`                                          | Main-thread tick. **Should be called regularly** from the host loop. It currently performs no deferred work and is retained for API stability. |
 | `queryStatus() -> EngineStatus`                     | Polls current metrics without mutating state.                                                                          |
 | `consumeDiagnostics() -> vector<DiagnosticMessage>` | Empties internal diagnostic queue.                                                                                     |
 | `shutdown()`                                        | Triggers rigid teardown sequence. Terminal — construct new `EngineSession` to restart.                                 |
@@ -47,10 +47,9 @@ The engine enforces a strict, linear initialization sequence:
 | Method                            | Writes                                                                |
 | --------------------------------- | --------------------------------------------------------------------- |
 | `setMasterGain(float)`            | `mConfig.masterGain` (linear 0.1–3.0)                                 |
-| `setDbapFocus(float)`             | `mConfig.dbapFocus` + sets `mPendingAutoComp` if auto-comp enabled    |
+| `setDbapFocus(float)`             | `mConfig.dbapFocus` (clamped to minimum `0.1f`)                       |
 | `setSpeakerMixDb(float)`          | `mConfig.loudspeakerMix` (dB→linear)                                  |
 | `setSubMixDb(float)`              | `mConfig.subMix` (dB→linear)                                          |
-| `setAutoCompensation(bool)`       | `mConfig.focusAutoCompensation` + sets `mPendingAutoComp` if enabling |
 | `setElevationMode(ElevationMode)` | `mConfig.elevationMode`                                               |
 
 All writes use `std::memory_order_relaxed`. Safe to call after `start()` and before `shutdown()`.
@@ -96,7 +95,7 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 
 ### Main-Thread Tick (`update()`)
 
-Audio thread strictness forbids heavy configuration matrix recalculation during a callback. `computeFocusCompensation()` and similar structural mutators are deferred to the main thread via the `update()` tick.
+`update()` remains part of the public API so hosts can keep a stable polling/tick structure, but the current implementation no longer performs deferred focus-compensation work. That path was removed after DBAP normalization made it unnecessary.
 
 ---
 

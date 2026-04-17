@@ -82,7 +82,7 @@ static void printUsage(const char* progName) {
               << "  --samplerate <int>  Audio sample rate in Hz (default: 48000)\n"
               << "  --buffersize <int>  Frames per audio callback (default: 512)\n"
               << "  --gain <float>      Master gain 0.0–1.0 (default: 0.5)\n"
-              << "  --focus <float>     DBAP rolloff exponent 0.2–5.0 (default: 1.5)\n"
+              << "  --focus <float>     DBAP rolloff exponent 0.1–5.0 (default: 1.5)\n"
               << "  --speaker_mix <dB>  Loudspeaker mix trim in dB (±10, default: 0)\n"
               << "  --sub_mix <dB>      Subwoofer mix trim in dB (±10, default: 0)\n"
               << "  --elevation_mode <n> Vertical rescaling mode (default: 0):\n"

@@ -57,10 +57,9 @@ struct LayoutInput {
 ```cpp
 struct RuntimeParams {
     float masterGain = 0.5f;        // linear, range 0.1–3.0
-    float dbapFocus = 1.5f;         // DBAP rolloff exponent, range 0.2–5.0
+    float dbapFocus = 1.5f;         // DBAP rolloff exponent, minimum 0.1
     float speakerMixDb = 0.0f;      // post-DBAP main trim, range -10–+10 dB
     float subMixDb = 0.0f;          // post-DBAP sub trim, range -10–+10 dB
-    bool autoCompensation = false;
 };
 ```
 `speakerMixDb` and `subMixDb` are converted dB → linear at store time: `powf(10.0f, dB / 20.0f)`.
@@ -82,7 +81,7 @@ The engine enforces a strict, linear initialization sequence:
 | Method | Writes to | Notes |
 |---|---|---|
 | `setPaused(bool)` | `mConfig.paused` | Only supported transport control. Stop/seek unsupported. |
-| `update()` | — | Must be called regularly from main thread (~50ms). Dispatches `computeFocusCompensation()` when `mPendingAutoComp` is set. |
+| `update()` | — | Should be called from the main thread / host loop. Currently retained for API stability; no deferred focus-compensation work remains. |
 | `queryStatus() -> EngineStatus` | — | Lock-free snapshot. No state mutation. |
 | `consumeDiagnostics() -> DiagnosticEvents` | — | Atomically exchanges event flags. Clears them on read. |
 | `shutdown()` | — | Terminal. Destroy and recreate `EngineSession` to restart. |
@@ -92,10 +91,9 @@ The engine enforces a strict, linear initialization sequence:
 | Method | Writes | Notes |
 |---|---|---|
 | `setMasterGain(float)` | `mConfig.masterGain` | Linear 0.1–3.0 |
-| `setDbapFocus(float)` | `mConfig.dbapFocus` | Sets `mPendingAutoComp` if autoComp enabled |
+| `setDbapFocus(float)` | `mConfig.dbapFocus` | Clamped to a minimum of `0.1f` |
 | `setSpeakerMixDb(float)` | `mConfig.loudspeakerMix` | dB → linear conversion at store time |
 | `setSubMixDb(float)` | `mConfig.subMix` | dB → linear conversion at store time |
-| `setAutoCompensation(bool)` | `mConfig.focusAutoCompensation` | Sets `mPendingAutoComp` if enabling |
 | `setElevationMode(ElevationMode)` | `mConfig.elevationMode` | Cast to int at store time |
 
 All writes use `std::memory_order_relaxed`. Safe to call after `start()` and before `shutdown()`.
@@ -147,10 +145,9 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 | Parameter | AlloLib type | Range | Default |
 |---|---|---|---|
 | `gain` | `al::Parameter` | 0.1–3.0 | 0.5 |
-| `focus` | `al::Parameter` | 0.2–5.0 | 1.5 |
+| `focus` | `al::Parameter` | 0.1–5.0 | 1.5 |
 | `speaker_mix_db` | `al::Parameter` | -10–+10 | 0.0 |
 | `sub_mix_db` | `al::Parameter` | -10–+10 | 0.0 |
-| `auto_comp` | `al::ParameterBool` | 0/1 | 0 |
 | `paused` | `al::ParameterBool` | 0/1 | 0 |
 | `elevation_mode` | `al::Parameter` | 0–2 | 0 |
 
@@ -161,7 +158,7 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 
 ### Main-Thread Tick (`update()`)
 
-Audio thread strictness forbids heavy configuration matrix recalculation during a callback. `computeFocusCompensation()` is deferred to the main thread via the `mPendingAutoComp` flag. `update()` checks the flag, clears it, and calls `mSpatializer->computeFocusCompensation()`.
+`update()` remains available so hosts can preserve an existing main-thread tick structure, but the current implementation no longer dispatches deferred focus-compensation work. That path was removed after normalized DBAP made it unnecessary.
 
 ---
 

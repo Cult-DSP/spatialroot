@@ -164,7 +164,7 @@ struct RealtimeConfig {
     // while the audio thread snapshots it in processBlock() Step A.
     // (Was a plain float before — that was a data race, even if benign on
     // most architectures. Fixed here for correctness.)
-    std::atomic<float> dbapFocus{1.0f};  // DBAP focus/rolloff exponent (0.2–5.0)
+    std::atomic<float> dbapFocus{1.0f};  // DBAP focus/rolloff exponent (minimum 0.1)
 
     // Elevation rescaling mode — stored as atomic<int> so the OSC listener
     // thread can safely update it while the audio thread reads it per-block.
@@ -321,4 +321,3 @@ struct EngineState {
     std::atomic<uint64_t> deviceClusterNext{0};
     std::atomic<bool>     deviceClusterEvent{false};
 };
-

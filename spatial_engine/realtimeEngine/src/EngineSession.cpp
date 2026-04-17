@@ -15,7 +15,7 @@
 
 struct EngineSession::OscParams {
     al::Parameter gain{"gain", "realtime", 0.5f, 0.1f, 3.0f};
-    al::Parameter focus{"focus", "realtime", 1.5f, 0.2f, 5.0f};
+    al::Parameter focus{"focus", "realtime", 1.5f, 0.1f, 5.0f};
     al::Parameter spkMixDb{"speaker_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
     al::Parameter subMixDb{"sub_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
     al::ParameterBool paused{"paused", "realtime", 0.0f};
@@ -138,7 +138,7 @@ bool EngineSession::applyLayout(const LayoutInput& layoutIn)
 bool EngineSession::configureRuntime(const RuntimeParams& params)
 {
     mConfig.masterGain.store(params.masterGain, std::memory_order_relaxed);
-    mConfig.dbapFocus.store(params.dbapFocus, std::memory_order_relaxed);
+    mConfig.dbapFocus.store(std::max(params.dbapFocus, 0.1f), std::memory_order_relaxed);
     mConfig.loudspeakerMix.store(powf(10.0f, params.speakerMixDb / 20.0f), std::memory_order_relaxed);
     mConfig.subMix.store(powf(10.0f, params.subMixDb / 20.0f), std::memory_order_relaxed);
     mOutputRemap = std::make_unique<OutputRemap>();

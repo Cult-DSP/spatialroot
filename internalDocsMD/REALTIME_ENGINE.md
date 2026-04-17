@@ -7,6 +7,8 @@
 All phases complete: Phases 1–10 + OSC timing fix + Phase 11 bug-fix pass.  
 See [API_internal.md](API_internal.md) for the `EngineSession` public API contract.
 
+Historical note: sections below that mention focus auto-compensation describe a removed pre-normalization subsystem. Current DBAP math and API behavior live in `dbapMath.md`, `API.md`, and `API_internal.md`.
+
 ---
 
 ## Agent Architecture Overview

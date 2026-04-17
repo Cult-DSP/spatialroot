@@ -22,7 +22,7 @@ Three spatializers supported:
 | **Localization** | Moderate | Precise | Moderate |
 | **Speakers/Src** | Distance-weighted (many) | 3 speakers (exact) | Layer interpolation |
 | **Best For** | Unknown/irregular layouts | Dense 3D arrays | AlloSphere, TransLAB |
-| **Params** | `--dbap_focus` (0.2–5.0) | — | `--lbap_dispersion` (0–1.0) |
+| **Params** | `--dbap_focus` (0.1–5.0) | — | `--lbap_dispersion` (0–1.0) |
 
 Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 
@@ -173,7 +173,7 @@ End-of-render diagnostics (`--debug_dir` writes `render_stats.json`, `block_stat
 - Conduct further testing for range 1.1–1.5
 - Subs need energy distribution based on number of subs — currently routed equally to both
 - Sub level at focus 2.0 is 30–40% too loud (DBAP focus increases energy concentration → mains drop, but LFE bypass means subs don't compensate)
-- **Possible future:** scale sub level based on DBAP focus parameter (see `agent_compensation_and_gain.md` — `focusAutoCompensation` toggle partially addresses this)
+- **Possible future:** scale sub level based on DBAP focus parameter if listening tests show a persistent main/sub balance shift. This is separate from DBAP normalization; the old `focusAutoCompensation` path has been removed.
 
 ### Master Gain Default
 

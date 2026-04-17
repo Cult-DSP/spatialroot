@@ -20,10 +20,10 @@ Source of truth for this motivation: the DBAP Focus Investigation Report. :conte
 
 1. Create `cult-allolib` (done and added submodule)
    1.5 - update cmake, init, builds, and anything else to use this submodule (**DONE 2026-04-17**)
-2. Augment the existing DBAP files in-place rather than rewriting from scratch (**NEXT**)
+2. Augment the existing DBAP files in-place rather than rewriting from scratch (**DONE 2026-04-17**)
 3. Update Spatial Root to build against `cult-allolib` (**DONE 2026-04-17** — see Phase 1.5)
-4. Test realtime runtime behavior thoroughly
-5. Disable and then remove auto-compensation if validation confirms normalized DBAP makes it unnecessary
+4. Test realtime runtime behavior thoroughly (**NEXT**)
+5. Disable and then remove auto-compensation if validation confirms normalized DBAP makes it unnecessary (**DONE 2026-04-17**)
 6. Prune unused parts of AlloLib only after the fork is stable
 
 ---
@@ -104,7 +104,15 @@ The new implementation should eliminate the current global attenuation behavior 
 - comments clearly marking original behavior versus Cult modifications
 - temporary comparison mechanism if needed
 
-### Exit criteria
+### What was done
+
+- `internal/cult-allolib/src/sound/al_Dbap.cpp` now computes raw per-speaker weights using the inherited AlloLib distance law and applies max-scaled L2 normalization in both `renderSample()` and `renderBuffer()`
+- `renderBuffer()` precomputes final per-speaker gains outside the inner sample loop
+- `internal/cult-allolib/include/al/sound/al_Dbap.hpp` now documents the normalized focus semantics and clamps focus to a minimum of `0.1`
+- `DBAP_MAX_NUM_SPEAKERS` is now enforced at construction time with an immediate `std::runtime_error` if exceeded
+- `internalDocsMD/dbapMath.md` is now the math source of truth for the implementation and locked decisions
+
+### Exit criteria (met)
 
 - DBAP code compiles in `cult-allolib`
 - focus behavior is no longer based on unnormalized global attenuation
