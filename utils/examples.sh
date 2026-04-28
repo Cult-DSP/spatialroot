@@ -6,14 +6,14 @@ set -euo pipefail
 HF_BASE="https://huggingface.co/datasets/lucianparisi/atmos-data/resolve/main"
 
 URL_1="$HF_BASE/driveExample1.wav"
-OUTPUT_NAME_1="Each_Example_1.wav"
+OUTPUT_NAME_1="Echo_Example_1.wav"
 URL_2="$HF_BASE/driveExample2.wav"
 OUTPUT_NAME_2="Echo_Example_2.wav"
 URL_3="$HF_BASE/SWALE-ATMOS-LFE.wav"
 OUTPUT_NAME_3="LucianParisi_Swale_Atmos_Mix.wav"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_DATA_DIR="$SCRIPT_DIR/sourceData"
+SOURCE_DATA_DIR="$SCRIPT_DIR/../sourceData"
 
 download_from_hf() {
     local url="$1"
