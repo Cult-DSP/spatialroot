@@ -12,6 +12,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Default single-config generators to a production-oriented build unless the
+# caller explicitly chooses another configuration.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "No build type set — defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 # ── Build options ─────────────────────────────────────────────────────────────
 option(SPATIALROOT_BUILD_ENGINE   "Build spatialroot_realtime engine"    ON)
 option(SPATIALROOT_BUILD_OFFLINE  "Build spatialroot_spatial_render"     ON)
