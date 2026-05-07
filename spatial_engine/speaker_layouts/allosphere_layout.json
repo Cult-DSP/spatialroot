@@ -322,6 +322,6 @@
   ],
   "subwoofers": [{ "channel": 47 }],
   "notes": [
-    "may need to update to be 0 indexed? , sub has been remapped from layout 55 to device 47"
+    "may need to update to be 0 indexed?, sub has been remapped from layout 55 to device 47"
   ]
 }

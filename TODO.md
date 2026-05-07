@@ -60,9 +60,7 @@
 
 - potentially queue multiple files
 
-# Transcoder
-
-- update transcoder to reflect paper status
+# Other Tasks for final packaging:
 
 # Future Work
 
