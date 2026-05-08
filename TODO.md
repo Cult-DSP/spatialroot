@@ -3,7 +3,6 @@
 ## immediate
 
 - clean up spatial_engine/src -> spatial render // deprecate vbap render
-- fix windows build after cult-allolib change
 - debug overall windows build
 
 ## next tasks

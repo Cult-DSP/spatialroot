@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libcult_allolib_core.a CMakeFiles/cult_allolib_core.dir/src/spatial/al_Pose.cpp.o CMakeFiles/cult_allolib_core.dir/src/system/al_Printing.cpp.o CMakeFiles/cult_allolib_core.dir/src/system/al_ThreadNative.cpp.o CMakeFiles/cult_allolib_core.dir/src/system/al_Time.cpp.o CMakeFiles/cult_allolib_core.dir/src/types/al_Color.cpp.o CMakeFiles/cult_allolib_core.dir/src/types/al_VariantValue.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libcult_allolib_core.a

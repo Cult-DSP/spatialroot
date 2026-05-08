@@ -25,7 +25,7 @@ Direct `al/` includes found in Spatial Root:
 - `source/spatial_engine/realtimeEngine/src/Pose.hpp`: `al/math/al_Vec.hpp`
 - `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`: `al/io/al_AudioIO.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Speaker.hpp`
 - `source/spatial_engine/src/LayoutLoader.hpp`: `al/sound/al_Speaker.hpp`
-- `source/spatial_engine/src/renderer/SpatialRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Lbap.hpp`, `al/sound/al_Spatializer.hpp`, `al/io/al_AudioIOData.hpp`
+- `source/spatial_engine/spatialRender/SpatialRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Lbap.hpp`, `al/sound/al_Spatializer.hpp`, `al/io/al_AudioIOData.hpp`
 - `source/spatial_engine/src/vbap_src/VBAPRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/io/al_AudioIOData.hpp`
 
 Direct target links found in Spatial Root:

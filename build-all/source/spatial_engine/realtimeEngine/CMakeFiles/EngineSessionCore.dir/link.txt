@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libEngineSessionCore.a CMakeFiles/EngineSessionCore.dir/src/EngineSession.cpp.o CMakeFiles/EngineSessionCore.dir/__/src/JSONLoader.cpp.o CMakeFiles/EngineSessionCore.dir/__/src/LayoutLoader.cpp.o CMakeFiles/EngineSessionCore.dir/__/src/WavUtils.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libEngineSessionCore.a

@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libcult_allolib_audio.a CMakeFiles/cult_allolib_audio.dir/src/io/al_AudioIO.cpp.o CMakeFiles/cult_allolib_audio.dir/src/io/al_AudioIOData.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libcult_allolib_audio.a

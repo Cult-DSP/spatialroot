@@ -34,20 +34,18 @@ if(NOT TARGET al)
     )
 endif()
 
-# Source files are in spatial_engine/src (one level up from spatialRender)
-# SpatialRenderer is in renderer subdirectory
 add_executable(spatialroot_spatial_render
-    ../src/main.cpp
-    ../src/renderer/SpatialRenderer.cpp
+    main.cpp
+    SpatialRenderer.cpp
     ../src/JSONLoader.cpp
     ../src/LayoutLoader.cpp
     ../src/WavUtils.cpp
 )
 
-# Include cult-allolib headers and renderer for SpatialRenderer.hpp
 target_include_directories(spatialroot_spatial_render PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/renderer
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
 target_link_libraries(spatialroot_spatial_render

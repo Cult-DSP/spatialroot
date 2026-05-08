@@ -1,7 +1,7 @@
 # Spatialization & Rendering — Internal Reference
 
-**Last Updated:** February 2026  
-**Source:** `source/spatial_engine/src/renderer/SpatialRenderer.cpp`, `source/spatial_engine/src/JSONLoader.cpp`
+**Last Updated:** May 8, 2026  
+**Source:** `source/spatial_engine/spatialRender/SpatialRenderer.cpp`, `source/spatial_engine/src/JSONLoader.cpp`
 
 See [DEPENDENCIES.md](DEPENDENCIES.md) for LUSID scene and speaker layout JSON format specs.
 
@@ -133,7 +133,7 @@ End-of-render diagnostics (`--debug_dir` writes `render_stats.json`, `block_stat
 
 ### Key Source Files
 
-- `source/spatial_engine/src/renderer/SpatialRenderer.cpp/.hpp` — core renderer
+- `source/spatial_engine/spatialRender/SpatialRenderer.cpp/.hpp` — core renderer
 - `source/spatial_engine/src/JSONLoader.cpp/.hpp` — LUSID scene parser
 - `source/spatial_engine/src/LayoutLoader.cpp/.hpp` — speaker layout parser
 - `source/spatial_engine/src/WavUtils.cpp/.hpp` — WAV/RF64 I/O
@@ -177,4 +177,4 @@ End-of-render diagnostics (`--debug_dir` writes `render_stats.json`, `block_stat
 
 ### Master Gain Default
 
-`masterGain` default is consistently `0.5` across all code and docs. (`SpatialRenderer.hpp` line 76, `main.cpp` default, all documentation.)
+`masterGain` default is consistently `0.5` across all code and docs. (`spatialRender/SpatialRenderer.hpp`, `spatialRender/main.cpp`, all documentation.)

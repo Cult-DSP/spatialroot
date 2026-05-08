@@ -121,7 +121,7 @@ Source: `internal/cult_transcoder/` (git submodule). See `internal/cult_transcod
 
 ### `spatialroot_spatial_render` — Offline Batch Renderer
 
-Renders a LUSID scene + sources to an N-channel WAV file (offline, not real-time). See [SPATIALIZATION.md § Rendering System](SPATIALIZATION.md#rendering-system) for full CLI docs.
+Renders a LUSID scene + sources to an N-channel WAV file (offline, not real-time). Implementation now lives in `source/spatial_engine/spatialRender/`, while shared scene/layout/WAV loaders remain in `source/spatial_engine/src/`. See [SPATIALIZATION.md § Rendering System](SPATIALIZATION.md#rendering-system) for full CLI docs.
 
 ### `EngineSession` — C++ Embeddable Engine API
 
@@ -148,10 +148,10 @@ spatialroot/
 │   ├── gui/imgui/                               # Dear ImGui + GLFW GUI
 │   ├── scripts/                                 # Repo helper scripts
 │   └── spatial_engine/
-│   ├── realtimeEngine/                            # Realtime engine source
-│   │   └── src/  (EngineSession.hpp, Spatializer.hpp, Streaming.hpp, ...)
-│   ├── src/                                       # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
-│   └── spatialRender/                             # Offline renderer source
+│       ├── realtimeEngine/                        # Realtime engine source
+│       │   └── src/  (EngineSession.hpp, Spatializer.hpp, Streaming.hpp, ...)
+│       ├── src/                                   # Shared loaders/utilities (JSONLoader, LayoutLoader, WavUtils)
+│       └── spatialRender/                         # Offline renderer CLI + SpatialRenderer implementation
 ├── internal/
 │   ├── cult_transcoder/                           # ADM↔LUSID transcoder (submodule)
 │   ├── LUSID/                                     # LUSID schema + docs (no Python runtime)

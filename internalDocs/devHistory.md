@@ -1,7 +1,26 @@
 # Development History
 
-**Last Updated:** May 7, 2026  
+**Last Updated:** May 8, 2026  
 **Note:** Newest entries at top, oldest at bottom.
+
+---
+
+## Offline Renderer Source Split (May 8, 2026)
+
+**Status:** Complete. Non-destructive source-layout separation only.
+
+- Moved offline renderer implementation from `source/spatial_engine/src/` into `source/spatial_engine/spatialRender/`
+- New offline-owned paths:
+  - `source/spatial_engine/spatialRender/main.cpp`
+  - `source/spatial_engine/spatialRender/SpatialRenderer.hpp`
+  - `source/spatial_engine/spatialRender/SpatialRenderer.cpp`
+- Shared infrastructure intentionally stayed in `source/spatial_engine/src/`:
+  - `JSONLoader.*`
+  - `LayoutLoader.*`
+  - `WavUtils.*`
+- `source/spatial_engine/realtimeEngine/` was preserved as the active runtime engine with no intended behavior changes
+- `source/spatial_engine/spatialRender/CMakeLists.txt` was updated to build from the relocated offline sources while continuing to link shared implementations from `../src/`
+- Ambiguity intentionally preserved: some realtime logic was historically adapted from `SpatialRenderer`, but the realtime engine remains self-contained and should not depend on offline internals
 
 ---
 

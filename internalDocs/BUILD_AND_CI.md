@@ -180,7 +180,7 @@ Some active realtime and offline spatialization files still used `M_PI` directly
 
 - `source/spatial_engine/realtimeEngine/src/Pose.hpp`
 - `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`
-- `source/spatial_engine/src/renderer/SpatialRenderer.cpp`
+- `source/spatial_engine/spatialRender/SpatialRenderer.cpp`
 - `source/spatial_engine/src/vbap_src/VBAPRenderer.cpp`
 
 ### Stale Submodule Entries
