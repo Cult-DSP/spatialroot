@@ -619,7 +619,7 @@ MultiWavData VBAPRenderer::render(const RenderConfig &config) {
     std::cout << "Rendering " << renderSamples << " samples (" 
               << (double)renderSamples / sr << " sec) to " 
               << numSpeakers << " speakers from " << mSources.size() << " sources\n";
-    std::cout << "  Master gain: " << config.masterGain << "\n";
+    std::cout << "  Master gain: " << config.masterGainDb << " dB\n";
     std::cout << "  Render resolution: " << config.renderResolution << " (block size: " << config.blockSize << ")\n";
     std::string emodeStr;
     switch (config.elevationMode) {
@@ -758,7 +758,7 @@ MultiWavData VBAPRenderer::render(const RenderConfig &config) {
         statsFile << "  \"silentChannels\": " << silentChannels << ",\n";
         statsFile << "  \"clippingChannels\": " << clippingChannels << ",\n";
         statsFile << "  \"nanChannels\": " << nanChannels << ",\n";
-        statsFile << "  \"masterGain\": " << config.masterGain << ",\n";
+        statsFile << "  \"masterGainDb\": " << config.masterGainLinear()Db << ",\n";
         statsFile << "  \"channelRMS\": [";
         for (int i = 0; i < numSpeakers; i++) {
             statsFile << mLastStats.channelRMS[i];
@@ -988,7 +988,7 @@ void VBAPRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &config,
             for (int ch = 0; ch < numSpeakers; ch++) {
                 float sample = audioIO.out(ch, i);
                 if (!std::isfinite(sample)) sample = 0.0f;
-                out.samples[ch][outBlockStart + i] = sample * config.masterGain;
+                out.samples[ch][outBlockStart + i] = sample * config.masterGainLinear();
             }
         }
     }
@@ -1056,7 +1056,7 @@ void VBAPRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config,
                 
                 // Accumulate into output
                 for (int ch = 0; ch < numSpeakers; ch++) {
-                    float sample = inputSample * gainsInterp[ch] * config.masterGain;
+                    float sample = inputSample * gainsInterp[ch] * config.masterGainLinear();
                     if (!std::isfinite(sample)) sample = 0.0f;
                     out.samples[ch][outBlockStart + i] += sample;
                 }
@@ -1108,7 +1108,7 @@ void VBAPRenderer::renderPerSample(MultiWavData &out, const RenderConfig &config
             
             // Accumulate into output
             for (int ch = 0; ch < numSpeakers; ch++) {
-                float sample = inputSample * gains[ch] * config.masterGain;
+                float sample = inputSample * gains[ch] * config.masterGainLinear();
                 if (!std::isfinite(sample)) sample = 0.0f;
                 out.samples[ch][outIdx] += sample;
             }

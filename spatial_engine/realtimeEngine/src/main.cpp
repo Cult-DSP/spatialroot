@@ -81,10 +81,10 @@ static void printUsage(const char* progName) {
               << "Optional:\n"
               << "  --samplerate <int>  Audio sample rate in Hz (default: 48000)\n"
               << "  --buffersize <int>  Frames per audio callback (default: 512)\n"
-              << "  --gain <float>      Master gain 0.0–1.0 (default: 0.5)\n"
+              << "  --gain <dB>         Master gain in dB -60–+12 (default: 0, 0 dB = unity)\n"
               << "  --focus <float>     DBAP rolloff exponent 0.1–5.0 (default: 1.5)\n"
-              << "  --speaker_mix <dB>  Loudspeaker mix trim in dB (±10, default: 0)\n"
-              << "  --sub_mix <dB>      Subwoofer mix trim in dB (±10, default: 0)\n"
+              << "  --speaker_mix <dB>  Loudspeaker mix trim in dB -60–+12 (default: 0)\n"
+              << "  --sub_mix <dB>      Subwoofer mix trim in dB -60–+12 (default: 0)\n"
               << "  --elevation_mode <n> Vertical rescaling mode (default: 0):\n"
               << "                       0 = RescaleAtmosUp, 1 = RescaleFullSphere, 2 = Clamp\n"
               << "  --remap <path>      [DEPRECATED] CSV override for output routing. Not a\n"
@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
 
     // 4) Define realtime DSP constants.
     RuntimeParams rParams;
-    rParams.masterGain       = getArgFloat(argc, argv, "--gain", 0.5f);
+    rParams.masterGainDb     = getArgFloat(argc, argv, "--gain", 0.0f);
     rParams.dbapFocus        = getArgFloat(argc, argv, "--focus", 1.5f);
     rParams.speakerMixDb     = getArgFloat(argc, argv, "--speaker_mix", 0.0f);
     rParams.subMixDb         = getArgFloat(argc, argv, "--sub_mix", 0.0f);

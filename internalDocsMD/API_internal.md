@@ -56,13 +56,13 @@ struct LayoutInput {
 **`RuntimeParams`** — passed to `configureRuntime()`:
 ```cpp
 struct RuntimeParams {
-    float masterGain = 0.5f;        // linear, range 0.1–3.0
+    float masterGainDb = 0.0f;      // Master gain in dB. Range: -60–+12 dB. 0 dB = unity.
     float dbapFocus = 1.5f;         // DBAP rolloff exponent, minimum 0.1
-    float speakerMixDb = 0.0f;      // post-DBAP main trim, range -10–+10 dB
-    float subMixDb = 0.0f;          // post-DBAP sub trim, range -10–+10 dB
+    float speakerMixDb = 0.0f;      // post-DBAP main trim in dB, range -60–+12 dB
+    float subMixDb = 0.0f;          // post-DBAP sub trim in dB, range -60–+12 dB
 };
 ```
-`speakerMixDb` and `subMixDb` are converted dB → linear at store time: `powf(10.0f, dB / 20.0f)`.
+All three dB fields are converted to linear at store time: `std::pow(10.0f, dB / 20.0f)`.
 
 ---
 
@@ -90,7 +90,7 @@ The engine enforces a strict, linear initialization sequence:
 
 | Method | Writes | Notes |
 |---|---|---|
-| `setMasterGain(float)` | `mConfig.masterGain` | Linear 0.1–3.0 |
+| `setMasterGainDb(float)` | `mConfig.masterGain` | dB → linear conversion at store time; range -60–+12 dB |
 | `setDbapFocus(float)` | `mConfig.dbapFocus` | Clamped to a minimum of `0.1f` |
 | `setSpeakerMixDb(float)` | `mConfig.loudspeakerMix` | dB → linear conversion at store time |
 | `setSubMixDb(float)` | `mConfig.subMix` | dB → linear conversion at store time |
@@ -144,10 +144,10 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 
 | Parameter | AlloLib type | Range | Default |
 |---|---|---|---|
-| `gain` | `al::Parameter` | 0.1–3.0 | 0.5 |
+| `gain_db` | `al::Parameter` | -60–+12 dB | 0.0 |
 | `focus` | `al::Parameter` | 0.1–5.0 | 1.5 |
-| `speaker_mix_db` | `al::Parameter` | -10–+10 | 0.0 |
-| `sub_mix_db` | `al::Parameter` | -10–+10 | 0.0 |
+| `speaker_mix_db` | `al::Parameter` | -60–+12 dB | 0.0 |
+| `sub_mix_db` | `al::Parameter` | -60–+12 dB | 0.0 |
 | `paused` | `al::ParameterBool` | 0/1 | 0 |
 | `elevation_mode` | `al::Parameter` | 0–2 | 0 |
 

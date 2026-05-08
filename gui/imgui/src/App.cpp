@@ -414,12 +414,12 @@ void App::renderEngineTab() {
         ImGui::TextDisabled("MASTER GAIN");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
-        if (ImGui::SliderFloat("##gain", &mGain, 0.1f, 3.0f, "%.2f"))
-            if (isRunning) mSession->setMasterGain(mGain);
+        if (ImGui::SliderFloat("##gain", &mGainDb, -60.f, 12.f, "%.1f dB"))
+            if (isRunning) mSession->setMasterGainDb(mGainDb);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
-        if (ImGui::InputFloat("##gaininput", &mGain, 0.f, 0.f, "%.2f"))
-            if (isRunning) { mGain = std::clamp(mGain, 0.1f, 3.0f); mSession->setMasterGain(mGain); }
+        if (ImGui::InputFloat("##gaininput", &mGainDb, 0.f, 0.f, "%.1f"))
+            if (isRunning) { mGainDb = std::clamp(mGainDb, -60.f, 12.f); mSession->setMasterGainDb(mGainDb); }
 
         // DBAP Focus
         ImGui::TextDisabled("DBAP FOCUS");
@@ -436,23 +436,23 @@ void App::renderEngineTab() {
         ImGui::TextDisabled("SPEAKER MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
-        if (ImGui::SliderFloat("##spkmix", &mSpkMixDb, -10.f, 10.f, "%.1f dB"))
+        if (ImGui::SliderFloat("##spkmix", &mSpkMixDb, -60.f, 12.f, "%.1f dB"))
             if (isRunning) mSession->setSpeakerMixDb(mSpkMixDb);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##spkmixinput", &mSpkMixDb, 0.f, 0.f, "%.1f"))
-            if (isRunning) { mSpkMixDb = std::clamp(mSpkMixDb, -10.f, 10.f); mSession->setSpeakerMixDb(mSpkMixDb); }
+            if (isRunning) { mSpkMixDb = std::clamp(mSpkMixDb, -60.f, 12.f); mSession->setSpeakerMixDb(mSpkMixDb); }
 
         // Sub Mix dB
         ImGui::TextDisabled("SUB MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
-        if (ImGui::SliderFloat("##submix", &mSubMixDb, -10.f, 10.f, "%.1f dB"))
+        if (ImGui::SliderFloat("##submix", &mSubMixDb, -60.f, 12.f, "%.1f dB"))
             if (isRunning) mSession->setSubMixDb(mSubMixDb);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.f);
         if (ImGui::InputFloat("##submixinput", &mSubMixDb, 0.f, 0.f, "%.1f"))
-            if (isRunning) { mSubMixDb = std::clamp(mSubMixDb, -10.f, 10.f); mSession->setSubMixDb(mSubMixDb); }
+            if (isRunning) { mSubMixDb = std::clamp(mSubMixDb, -60.f, 12.f); mSession->setSubMixDb(mSubMixDb); }
 
         // Elevation Mode
         ImGui::TextDisabled("ELEVATION MODE");
@@ -794,7 +794,7 @@ void App::doLaunchEngine(const std::string& scenePath,
     }
 
     RuntimeParams rp;
-    rp.masterGain       = mGain;
+    rp.masterGainDb     = mGainDb;
     rp.dbapFocus        = mFocus;
     rp.speakerMixDb     = mSpkMixDb;
     rp.subMixDb         = mSubMixDb;
@@ -824,7 +824,7 @@ void App::doLaunchEngine(const std::string& scenePath,
 }
 
 void App::resetRuntimeToDefaults() {
-    mGain          = 0.5f;
+    mGainDb        = 0.0f;
     mFocus         = 1.5f;
     mSpkMixDb      = 0.0f;
     mSubMixDb      = 0.0f;

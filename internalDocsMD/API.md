@@ -46,7 +46,7 @@ The engine enforces a strict, linear initialization sequence:
 
 | Method                            | Writes                                                                |
 | --------------------------------- | --------------------------------------------------------------------- |
-| `setMasterGain(float)`            | `mConfig.masterGain` (linear 0.1–3.0)                                 |
+| `setMasterGainDb(float)`          | `mConfig.masterGain` (dB → linear; range -60–+12 dB, 0 dB = unity)   |
 | `setDbapFocus(float)`             | `mConfig.dbapFocus` (clamped to minimum `0.1f`)                       |
 | `setSpeakerMixDb(float)`          | `mConfig.loudspeakerMix` (dB→linear)                                  |
 | `setSubMixDb(float)`              | `mConfig.subMix` (dB→linear)                                          |

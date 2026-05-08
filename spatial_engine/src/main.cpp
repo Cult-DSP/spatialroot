@@ -48,7 +48,7 @@ void printUsage() {
               << "  --dbap_focus FLOAT    DBAP focus/rolloff exponent (default: 1.0, range: 0.2-5.0)\n"
               << "  --lbap_dispersion F   LBAP dispersion threshold (default: 0.5, range: 0.0-1.0)\n\n";
     std::cout << "General Options:\n"
-              << "  --master_gain FLOAT   Master gain (default: 0.25 for headroom)\n"
+              << "  --master_gain DB      Master gain in dB -60–+12 (default: 0, 0 dB = unity)\n"
               << "  --solo_source NAME    Render only the named source (for debugging)\n"
               << "  --t0 SECONDS          Start time in seconds (default: 0)\n"
               << "  --t1 SECONDS          End time in seconds (default: full duration)\n"
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     }
 
     fs::path layoutFile, positionsFile, sourcesFolder, admFile, outFile;
-    RenderConfig config;  // Uses sensible defaults: masterGain=0.25f, pannerType=DBAP, etc.
+    RenderConfig config;  // Uses sensible defaults: masterGainDb=0.0f (0 dB = unity), pannerType=DBAP, etc.
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -143,10 +143,10 @@ int main(int argc, char *argv[]) {
                           << " is outside recommended range [0.0, 1.0]\n";
             }
         } else if (arg == "--master_gain") {
-            config.masterGain = std::stof(argv[++i]);
-            if (config.masterGain < 0.0f || config.masterGain > 1.0f) {
-                std::cerr << "Error: --master_gain must be in range [0.0, 1.0]\n";
-                return 1;
+            config.masterGainDb = std::stof(argv[++i]);
+            if (config.masterGainDb < -60.0f || config.masterGainDb > 12.0f) {
+                std::cerr << "Warning: --master_gain " << config.masterGainDb
+                          << " dB is outside supported range [-60, +12]\n";
             }
         } else if (arg == "--solo_source") {
             config.soloSource = argv[++i];

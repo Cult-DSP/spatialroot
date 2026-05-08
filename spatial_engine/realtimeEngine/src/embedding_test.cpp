@@ -49,8 +49,8 @@ int main() {
     // Primary purpose here: verify all six methods compile and link against EngineSessionCore.
     std::cout << "[embedding_test] Calling V1.1 runtime setters (pre-start, writes atomics):\n";
 
-    session.setMasterGain(0.8f);
-    std::cout << "[embedding_test]   setMasterGain(0.8)         OK\n";
+    session.setMasterGainDb(-2.0f);
+    std::cout << "[embedding_test]   setMasterGainDb(-2.0 dB)   OK\n";
 
     session.setDbapFocus(2.0f);
     std::cout << "[embedding_test]   setDbapFocus(2.0)          OK\n";

@@ -732,7 +732,7 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     // Print spatializer info
     printSpatializerInfo(config);
     
-    std::cout << "  Master gain: " << config.masterGain << "\n";
+    std::cout << "  Master gain: " << config.masterGainDb << " dB\n";
     std::cout << "  Render resolution: " << config.renderResolution << " (block size: " << config.blockSize << ")\n";
     // Print a human-readable elevation mode string
     std::string emodeStr;
@@ -881,7 +881,7 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
         statsFile << "  \"silentChannels\": " << silentChannels << ",\n";
         statsFile << "  \"clippingChannels\": " << clippingChannels << ",\n";
         statsFile << "  \"nanChannels\": " << nanChannels << ",\n";
-        statsFile << "  \"masterGain\": " << config.masterGain << ",\n";
+        statsFile << "  \"masterGainDb\": " << config.masterGainDb << ",\n";
         if (config.pannerType == PannerType::DBAP) {
             statsFile << "  \"dbapFocus\": " << config.dbapFocus << ",\n";
         }
@@ -990,7 +990,7 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
             // Special handling for LFE channel / SUB (no spatialization) 
             if (name == "LFE") {
                 // Example: assume mSubwooferChannels is a std::vector<int> of sub channel indices
-                float subGain = (config.masterGain * dbap_sub_compensation) / mSubwooferChannels.size(); // Could customize LFE gain if desired
+                float subGain = (config.masterGainLinear() * dbap_sub_compensation) / mSubwooferChannels.size(); // Could customize LFE gain if desired
                 for (size_t i = 0; i < blockLen; ++i) {
                     float sample = sourceBuffer[i];
                     for (int subCh : mSubwooferChannels) {
@@ -1142,7 +1142,7 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
             for (int ch = 0; ch < numSpeakers; ch++) {
                 float sample = audioIO.out(ch, i);
                 if (!std::isfinite(sample)) sample = 0.0f;
-                out.samples[ch][outBlockStart + i] = sample * config.masterGain;
+                out.samples[ch][outBlockStart + i] = sample * config.masterGainLinear();
             }
         }
 
@@ -1216,7 +1216,7 @@ void SpatialRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config
                 
                 // Accumulate into output
                 for (int ch = 0; ch < numSpeakers; ch++) {
-                    float sample = inputSample * gainsInterp[ch] * config.masterGain;
+                    float sample = inputSample * gainsInterp[ch] * config.masterGainLinear();
                     if (!std::isfinite(sample)) sample = 0.0f;
                     out.samples[ch][outBlockStart + i] += sample;
                 }
@@ -1272,7 +1272,7 @@ void SpatialRenderer::renderPerSample(MultiWavData &out, const RenderConfig &con
             
             // Accumulate into output
             for (int ch = 0; ch < numSpeakers; ch++) {
-                float sample = inputSample * gains[ch] * config.masterGain;
+                float sample = inputSample * gains[ch] * config.masterGainLinear();
                 if (!std::isfinite(sample)) sample = 0.0f;
                 out.samples[ch][outIdx] += sample;
             }

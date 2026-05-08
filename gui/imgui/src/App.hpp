@@ -87,11 +87,11 @@ private:
     bool        mSourceIsLusid = false;
     std::string mSourceHint;
 
-    // ── Runtime controls (match Python GUI / engine defaults) ─────────────
-    float mGain          = 0.5f;
+    // ── Runtime controls ──────────────────────────────────────────────────
+    float mGainDb        = 0.0f;   // Master gain in dB (-60–+12, 0 = unity)
     float mFocus         = 1.5f;
-    float mSpkMixDb      = 0.0f;
-    float mSubMixDb      = 0.0f;
+    float mSpkMixDb      = 0.0f;   // Speaker mix trim in dB (-60–+12)
+    float mSubMixDb      = 0.0f;   // Sub mix trim in dB (-60–+12)
     int   mElevationMode = 0;    // 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp
 
     // ── cult-transcoder ADM flow ──────────────────────────────────────────

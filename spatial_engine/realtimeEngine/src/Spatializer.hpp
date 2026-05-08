@@ -1096,7 +1096,7 @@ public:
     // amplitude sum rather than assuming power-constant behavior to be safe.
     //
     // The computed compensation is written into mConfig.loudspeakerMix
-    // (clamped to the ±10 dB range). The sub slider is NOT touched.
+    // (clamped to the -60–+12 dB range). The sub slider is NOT touched.
     //
     // REAL-TIME SAFE: this method runs on the main/control thread only.
     // It temporarily borrows mRenderIO and mSourceBuffer for the impulse

@@ -181,9 +181,9 @@ struct RealtimeConfig {
     // Read ordering on the audio thread is relaxed — a one-buffer lag on a
     // gain change is inaudible and does not constitute a data race.
     // (Phase 6 — Compensation and Gain Agent)
-    std::atomic<float> masterGain{0.5f};          // Global output gain (0.0–1.0)
-    std::atomic<float> loudspeakerMix{1.0f};      // post-DBAP main-channel trim (±10 dB)
-    std::atomic<float> subMix{1.0f};              // post-DBAP sub-channel trim  (±10 dB)
+    std::atomic<float> masterGain{1.0f};           // Global output gain (linear; API accepts dB, converted at boundary; 1.0 = 0 dB)
+    std::atomic<float> loudspeakerMix{1.0f};      // post-DBAP main-channel trim (linear; API accepts dB -60–+12)
+    std::atomic<float> subMix{1.0f};              // post-DBAP sub-channel trim  (linear; API accepts dB -60–+12)
     // ── File paths (set at startup, read-only after) ─────────────────────
     std::string layoutPath;       // Speaker layout JSON
     std::string scenePath;        // LUSID scene JSON (positions/trajectories)

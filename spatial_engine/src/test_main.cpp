@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 struct RenderConfig {
-    float masterGain = 0.5f; // Default value
+    float masterGainDb = 0.0f; // Master gain in dB (-60–+12, 0 = unity)
 };
 
 int main(int argc, char* argv[]) {
@@ -12,12 +12,12 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--master_gain") {
-            config.masterGain = std::stof(argv[++i]);
+            config.masterGainDb = std::stof(argv[++i]);
         }
     }
 
-    // Output the received masterGain value
-    std::cout << "Received masterGain: " << config.masterGain << std::endl;
+    // Output the received masterGainDb value
+    std::cout << "Received masterGainDb: " << config.masterGainDb << " dB" << std::endl;
 
     return 0;
 }

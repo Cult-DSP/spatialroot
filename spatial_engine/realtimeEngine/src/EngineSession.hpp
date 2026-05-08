@@ -81,10 +81,10 @@ struct LayoutInput {
 };
 
 struct RuntimeParams {
-    float masterGain = 0.5f;
+    float masterGainDb = 0.0f;   // Master gain in dB. Range: -60–+12 dB. 0 dB = unity.
     float dbapFocus = 1.5f;
-    float speakerMixDb = 0.0f;
-    float subMixDb = 0.0f;
+    float speakerMixDb = 0.0f;   // Post-DBAP main-channel trim in dB. Range: -60–+12 dB.
+    float subMixDb = 0.0f;       // Post-DBAP sub-channel trim in dB. Range: -60–+12 dB.
 };
 
 class EngineSession {
@@ -104,7 +104,7 @@ public:
     // V1.1 runtime setter surface — safe to call after start(), before shutdown().
     // All writes use std::memory_order_relaxed, identical to the OSC callback implementations.
     // Calling before start() is harmless (writes the atomics) but has no effect on the engine.
-    void setMasterGain(float gain);
+    void setMasterGainDb(float dB);
     void setDbapFocus(float focus);
     void setSpeakerMixDb(float dB);
     void setSubMixDb(float dB);

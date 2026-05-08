@@ -46,7 +46,8 @@ enum class ElevationMode {
 
 // Render configuration options
 struct RenderConfig {
-    float masterGain = 0.5;       // Output gain to prevent clipping (0.0-1.0)
+    float masterGainDb = 0.0f;    // Master gain in dB. Range: -60–+12 dB. 0 dB = unity.
+    float masterGainLinear() const { return std::pow(10.0f, masterGainDb / 20.0f); }
     std::string soloSource = "";    // If non-empty, only render this source
     double t0 = -1.0;               // Start time in seconds (-1 = from beginning)
     double t1 = -1.0;               // End time in seconds (-1 = to end)

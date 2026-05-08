@@ -14,10 +14,10 @@
 #include <cmath>
 
 struct EngineSession::OscParams {
-    al::Parameter gain{"gain", "realtime", 0.5f, 0.1f, 3.0f};
+    al::Parameter gainDb{"gain_db", "realtime", 0.0f, -60.0f, 12.0f};
     al::Parameter focus{"focus", "realtime", 1.5f, 0.1f, 5.0f};
-    al::Parameter spkMixDb{"speaker_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
-    al::Parameter subMixDb{"sub_mix_db", "realtime", 0.0f, -10.0f, 10.0f};
+    al::Parameter spkMixDb{"speaker_mix_db", "realtime", 0.0f, -60.0f, 12.0f};
+    al::Parameter subMixDb{"sub_mix_db", "realtime", 0.0f, -60.0f, 12.0f};
     al::ParameterBool paused{"paused", "realtime", 0.0f};
     al::Parameter elevMode{"elevation_mode", "realtime", 0.0f, 0.0f, 2.0f};
 };
@@ -137,10 +137,10 @@ bool EngineSession::applyLayout(const LayoutInput& layoutIn)
 
 bool EngineSession::configureRuntime(const RuntimeParams& params)
 {
-    mConfig.masterGain.store(params.masterGain, std::memory_order_relaxed);
+    mConfig.masterGain.store(std::pow(10.0f, params.masterGainDb / 20.0f), std::memory_order_relaxed);
     mConfig.dbapFocus.store(std::max(params.dbapFocus, 0.1f), std::memory_order_relaxed);
-    mConfig.loudspeakerMix.store(powf(10.0f, params.speakerMixDb / 20.0f), std::memory_order_relaxed);
-    mConfig.subMix.store(powf(10.0f, params.subMixDb / 20.0f), std::memory_order_relaxed);
+    mConfig.loudspeakerMix.store(std::pow(10.0f, params.speakerMixDb / 20.0f), std::memory_order_relaxed);
+    mConfig.subMix.store(std::pow(10.0f, params.subMixDb / 20.0f), std::memory_order_relaxed);
     mOutputRemap = std::make_unique<OutputRemap>();
     if (!mRemapCsv.empty()) {
         // DEPRECATED: CSV remap is not a supported user workflow.
@@ -180,15 +180,15 @@ bool EngineSession::start()
         mParamServer = std::make_unique<al::ParameterServer>("127.0.0.1", mOscPort);
         mOscParams = std::make_unique<OscParams>();
 
-        mOscParams->gain.set(mConfig.masterGain.load());
+        mOscParams->gainDb.set(20.0f * std::log10(mConfig.masterGain.load()));
         mOscParams->focus.set(mConfig.dbapFocus.load());
-        mOscParams->spkMixDb.set((float)(20.0f * std::log10(mConfig.loudspeakerMix.load())));
-        mOscParams->subMixDb.set((float)(20.0f * std::log10(mConfig.subMix.load())));
+        mOscParams->spkMixDb.set(20.0f * std::log10(mConfig.loudspeakerMix.load()));
+        mOscParams->subMixDb.set(20.0f * std::log10(mConfig.subMix.load()));
         mOscParams->paused.set(mConfig.paused.load() ? 1.0f : 0.0f);
         mOscParams->elevMode.set(static_cast<float>(mConfig.elevationMode.load(std::memory_order_relaxed)));
 
-        mOscParams->gain.registerChangeCallback([this](float v) {
-            this->mConfig.masterGain.store(v, std::memory_order_relaxed);
+        mOscParams->gainDb.registerChangeCallback([this](float dB) {
+            this->mConfig.masterGain.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
         });
 
         mOscParams->focus.registerChangeCallback([this](float v) {
@@ -196,11 +196,11 @@ bool EngineSession::start()
         });
 
         mOscParams->spkMixDb.registerChangeCallback([this](float dB) {
-            this->mConfig.loudspeakerMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+            this->mConfig.loudspeakerMix.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
         });
 
         mOscParams->subMixDb.registerChangeCallback([this](float dB) {
-            this->mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+            this->mConfig.subMix.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
         });
 
         mOscParams->paused.registerChangeCallback([this](float v) {
@@ -214,7 +214,7 @@ bool EngineSession::start()
             this->mConfig.elevationMode.store(mode, std::memory_order_relaxed);
         });
 
-        *mParamServer << mOscParams->gain << mOscParams->focus << mOscParams->spkMixDb
+        *mParamServer << mOscParams->gainDb << mOscParams->focus << mOscParams->spkMixDb
                       << mOscParams->subMixDb << mOscParams->paused
                       << mOscParams->elevMode;
 
@@ -270,9 +270,9 @@ void EngineSession::setPaused(bool isPaused)
     mConfig.paused.store(isPaused, std::memory_order_relaxed);
 }
 
-void EngineSession::setMasterGain(float gain)
+void EngineSession::setMasterGainDb(float dB)
 {
-    mConfig.masterGain.store(gain, std::memory_order_relaxed);
+    mConfig.masterGain.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
 }
 
 void EngineSession::setDbapFocus(float focus)
@@ -282,12 +282,12 @@ void EngineSession::setDbapFocus(float focus)
 
 void EngineSession::setSpeakerMixDb(float dB)
 {
-    mConfig.loudspeakerMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+    mConfig.loudspeakerMix.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
 }
 
 void EngineSession::setSubMixDb(float dB)
 {
-    mConfig.subMix.store(powf(10.0f, dB / 20.0f), std::memory_order_relaxed);
+    mConfig.subMix.store(std::pow(10.0f, dB / 20.0f), std::memory_order_relaxed);
 }
 
 void EngineSession::setElevationMode(ElevationMode mode)

@@ -86,7 +86,7 @@ Speaker layouts: `spatial_engine/speaker_layouts/translab-sono-layout.json` (pri
 
 | File | Role |
 |---|---|
-| `gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching (fix for Bug 4 pattern). Controls engine via direct C++ setters (`mSession->setMasterGain()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
+| `gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching (fix for Bug 4 pattern). Controls engine via direct C++ setters (`mSession->setMasterGainDb()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
 | `gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs the `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion. |
 | `gui/imgui/src/main.cpp` | GLFW window setup, render loop, calls `App::tick()` each frame. |
 
@@ -108,10 +108,10 @@ session.start();                  // launches audio thread + loader thread
 
 **Runtime control (safe to call after `start()`):**
 ```cpp
-session.setMasterGain(float);      // 0.0–3.0
+session.setMasterGainDb(float);    // -60–+12 dB (0 dB = unity)
 session.setDbapFocus(float);       // 0.2–5.0
-session.setSpeakerMixDb(float);    // ±10 dB
-session.setSubMixDb(float);        // ±10 dB
+session.setSpeakerMixDb(float);    // -60–+12 dB
+session.setSubMixDb(float);        // -60–+12 dB
 session.setAutoCompensation(bool);
 session.setElevationMode(ElevationMode);
 session.setPaused(bool);
@@ -132,10 +132,10 @@ Port: **9009** (default, set via `--osc_port`). Group prefix: `realtime`. All pa
 
 | OSC address | Type | Range | Default | Notes |
 |---|---|---|---|---|
-| `/realtime/gain` | float | 0.1–3.0 | 0.5 | Master gain |
+| `/realtime/gain_db` | float (dB) | -60–+12 | 0.0 | Master gain; converted to linear at callback |
 | `/realtime/focus` | float | 0.2–5.0 | 1.5 | DBAP rolloff exponent |
-| `/realtime/speaker_mix_db` | float | -10–10 | 0.0 | Post-DBAP main trim |
-| `/realtime/sub_mix_db` | float | -10–10 | 0.0 | Post-DBAP sub trim |
+| `/realtime/speaker_mix_db` | float (dB) | -60–+12 | 0.0 | Post-DBAP main trim |
+| `/realtime/sub_mix_db` | float (dB) | -60–+12 | 0.0 | Post-DBAP sub trim |
 | `/realtime/auto_comp` | float (bool) | 0/1 | 0 | Focus auto-compensation |
 | `/realtime/paused` | float (bool) | 0/1 | 0 | Pause/resume transport |
 | `/realtime/elevation_mode` | float (int) | 0/1/2 | 0 | 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp |

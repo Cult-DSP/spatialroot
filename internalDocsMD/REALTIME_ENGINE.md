@@ -267,7 +267,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 3. **Pause/resume fade** — 8ms linear ramp on pause/resume (RT-safe, no locks)
 4. **Per-channel gain anchors** — smooth transitions when speaker count changes
 5. **Smoother feedback fix** — smoother was using its own smoothed output as input (eating itself); fixed by storing raw atomics separately
-6. **Master gain range** — expanded to 0.1–3.0
+6. **Master gain range** — expanded to 0.1–3.0 (superseded: see Bug 11.x additions below)
 
 **Phase 11 addition:** `ctrl.autoComp` wired from `mSmooth.smoothed.autoComp` in Step 3 so focus auto-compensation flag reaches `renderBlock()` correctly.
 
@@ -277,6 +277,14 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 - **Late early-return (no memset):** The existing early-return after Step 4 no longer runs memset. Step 4's multiply-by-zero is sufficient; the memset was wiping the graceful fade ramp on the completing block (Bug 11.1).
 - **Resume step calculation:** Fade-in step is now `(1.0f - mPauseFade) / fadeFrames` rather than always `1/fadeFrames`. Ramp continues from current gain instead of resetting to zero (Bug 11.3).
 - **`stop()` fade-before-hard-stop:** Arms pause fade and unconditionally sleeps 50ms before calling `mAudioIO.stop()`. Resets `mConfig.paused = false` afterward (Bugs 11.2, 11.4).
+
+**Gain system (May 7, 2026):** All three gain controls now accept dB at every public surface. Conversion to linear (`std::pow(10.0f, dB / 20.0f)`) happens at the API boundary in `configureRuntime()`, `setMasterGainDb()`, `setSpeakerMixDb()`, `setSubMixDb()`, and OSC callbacks. Internal `RealtimeConfig` atomics remain linear.
+
+| Control | Public API | Range | Default | OSC address |
+|---|---|---|---|---|
+| Master gain | `RuntimeParams::masterGainDb`, `setMasterGainDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/gain_db` |
+| Speaker mix | `RuntimeParams::speakerMixDb`, `setSpeakerMixDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/speaker_mix_db` |
+| Sub mix | `RuntimeParams::subMixDb`, `setSubMixDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/sub_mix_db` |
 
 ---
 
@@ -373,8 +381,8 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 | Control                                         | Range  | Default | Effect                                        |
 | ----------------------------------------------- | ------ | ------- | --------------------------------------------- |
-| Loudspeaker Mix (`--speaker_mix`)               | ±10 dB | 0.0     | Post-DBAP main-channel trim                   |
-| Sub Mix (`--sub_mix`)                           | ±10 dB | 0.0     | Post-LFE-routing sub trim                     |
+| Loudspeaker Mix (`--speaker_mix`)               | -60–+12 dB | 0.0  | Post-DBAP main-channel trim                   |
+| Sub Mix (`--sub_mix`)                           | -60–+12 dB | 0.0  | Post-LFE-routing sub trim                     |
 | Focus Auto-Compensation (`--auto_compensation`) | on/off | off     | Auto-updates loudspeaker mix as focus changes |
 
 **Signal chain:** Source → masterGain → DBAP → spkMix trim → output; LFE → lfeMix trim → output.
@@ -464,10 +472,10 @@ OSC is the **secondary** control surface (primary is direct `EngineSession` sett
 
 | Parameter         | OSC Address                | Type         | Range   | Default | Notes                                          |
 | ----------------- | -------------------------- | ------------ | ------- | ------- | ---------------------------------------------- |
-| Master Gain       | `/realtime/gain`           | float        | 0.1–3.0 | 0.5     | Master gain                                    |
+| Master Gain dB    | `/realtime/gain_db`        | float (dB)   | -60–+12 | 0.0     | Master gain; converted to linear at callback   |
 | DBAP Focus        | `/realtime/focus`          | float        | 0.2–5.0 | 1.5     | DBAP rolloff exponent                          |
-| Speaker Mix dB    | `/realtime/speaker_mix_db` | float        | -10–+10 | 0.0     | Post-DBAP main trim                            |
-| Sub Mix dB        | `/realtime/sub_mix_db`     | float        | -10–+10 | 0.0     | Post-DBAP sub trim                             |
+| Speaker Mix dB    | `/realtime/speaker_mix_db` | float (dB)   | -60–+12 | 0.0     | Post-DBAP main trim                            |
+| Sub Mix dB        | `/realtime/sub_mix_db`     | float (dB)   | -60–+12 | 0.0     | Post-DBAP sub trim                             |
 | Auto-Compensation | `/realtime/auto_comp`      | float (bool) | 0/1     | 0       | Focus auto-compensation                        |
 | Pause/Play        | `/realtime/paused`         | float (bool) | 0/1     | 0       | Pause/resume transport                         |
 | Elevation Mode    | `/realtime/elevation_mode` | float (int)  | 0/1/2   | 0       | 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp |
