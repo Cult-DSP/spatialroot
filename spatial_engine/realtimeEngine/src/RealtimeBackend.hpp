@@ -261,8 +261,10 @@ public:
             // 50ms gives kPauseFadeMs (8ms) plus two max-buffer durations of margin.
             if (!mConfig.paused.load(std::memory_order_relaxed)) {
                 mConfig.paused.store(true, std::memory_order_relaxed);
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
+            // Always wait: the fade may have just been armed, or was already
+            // in progress from a recent pause — either way 50ms clears it.
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
             mAudioIO.stop();
             mConfig.playing.store(false);
             mConfig.paused.store(false);  // reset so next start() begins unpaused
@@ -421,12 +423,37 @@ private:
                 mPauseFadeFramesLeft = fadeFrames;
                 mPauseFadeStep       = -(mPauseFade / static_cast<float>(fadeFrames));
             } else {
-                // paused → playing: fade IN   (mPauseFade → 1.0)
-                mPauseFade           = 0.0f;
+                // paused → playing: fade IN from wherever the ramp currently is.
+                // Don't reset mPauseFade to 0 — if a fade-out was mid-ramp when
+                // resume was requested, forcing 0 creates a gain discontinuity.
                 mPauseFadeFramesLeft = fadeFrames;
-                mPauseFadeStep       = 1.0f / static_cast<float>(fadeFrames);
+                mPauseFadeStep       = (1.0f - mPauseFade) / static_cast<float>(fadeFrames);
             }
             mPrevPaused = pausedNow;
+        }
+
+        // ── Fast-path: already fully paused (no fade active) ─────────────────
+        // Skip all rendering to save CPU and prevent the Spatializer from
+        // updating its per-block interpolation anchors (mPrevSafePos etc.) on
+        // the frozen currentFrame. That state drift is what causes clicks on
+        // subsequent pauses — the anchor is "cached" to the paused position
+        // after many idle blocks and produces a transient when playback resumes
+        // and then pauses again.
+        // This path fires on every steady-paused block AFTER the fade completes.
+        // The fade-completing block itself is handled by the late early-return
+        // after Step 4 (which plays the graceful ramp before stopping).
+        if (pausedNow && mPauseFadeFramesLeft == 0 && mPauseFade <= 0.0f) {
+            for (unsigned int ch = 0; ch < numChannels; ++ch)
+                std::memset(io.outBuffer(ch), 0, numFrames * sizeof(float));
+            {
+                auto t1 = std::chrono::steady_clock::now();
+                double us = std::chrono::duration<double, std::micro>(t1 - mCallbackStart).count();
+                double budget = (static_cast<double>(numFrames) / sampleRate) * 1e6;
+                mState.callbackCpuLoad.store(
+                    std::max(0.0f, static_cast<float>(us / budget)),
+                    std::memory_order_relaxed);
+            }
+            return;
         }
 
         // ── D) Per-channel gain anchors (block-boundary interpolation) ────────
