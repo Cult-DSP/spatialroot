@@ -129,7 +129,7 @@ Renders a LUSID scene + sources to an N-channel WAV file (offline, not real-time
 
 ### LUSID Schema
 
-`internal/LUSID/` submodule. Schema: `internal/LUSID/schema/lusid_scene_v0.5.schema.json`. The Python LUSID runtime/library was removed in Phase 6 — only the schema and docs remain.
+`internal/LUSID/` submodule. Schema: `internal/LUSID/schema/lusid_scene_v1.0.schema.json`. The Python LUSID runtime/library was removed in Phase 6 — only the schema and docs remain.
 
 ---
 
@@ -165,6 +165,7 @@ spatialroot/
 │   ├── processedData/                             # Working outputs (scene, caches)
 │   │   └── stageForRender/scene.lusid.json        # Canonical scene input for engine
 │   └── sourceData/                                # Input audio + LUSID packages
+│   └── tmpProccessedData/                         # Temp/legacy artifact area — not canonical workflow data
 ├── source/spatial_engine/speaker_layouts/         # JSON speaker layout files
 ├── internalDocs/                                  # Internal docs (this file + consolidated files)
 └── PUBLIC_DOCS/                                   # Public-facing API docs
@@ -194,6 +195,7 @@ spatialroot/
 | --------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Empty scene / no frames after transcoding     | Check ADM XML format — run `cult-transcoder` with verbose output                        |
 | `cult-transcoder` not found                   | Build with `./build.sh --cult-only`                                                     |
+| Confusing old data folder references          | Use `data/sourceData` and `data/processedData` as the canonical active paths; treat `data/tmpProccessedData` as temp/legacy |
 | LFE stem missing / wrong                      | Check `--lfe-mode` flag. `hardcoded` = channel 4; `speaker-label` = ADM label detection |
 | `ModuleNotFoundError: No module named 'lxml'` | You're running archived Python code. Use the current C++ toolchain.                     |
 
@@ -249,7 +251,7 @@ spatialroot/
 
 ### Adding a New Node Type to LUSID
 
-1. Update JSON schema: `internal/LUSID/schema/lusid_scene_v0.5.schema.json`
+1. Update JSON schema: `internal/LUSID/schema/lusid_scene_v1.0.schema.json`
 2. Update C++ loaders if renderer needs to consume it: `source/spatial_engine/src/JSONLoader.cpp`
 3. Document in `PUBLIC_DOCS/API.md` and relevant internal docs
 

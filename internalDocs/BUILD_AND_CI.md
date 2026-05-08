@@ -187,6 +187,8 @@ Some active realtime and offline spatialization files still used `M_PI` directly
 
 `thirdparty/libbw64` and `thirdparty/libadm` are registered in `.gitmodules` at the spatialroot level but not used by any active `CMakeLists.txt` (`spatialroot_adm_extract` was archived in Phase 3). Not harmful but potentially confusing.
 
+Treat these as legacy top-level submodules, not part of the active reorganized build path.
+
 ### FetchContent Requires Network
 
 `internal/cult_transcoder/CMakeLists.txt` fetches Catch2 (v3.5.3) and pugixml (v1.14) from GitHub at first configure. Air-gapped builds will fail on first run.
@@ -204,7 +206,7 @@ Some active realtime and offline spatialization files still used `M_PI` directly
 | Catch2     | v3.5.3  | `https://github.com/catchorg/Catch2.git` |
 | pugixml    | v1.14   | `https://github.com/zeux/pugixml.git`    |
 
-Fetched into `internal/cult_transcoder/build/_deps/` at configure time. Network required on first run.
+Fetched into the active CMake build tree's `_deps/` directory at configure time (for example `build/_deps/` when configuring from the Spatial Root repo root). Network required on first run unless those dependencies are already present in the build tree.
 
 ### cult-transcoder Submodule Nesting
 
@@ -216,7 +218,7 @@ cd internal/cult_transcoder
 git submodule update --init thirdparty/libbw64
 ```
 
-`init.sh` / `init.ps1` handle this automatically via `initializeCultTranscoderSubmodules()` which runs `git submodule update --init --depth 1 thirdparty/libbw64` from within `internal/cult_transcoder/`.
+`init.sh` / `init.ps1` handle this automatically, and the parent `build.sh`, `build.ps1`, plus root `CMakeLists.txt` now self-heal required submodules when their working trees are missing or incomplete.
 
 Presence check: `internal/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp` — the same path that `internal/cult_transcoder/CMakeLists.txt` checks in its `FATAL_ERROR` guard.
 
@@ -234,13 +236,21 @@ Presence check: `internal/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.h
 **macOS / Linux**
 
 - `init.sh` initializes `internal/cult-allolib`, `cult_transcoder` plus nested dependencies, `thirdparty/libsndfile`, and optional GUI submodules when they are registered
+- `build.sh` and root `CMakeLists.txt` also self-heal required submodules during configure/build if a checkout is incomplete
 - GUI-enabled builds use the same portable logo-embedding path as Windows; no `xxd` dependency remains
 
 **Windows**
 
 - `init.ps1` initializes `internal/cult-allolib`, `cult_transcoder` plus nested dependencies, `thirdparty/libsndfile`, and optional GUI submodules when they are registered
+- `build.ps1` and root `CMakeLists.txt` also self-heal required submodules during configure/build if a checkout is incomplete
 - `build.ps1` remains the canonical Windows build entry point
 - GUI-enabled builds no longer require `xxd`; logo embedding is handled entirely by CMake
+
+### Current Data Locations
+
+- `data/sourceData/` and `data/processedData/` are the canonical active Spatial Root data locations.
+- Older fallback behavior may still reference legacy `processedData/` paths for compatibility, but new parent-repo workflows should use `data/...`.
+- `data/tmpProccessedData/` is not a canonical source/workflow location; treat it as temp or legacy artifact space, not a primary input/output contract.
 
 ### Known Windows Limitations
 

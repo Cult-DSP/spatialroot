@@ -6,7 +6,7 @@
 
 ## LUSID Scene JSON Format
 
-> `json_schema_info.md` — Primary format spec. See also `internal/LUSID/schema/lusid_scene_v0.5.schema.json` and `internal/LUSID/internalDocs/DEVELOPMENT.md`.
+> `json_schema_info.md` — Primary format spec. See also `internal/LUSID/schema/lusid_scene_v1.0.schema.json` and `internal/LUSID/internalDocs/DEVELOPMENT.md`.
 
 **LUSID `scene.lusid.json` is the canonical spatial data format** read directly by the C++ renderer. The old `renderInstructions.json` format is deprecated and removed.
 
@@ -14,7 +14,7 @@
 
 ```json
 {
-  "version": "0.5",
+  "version": "1.0",
   "sampleRate": 48000,
   "timeUnit": "seconds",
   "duration": 566.0,
@@ -37,10 +37,10 @@
 
 | Field | Description |
 |---|---|
-| `version` | LUSID format version (`"0.5"`) |
+| `version` | LUSID format version (`"1.0"`) |
 | `sampleRate` | Sample rate in Hz (must match audio files) |
 | `timeUnit` | `"seconds"` (default), `"samples"`, or `"milliseconds"` — **always specify explicitly** |
-| `duration` | **v0.5.2+** Total scene duration in seconds from ADM metadata. Renderer uses this instead of inferring from WAV lengths. Prevents truncated renders. |
+| `duration` | Total scene duration in seconds from ADM metadata. Renderer uses this instead of inferring from WAV lengths. Prevents truncated renders. |
 | `metadata` | Optional: source format, original duration string |
 | `frames` | Array of time-ordered frames containing spatial nodes |
 
