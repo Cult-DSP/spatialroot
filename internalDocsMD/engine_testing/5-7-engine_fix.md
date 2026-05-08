@@ -1,5 +1,22 @@
 5/7/26
 
+## fix step 1
+
+Here's a summary of what changed and why:
+
+What was broken: mPrevSafePos[si] was always written as the block-center guard-resolved position (safePos), even for fast-mover blocks whose last rendered audio corresponded to the last sub-step (near positionEnd). Under normalized DBAP, a 4× gain difference can exist between block-center and positionEnd positions when they straddle a normalization basin boundary. The Bug 9.1 doBlend on the following block then started from the wrong gain state, injecting a discontinuity instead of smoothing one.
+
+What changed (Spatializer.hpp):
+
+Location Change
+Lines 696–698 (fast-mover loop) Capture lastSubSafePos = subSafePos at j == kNumSubSteps - 1
+Lines 714–723 (new in-branch state write) Fast-mover branch writes mPrevSafePos = lastSubSafePos, clears mPrevGuardFired, sets mPrevWasFastMover = 1
+Line 730 (normal-path state update) Guarded by !isFastMover; clears mPrevWasFastMover = 0
+Private section + prepareForSources() New mPrevWasFastMover vector, same pattern as existing flags
+Next step to verify: Run 360RA at translab with --device "MOTU Pro Audio" and listen for pops at fast-mover → slow segment transitions. If pops persist, the secondary mechanism (per-sub-step guard variability under normalized DBAP) is likely dominant — that's Bug 10 deferred, now documented in the audit.
+
+## diagnoses (prior to fix)
+
 Regression Analysis: Normalized DBAP — Fast-Mover Logic Breakdown
 Context
 The normalized DBAP upgrade added L2 normalization to al_Dbap.cpp so that sum(gain_k²) = 1 at all source positions and focus values. This was correct by design (Lossius et al., ICMC 2009, eq. 2). However, it changed the shape of the per-speaker gain function in a way that invalidates assumptions baked into the fast-mover and guard-continuity logic from before the upgrade.
@@ -119,18 +136,3 @@ Watch [CLUSTER] events and SpkG counts; both should remain sparse and non-period
 Run Ascent and Swale — these were clean under Bug 9.1 and must remain clean
 Listen for pops specifically at fast-mover → slow segment transitions (source comes to rest after rapid sweep)
 If pops persist, implement Fix B (endpoint pre-guarding) and retest 360RA
-
-## fix step 1
-
-Here's a summary of what changed and why:
-
-What was broken: mPrevSafePos[si] was always written as the block-center guard-resolved position (safePos), even for fast-mover blocks whose last rendered audio corresponded to the last sub-step (near positionEnd). Under normalized DBAP, a 4× gain difference can exist between block-center and positionEnd positions when they straddle a normalization basin boundary. The Bug 9.1 doBlend on the following block then started from the wrong gain state, injecting a discontinuity instead of smoothing one.
-
-What changed (Spatializer.hpp):
-
-Location Change
-Lines 696–698 (fast-mover loop) Capture lastSubSafePos = subSafePos at j == kNumSubSteps - 1
-Lines 714–723 (new in-branch state write) Fast-mover branch writes mPrevSafePos = lastSubSafePos, clears mPrevGuardFired, sets mPrevWasFastMover = 1
-Line 730 (normal-path state update) Guarded by !isFastMover; clears mPrevWasFastMover = 0
-Private section + prepareForSources() New mPrevWasFastMover vector, same pattern as existing flags
-Next step to verify: Run 360RA at translab with --device "MOTU Pro Audio" and listen for pops at fast-mover → slow segment transitions. If pops persist, the secondary mechanism (per-sub-step guard variability under normalized DBAP) is likely dominant — that's Bug 10 deferred, now documented in the audit.

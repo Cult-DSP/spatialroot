@@ -1,6 +1,6 @@
 # spatialroot — Agent Context
 
-**Last Updated:** April 12, 2026  
+**Last Updated:** May 7, 2026  
 **Project:** spatialroot — Open Spatial Audio Infrastructure  
 **Lead Developer:** Lucian Parisi
 
@@ -17,6 +17,7 @@
 | EngineSession API contract, structs, lifecycle, hard constraints | [API_internal.md](API_internal.md)       | [Contract](API_internal.md#contract) · [Hard Constraints](API_internal.md#hard-constraints) · [Validation & Gotchas](API_internal.md#validation--known-gotchas)                                                                          |
 | CI config, vendored deps, Windows fixes, CMake wiring            | [BUILD_AND_CI.md](BUILD_AND_CI.md)       | [CI Overview](BUILD_AND_CI.md#ci-overview) · [Dep Audit](BUILD_AND_CI.md#dependency-audit) · [Build Notes](BUILD_AND_CI.md#build-system-notes)                                                                                           |
 | Current DBAP state, locked decisions, onboarding investigation prompt | [cult_dbap.md](cult_dbap.md)         | [Current State](cult_dbap.md#current-state) · [Locked Decisions](cult_dbap.md#locked-decisions) · [Onboarding Prompt Task](cult_dbap.md#onboarding-prompt-task)                                                                             |
+| **DBAP pops/artifacts/fast-mover bugs — start here** | [engine_testing/4_1_bug_audit.md](engine_testing/4_1_bug_audit.md) | [DBAP render path summary](engine_testing/4_1_bug_audit.md#dbap-render-path-summary-one-source-one-block) · [Proximity guard structure](engine_testing/4_1_bug_audit.md#proximity-guard-structure-as-of-2026-04-01) · [Bug 10 (normalized DBAP)](engine_testing/4_1_bug_audit.md#bug-10--normalized-dbap-breaks-fast-mover-continuity-anchor) · [Bug 9.1](engine_testing/4_1_bug_audit.md#bug-91--cross-block-guard-transition-blending--patched-2026-04-01) |
 | LUSID scene format, speaker layout JSON, LUSID package import    | [DEPENDENCIES.md](DEPENDENCIES.md)       | [LUSID Scene](DEPENDENCIES.md#lusid-scene-json-format) · [Speaker Layout](DEPENDENCIES.md#speaker-layout-json-format) · [Package Import](DEPENDENCIES.md#lusid-package-import-contract-spatialseed)                                      |
 | Output routing architecture, two-space model, CSV deprecation    | [REMAP.md](REMAP.md)                     | [Two-Space Model](REMAP.md#two-space-model) · [Phase 7](REMAP.md#phase-7-routing-stage) · [Validation Gate](REMAP.md#validation-gate) · [Files Changed](REMAP.md#files-changed) · [Verification](REMAP.md#verification-checklist)        |
 | Realtime engine agents, bug audit, OSC params, threading         | [REALTIME_ENGINE.md](REALTIME_ENGINE.md) | [Agent Table](REALTIME_ENGINE.md#agent-architecture-overview) · [Bug Audit](REALTIME_ENGINE.md#bug-audit-april-1-2026) · [OSC Params](REALTIME_ENGINE.md#osc-parameter-reference) · [Threading](REALTIME_ENGINE.md#threading-and-safety) |
@@ -197,6 +198,10 @@ spatialroot/
 
 | Issue                                        | Solution                                                                                   |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **DBAP pops, clicks, gain steps — any artifact** | **Read `engine_testing/4_1_bug_audit.md` first.** It is the primary onboarding reference for all realtime engine bugs. Do not re-diagnose issues already documented there. |
+| Pops after normalized DBAP upgrade (fast-moving sources) | Bug 10.1 — fixed in `Spatializer.hpp` (May 7). `mPrevSafePos` now written as last sub-step position for fast-mover blocks. See `engine_testing/5-7-engine_fix.md` for full diagnosis. If pops persist, open Bug 10 deferred (endpoint pre-guarding). |
+| Pops at guard entry/exit (normal-path sources, near speakers) | Bug 9.1 — fixed. Cross-block guard-transition blending via `mPrevSafePos`/`mPrevGuardFired` in `Spatializer.hpp`. Do not reopen without consistent evidence. |
+| `[CLUSTER]` events every ~0.5 s / buzzing   | Correlate with `SpkG` (hard-floor guard active). If `SpkG > 0`, source is inside `kMinSpeakerDist = 0.15m` of a speaker — guard is firing repeatedly. Check source trajectory. |
 | Sources at zenith/nadir silent               | Use `--elevation_mode compress` (RescaleFullSphere)                                        |
 | Zero output / silent channels                | Verify `LayoutLoader.cpp` converts radians → degrees: `azimuth * 180.0f / M_PI`            |
 | LFE too loud/quiet                           | Tune `dbap_sub_compensation` in `SpatialRenderer.cpp` (TODO: make CLI option)              |

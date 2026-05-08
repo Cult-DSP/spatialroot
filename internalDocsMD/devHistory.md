@@ -1,7 +1,27 @@
 # Development History
 
-**Last Updated:** April 17, 2026  
+**Last Updated:** May 7, 2026  
 **Note:** Newest entries at top, oldest at bottom.
+
+---
+
+## Normalized DBAP — Fast-Mover Continuity Fix (May 7, 2026)
+
+**Status:** Fix confirmed working at translab. Bug 10.1 closed.
+
+**Problem:** After the April 17 normalized DBAP upgrade, fast-moving sources produced audible pops or gain steps. Root cause: `mPrevSafePos[si]` was always written as the block-center guard-resolved position (`safePos`), even for fast-mover blocks whose last rendered audio corresponded to the last sub-step (near `positionEnd`). Under normalized DBAP, the dominant speaker gain can jump 4× (from `1/sqrt(N) ≈ 0.25` equidistant to `≈1.0` near-speaker) across the normalization basin boundary. When `positionEnd` and block-center straddle that boundary, the Bug 9.1 `doBlend` anchor on the following block was wrong — it injected a discontinuity rather than smoothing one.
+
+**Fix (Spatializer.hpp):**
+- Fast-mover loop now captures `lastSubSafePos = subSafePos` at `j == kNumSubSteps - 1`
+- Fast-mover branch writes its own state immediately after the loop: `mPrevSafePos[si] = lastSubSafePos`, `mPrevGuardFired[si] = 0`, `mPrevWasFastMover[si] = 1`
+- Normal-path state update guarded by `!isFastMover`; clears `mPrevWasFastMover[si] = 0`
+- New `mPrevWasFastMover` per-source state vector added (same pattern as `mPrevGuardFired`)
+
+**Key insight:** Normalized DBAP moved the dangerous gain discontinuity from the speaker surface (where the proximity guard operates) to the normalization basin boundary (where one speaker becomes clearly dominant). The guard still functions correctly but is no longer the primary discontinuity risk. Any cross-block anchor mismatch that was previously sub-threshold under the old smooth gain function can now be audible.
+
+**Full diagnosis + code locations:** `internalDocsMD/engine_testing/5-7-engine_fix.md`  
+**Bug audit entry:** `internalDocsMD/engine_testing/4_1_bug_audit.md` — Bug 10 / Bug 10.1  
+**Deferred follow-up:** Bug 10 (per-sub-step guard variability) — endpoint pre-guarding. Implement if pops persist.
 
 ---
 
@@ -480,3 +500,5 @@ processedData/stageForRender/    — cult-transcoder writes scene.lusid.json her
 | Phase 4 | March 7, 2026  | `cult-transcoder` gains `--lfe-mode` flag; ADM profile detection (Atmos, Sony360RA)         |
 | Phase 5 | March 7, 2026  | TRANSCODE UI added to PySide6 GUI (superseded by ImGui GUI in Phase 6)                      |
 | Phase 6 | March 31, 2026 | C++ refactor complete. Python GUI/entrypoints/build/venv removed. ImGui + GLFW GUI shipped. |
+| Phase 7 | April 17, 2026 | Normalized DBAP (`sum(v_k²)=1`). `thirdparty/allolib` → `internal/cult-allolib`. Auto-compensation removed. |
+| Bug 10.1 | May 7, 2026 | Fast-mover continuity anchor fix for normalized DBAP (`mPrevSafePos` written as last sub-step position). |
