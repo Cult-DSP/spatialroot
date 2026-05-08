@@ -2,9 +2,6 @@
 
 ## immediate
 
-- transcode tab
-- debug overall windows build
-
 ## next tasks
 
 - create a cache for default speaker layout
@@ -15,14 +12,15 @@
 
 ## Crucial CLI / GUI Features:
 
-- update transcoding tab to use full features of trancoder
 - add more info to engine log - terminal output should be similar - option to expand engine log - mostly upon failer - more info
 - allow for setting runtime params prior to starting engine, add reset button
 - limit buffer size selectiom - potentially dangerous / produce warnings
 
 ## Other Tasks for final packaging:
 
-- add render tab - update render code to match non linear channel handeling, give it render params
+- clean up transcoder tab?
+- add render tab - update render code to match non linear channel handeling, give it render params ?
+- debug overall windows build \*\*\*
 
 # Future Work - move to future work md
 
