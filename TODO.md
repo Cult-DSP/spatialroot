@@ -2,7 +2,6 @@
 
 ## immediate
 
-- fix channel reloc and pop artifacts after dbap changes - next step in cult_dbap
 - pause is not a smooth fade like stop iis
 - add more gain control in api / engine then in gui
 -

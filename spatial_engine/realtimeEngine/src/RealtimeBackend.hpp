@@ -493,11 +493,11 @@ private:
             }
         }
 
-        // If fully paused (fade complete, gain == 0) — zero outputs and return
-        // without advancing playback position counters.
+        // If fully paused (fade complete, gain == 0) — return without advancing
+        // playback position counters. No memset needed: Step 4's multiply-by-zero
+        // already zeroed the buffer. Zeroing here would wipe the graceful fade on
+        // the block where the ramp completes, causing an audible click.
         if (pausedNow && mPauseFadeFramesLeft == 0 && mPauseFade <= 0.0f) {
-            for (unsigned int ch = 0; ch < numChannels; ++ch)
-                std::memset(io.outBuffer(ch), 0, numFrames * sizeof(float));
             // Update CPU load even in paused state (paused overhead is still real).
             {
                 auto t1 = std::chrono::steady_clock::now();
