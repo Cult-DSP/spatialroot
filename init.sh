@@ -135,7 +135,7 @@ if [ -d "${CULT_ALLOLIB_INCLUDE}" ]; then
     echo "✓ internal/cult-allolib already initialized"
 else
     echo "Fetching internal/cult-allolib (shallow, depth=1)..."
-    git submodule update --init --recursive --depth 1 internal/cult-allolib
+    git submodule update --init --recursive --depth 1 --checkout internal/cult-allolib
     echo "✓ internal/cult-allolib initialized"
 fi
 echo ""
@@ -148,7 +148,7 @@ if [ -f "${CULT_CMAKE}" ]; then
     echo "✓ cult_transcoder already initialized"
 else
     echo "Fetching cult_transcoder..."
-    git submodule update --init --depth 1 cult_transcoder
+    git submodule update --init --depth 1 --checkout cult_transcoder
     echo "✓ cult_transcoder initialized"
 fi
 
@@ -159,7 +159,7 @@ if [ -f "${LIBBW64_HEADER}" ] && [ -f "${R8BRAIN_HEADER}" ]; then
     echo "✓ cult_transcoder nested submodules already initialized"
 else
     echo "Fetching cult_transcoder nested submodules recursively..."
-    git -C "${PROJECT_ROOT}/cult_transcoder" submodule update --init --recursive --depth 1
+    git -C "${PROJECT_ROOT}/cult_transcoder" submodule update --init --recursive --depth 1 --checkout
     echo "✓ cult_transcoder nested submodules initialized"
 fi
 echo ""
@@ -172,7 +172,7 @@ if [ -f "${LIBSNDFILE_CMAKE}" ]; then
     echo "✓ thirdparty/libsndfile already initialized"
 else
     echo "Fetching thirdparty/libsndfile..."
-    git submodule update --init thirdparty/libsndfile
+    git submodule update --init --depth 1 --checkout thirdparty/libsndfile
     echo "✓ thirdparty/libsndfile initialized"
 fi
 echo ""
@@ -186,7 +186,7 @@ if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/imgui" "${PROJECT
         echo "✓ thirdparty/imgui already initialized"
     else
         echo "Fetching thirdparty/imgui..."
-        git submodule update --init --depth 1 thirdparty/imgui
+        git submodule update --init --depth 1 --checkout thirdparty/imgui
         echo "✓ thirdparty/imgui initialized"
     fi
 else
@@ -203,7 +203,7 @@ if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/glfw" "${PROJECT_
         echo "✓ thirdparty/glfw already initialized"
     else
         echo "Fetching thirdparty/glfw..."
-        git submodule update --init --depth 1 thirdparty/glfw
+        git submodule update --init --depth 1 --checkout thirdparty/glfw
         echo "✓ thirdparty/glfw initialized"
     fi
 else

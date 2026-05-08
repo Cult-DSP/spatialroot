@@ -2,7 +2,7 @@
 
 ## immediate
 
--
+- clean up spatial_engine/src
 - fix windows build after cult-allolib change
 - re organize custom submodules into internal/ and update cmake and shell scripts,
 - make sure all submodules are checked out at specific current commits

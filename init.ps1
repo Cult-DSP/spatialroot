@@ -81,7 +81,7 @@ if (Test-Path $AlloInclude) {
     Write-Host "✓ internal/cult-allolib already initialized"
 } else {
     Write-Host "Fetching internal/cult-allolib (shallow, depth=1)..."
-    git submodule update --init --recursive --depth 1 internal/cult-allolib
+    git submodule update --init --recursive --depth 1 --checkout internal/cult-allolib
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Failed to initialize internal/cult-allolib" -ForegroundColor Red
         exit 1
@@ -98,7 +98,7 @@ if (Test-Path $CultCMake) {
     Write-Host "✓ cult_transcoder already initialized"
 } else {
     Write-Host "Fetching cult_transcoder..."
-    git submodule update --init --depth 1 cult_transcoder
+    git submodule update --init --depth 1 --checkout cult_transcoder
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Failed to initialize cult_transcoder" -ForegroundColor Red
         exit 1
@@ -114,7 +114,7 @@ if ((Test-Path $Libbw64Header) -and (Test-Path $R8brainHeader)) {
 } else {
     Write-Host "Fetching cult_transcoder nested submodules recursively..."
     Push-Location (Join-Path $ProjectRoot "cult_transcoder")
-    git submodule update --init --recursive --depth 1
+    git submodule update --init --recursive --depth 1 --checkout
     $exitCode = $LASTEXITCODE
     Pop-Location
     if ($exitCode -ne 0) {
@@ -133,7 +133,7 @@ if (Test-Path $LibSndFileCMake) {
     Write-Host "✓ thirdparty/libsndfile already initialized"
 } else {
     Write-Host "Fetching thirdparty/libsndfile..."
-    git submodule update --init thirdparty/libsndfile
+    git submodule update --init --depth 1 --checkout thirdparty/libsndfile
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Failed to initialize thirdparty/libsndfile" -ForegroundColor Red
         exit 1
@@ -153,7 +153,7 @@ if ((Test-Path $GitmodulesPath) -and (Select-String -Path $GitmodulesPath -Patte
         Write-Host "✓ thirdparty/imgui already initialized"
     } else {
         Write-Host "Fetching thirdparty/imgui..."
-        git submodule update --init --depth 1 thirdparty/imgui
+        git submodule update --init --depth 1 --checkout thirdparty/imgui
         if ($LASTEXITCODE -ne 0) {
             Write-Host "✗ Failed to initialize thirdparty/imgui" -ForegroundColor Red
             exit 1
@@ -175,7 +175,7 @@ if ((Test-Path $GitmodulesPath) -and (Select-String -Path $GitmodulesPath -Patte
         Write-Host "✓ thirdparty/glfw already initialized"
     } else {
         Write-Host "Fetching thirdparty/glfw..."
-        git submodule update --init --depth 1 thirdparty/glfw
+        git submodule update --init --depth 1 --checkout thirdparty/glfw
         if ($LASTEXITCODE -ne 0) {
             Write-Host "✗ Failed to initialize thirdparty/glfw" -ForegroundColor Red
             exit 1
