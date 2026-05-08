@@ -144,7 +144,7 @@ Batch multichannel WAV rendering from a LUSID scene. Direct binary invocation is
 Options:
   --render_resolution <mode>   block (default), sample, smooth
   --block_size <n>             Block size for block mode (default: 64)
-  --spatializer <type>         dbap (default), vbap, lbap
+  --spatializer <type>         dbap (default), lbap
 ```
 
 ---

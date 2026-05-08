@@ -15,14 +15,14 @@ See [DEPENDENCIES.md](DEPENDENCIES.md) for LUSID scene and speaker layout JSON f
 
 Three spatializers supported:
 
-| Feature | DBAP (default) | VBAP | LBAP |
-|---|---|---|---|
-| **Coverage** | No gaps (works anywhere) | Can have gaps | No gaps |
-| **Layout Req** | Any layout | Good 3D triangulation | Multi-ring layers |
-| **Localization** | Moderate | Precise | Moderate |
-| **Speakers/Src** | Distance-weighted (many) | 3 speakers (exact) | Layer interpolation |
-| **Best For** | Unknown/irregular layouts | Dense 3D arrays | AlloSphere, TransLAB |
-| **Params** | `--dbap_focus` (0.1–5.0) | — | `--lbap_dispersion` (0–1.0) |
+| Feature | DBAP (default) | LBAP |
+|---|---|---|
+| **Coverage** | No gaps (works anywhere) | No gaps |
+| **Layout Req** | Any layout | Multi-ring layers |
+| **Localization** | Moderate | Moderate |
+| **Speakers/Src** | Distance-weighted (many) | Layer interpolation |
+| **Best For** | Unknown/irregular layouts | AlloSphere, TransLAB |
+| **Params** | `--dbap_focus` (0.1–5.0) | `--lbap_dispersion` (0–1.0) |
 
 Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 
@@ -35,14 +35,6 @@ Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
   --positions data/processedData/stageForRender/scene.lusid.json \
   --sources data/processedData/stageForRender/ \
   --out render.wav
-
-# VBAP
-./build/source/spatial_engine/spatialRender/spatialroot_spatial_render \
-  --spatializer vbap \
-  --layout allosphere_layout.json \
-  --positions scene.lusid.json \
-  --sources ./stageForRender/ \
-  --out render_vbap.wav
 
 # DBAP with tight focus
 ./build/source/spatial_engine/spatialRender/spatialroot_spatial_render \
@@ -63,7 +55,7 @@ Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 ```
 
 **Required flags:** `--layout`, `--positions`, `--sources`, `--out`  
-**Spatializer:** `--spatializer dbap|vbap|lbap`, `--dbap_focus`, `--lbap_dispersion`  
+**Spatializer:** `--spatializer dbap|lbap`, `--dbap_focus`, `--lbap_dispersion`  
 **General:** `--master_gain`, `--solo_source`, `--t0`, `--t1`, `--elevation_mode`, `--debug_dir`
 
 ### Duration Handling (Feb 16, 2026)
@@ -105,8 +97,8 @@ Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 
 ### Robustness Features
 
-**Zero-Block Detection & Fallback (VBAP):**
-- Detects when spatializer produces silence despite input energy (VBAP coverage gaps)
+**Zero-Block Detection & Fallback:**
+- Detects when spatializer produces silence despite input energy
 - Fallback: retarget direction 90% toward nearest speaker
 - Threshold: `kPannerZeroThreshold = 1e-6`
 
@@ -137,7 +129,6 @@ End-of-render diagnostics (`--debug_dir` writes `render_stats.json`, `block_stat
 - `source/spatial_engine/src/JSONLoader.cpp/.hpp` — LUSID scene parser
 - `source/spatial_engine/src/LayoutLoader.cpp/.hpp` — speaker layout parser
 - `source/spatial_engine/src/WavUtils.cpp/.hpp` — WAV/RF64 I/O
-- `source/spatial_engine/src/vbap_src/VBAPRenderer.cpp/.hpp` — VBAP implementation
 
 ### Algorithm Details
 

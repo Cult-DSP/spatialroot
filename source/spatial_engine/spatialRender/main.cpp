@@ -1,7 +1,7 @@
 // spatialroot Spatial Renderer for AlloSphere
 // 
-// renders spatial audio using Vector Base Amplitude Panning (VBAP),
-// Distance-Based Amplitude Panning (DBAP), or Layer-Based Amplitude Panning (LBAP)
+// renders spatial audio using Distance-Based Amplitude Panning (DBAP)
+// or Layer-Based Amplitude Panning (LBAP)
 // takes mono source files and spatial trajectory data
 // outputs multichannel WAV for the AlloSphere's speaker array
 //
@@ -44,7 +44,7 @@ void printUsage() {
               << "  --adm FILE          Multichannel ADM WAV file (direct streaming,\n"
               << "                      skips stem splitting)\n\n";
     std::cout << "Spatializer Options:\n"
-              << "  --spatializer TYPE    Spatializer: vbap, dbap, or lbap (default: dbap)\n"
+              << "  --spatializer TYPE    Spatializer: dbap or lbap (default: dbap)\n"
               << "  --dbap_focus FLOAT    DBAP focus/rolloff exponent (default: 1.0, range: 0.2-5.0)\n"
               << "  --lbap_dispersion F   LBAP dispersion threshold (default: 0.5, range: 0.0-1.0)\n\n";
     std::cout << "General Options:\n"
@@ -62,16 +62,12 @@ void printUsage() {
               << "  dbap   - Distance-Based Amplitude Panning (DEFAULT)\n"
               << "           Works with any speaker layout, no coverage gaps\n"
               << "           --dbap_focus controls distance attenuation (higher = sharper focus)\n"
-              << "  vbap   - Vector Base Amplitude Panning\n"
-              << "           Best for layouts with good 3D coverage, uses speaker triplets\n"
-              << "           May have coverage gaps at zenith/nadir\n"
               << "  lbap   - Layer-Based Amplitude Panning\n"
               << "           Designed for multi-ring/layer layouts (e.g., 3 elevation rings)\n"
               << "           --lbap_dispersion controls zenith/nadir signal spread\n\n";
     // DEV NOTE: Future --spatializer auto mode could detect layout type:
     // - Single ring (2D): use DBAP
     // - Multi-ring with good coverage: use LBAP or DBAP
-    // - Dense 3D coverage: use VBAP
     // For now, default to DBAP as safest option.
     std::cout << "Render Resolutions:\n"
               << "  block  - Direction computed at block center (RECOMMENDED)\n"
@@ -127,7 +123,7 @@ int main(int argc, char *argv[]) {
                 config.pannerType = PannerType::LBAP;
             } else {
                 std::cerr << "Error: unknown spatializer '" << panner << "'\n";
-                std::cerr << "Valid spatializers: dbap, lbap (VBAP removed - requires 3D layouts)\n";
+                std::cerr << "Valid spatializers: dbap, lbap\n";
                 return 1;
             }
         } else if (arg == "--dbap_focus") {

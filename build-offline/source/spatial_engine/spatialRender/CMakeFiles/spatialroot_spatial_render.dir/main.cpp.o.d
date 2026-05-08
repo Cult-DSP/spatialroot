@@ -967,7 +967,7 @@ source/spatial_engine/spatialRender/CMakeFiles/spatialroot_spatial_render.dir/ma
   /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1/unordered_set \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/math/al_Vec.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/math/al_Constants.hpp \
-  /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Vbap.hpp \
+  /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Dbap.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Spatializer.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/io/al_AudioIOData.hpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1/cassert \
@@ -985,8 +985,8 @@ source/spatial_engine/spatialRender/CMakeFiles/spatialroot_spatial_render.dir/ma
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/math/al_Mat.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/math/al_Quat.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/spatial/al_DistAtten.hpp \
-  /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Dbap.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Lbap.hpp \
+  /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../../../internal/cult-allolib/include/al/sound/al_Vbap.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../src/JSONLoader.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../src/LayoutLoader.hpp \
   /Users/lucian/Projects/spatialroot/source/spatial_engine/spatialRender/../src/WavUtils.hpp

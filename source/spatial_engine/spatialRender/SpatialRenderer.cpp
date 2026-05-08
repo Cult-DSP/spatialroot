@@ -46,7 +46,7 @@ SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
     // converts to radians using toRad() which assumes degree input
     // Without this conversion you get speaker positions at completely wrong angles
     // like -77.7 radians instead of -77.7 degrees which is way outside valid range
-    // This caused VBAP to fail silently and produce zero output
+    // This caused spatialization to fail silently and produce zero output
     //
     // CRITICAL FIX 2: AlloSphere hardware uses non-consecutive channel numbers 1-60 with gaps
     // but spatializers need consecutive 0-based indices for AudioIOData buffer access
@@ -130,9 +130,7 @@ SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
     
     // Create spatializers using unique_ptr (LBAP has broken copy semantics in AlloLib)
     
-    // VBAP removed from offline engine - requires 3D speaker arrangements for triangulation
     // Use DBAP (default) or LBAP for 2D layouts
-    std::cout << "VBAP removed from offline engine (requires 3D layouts)\n";
     
     // DBAP - distance-based amplitude panning
     // Note: DBAP doesn't need compile() - it uses distance-based calculations
@@ -349,8 +347,7 @@ al::Vec3f SpatialRenderer::nearestSpeakerDir(const al::Vec3f& dir) {
         }
     }
     
-    // Return direction 90% toward the speaker to stay inside hull
-    // This ensures VBAP can still find a valid triplet
+    // Return direction 90% toward the nearest speaker for a robust fallback.
     al::Vec3f spkDir = mSpeakerDirs[bestIdx];
     al::Vec3f blended = dir * 0.1f + spkDir * 0.9f;
     return safeNormalize(blended);
@@ -818,11 +815,11 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     if (config.renderResolution == "block") {
         renderPerBlock(out, config, startSample, endSample);
     } else if (config.renderResolution == "sample") {
-        std::cerr << "  ERROR: 'sample' mode is DISABLED (VBAP removed). Use 'block' mode instead.\n";
+        std::cerr << "  ERROR: 'sample' mode is DISABLED. Use 'block' mode instead.\n";
         std::cerr << "         For per-sample accuracy, use 'block' mode with --block_size 1.\n";
         return {};  // Return empty result
     } else if (config.renderResolution == "smooth") {
-        std::cerr << "  ERROR: 'smooth' mode is DISABLED (VBAP removed). Use 'block' mode instead.\n";
+        std::cerr << "  ERROR: 'smooth' mode is DISABLED. Use 'block' mode instead.\n";
         std::cerr << "         For smooth interpolation, use 'block' mode with small --block_size.\n";
         return {};  // Return empty result
     } else {
@@ -1029,7 +1026,7 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
                     al::Vec3f rawDirSub = safeDirForSource(name, kfs, tSub);
                     al::Vec3f dirSub = sanitizeDirForLayout(rawDirSub, config.elevationMode);
                     
-                    // Convert direction to position for DBAP, use direction for VBAP/LBAP
+                    // Convert direction to position for DBAP, use direction for LBAP
                     al::Vec3f posOrDir = (mActivePannerType == PannerType::DBAP) 
                         ? directionToDBAPPosition(dirSub) : dirSub;
                     
@@ -1151,7 +1148,7 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
 }
 
 // renderSmooth: Direction interpolated within each block using SLERP
-// Note: This mode is DEPRECATED. Only VBAP gains interpolation is implemented.
+// Note: This mode is DEPRECATED and intentionally disabled.
 void SpatialRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config,
                                     size_t startSample, size_t endSample) {
     int sr = mSpatial.sampleRate;
@@ -1159,9 +1156,7 @@ void SpatialRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config
     int bufferSize = config.blockSize;
     size_t renderSamples = endSample - startSample;
     
-    // For smooth mode, we need per-sample gain interpolation
-    // We compute VBAP gains at block start and end, then interpolate
-    // NOTE: This only works properly with VBAP, other panners use block mode internally
+    // Smooth mode is retained only as disabled historical implementation context.
     std::vector<float> gainsStart(numSpeakers);
     std::vector<float> gainsEnd(numSpeakers);
     std::vector<float> gainsInterp(numSpeakers);
@@ -1197,9 +1192,7 @@ void SpatialRenderer::renderSmooth(MultiWavData &out, const RenderConfig &config
             al::Vec3f dirStart = sanitizeDirForLayout(rawDirStart, config.elevationMode);
             al::Vec3f dirEnd = sanitizeDirForLayout(rawDirEnd, config.elevationMode);
             
-            // Compute gains at both ends (VBAP removed - smooth mode disabled)
-            // computeVBAPGains(dirStart, gainsStart);
-            // computeVBAPGains(dirEnd, gainsEnd);
+            // Smooth mode is disabled; retained code path is intentionally inert.
             // Smooth mode is disabled, so this code should not be reached
             assert(false && "Smooth mode should be disabled");
             
@@ -1265,8 +1258,7 @@ void SpatialRenderer::renderPerSample(MultiWavData &out, const RenderConfig &con
             // Sanitize direction to fit within speaker layout's representable range
             al::Vec3f dir = sanitizeDirForLayout(rawDir, config.elevationMode);
             
-            // For per-sample mode, always use VBAP gains (most accurate per-sample)
-            // computeVBAPGains(dir, gains);
+            // Sample mode is disabled; retained code path is intentionally inert.
             // Sample mode is disabled, so this code should not be reached
             assert(false && "Sample mode should be disabled");
             

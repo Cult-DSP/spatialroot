@@ -3,13 +3,12 @@
 // Supports multiple panning algorithms via --spatializer flag:
 // - DBAP (Distance-Based Amplitude Panning) - DEFAULT, robust for all layouts
 // - LBAP (Layer-Based Amplitude Panning) - designed for multi-ring layouts
-// - VBAP removed (requires 3D speaker arrangements for triangulation)
 //
 // IMPORTANT NOTES FOR DEBUGGING:
 // 
 // 1. al::Speaker constructor expects angles in DEGREES not radians
 //    the layout JSON has radians so we convert in the constructor
-//    without this VBAP silently produces zeros
+//    without this the spatializers silently produce zeros
 //
 // 2. AlloSphere hardware uses non-consecutive channel numbers 1-60 with gaps
 //    but we use consecutive 0-53 indices for rendering and the output WAV
@@ -47,7 +46,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <al/math/al_Vec.hpp>
-#include <al/sound/al_Vbap.hpp>
 #include <al/sound/al_Dbap.hpp>
 #include <al/sound/al_Lbap.hpp>
 #include <al/sound/al_Spatializer.hpp>
@@ -103,7 +101,6 @@ struct RenderConfig {
     
     // Spatializer selection (added 2026-01-27)
     // DBAP is default: works reliably for any speaker layout, no triangulation needed
-    // VBAP is best for dense, well-triangulated arrays like the AlloSphere
     // LBAP is designed for multi-ring layouts (speakers grouped by elevation)
     PannerType pannerType = PannerType::DBAP;
     
@@ -200,10 +197,7 @@ private:
     } mDirDiag;
     
     // Spatializer rendering diagnostics (per-render, reset at start)
-    // Note: Zero-block detection is primarily for VBAP but we run it for all panners
-    // to catch any unexpected failures.
-    // DEV NOTE: Consider skipping zero-block detection for DBAP/LBAP in future
-    // optimization pass, as they shouldn't produce zero blocks by design.
+    // Zero-block detection runs for all panners to catch unexpected failures.
     struct PannerDiag {
         std::unordered_map<std::string, uint64_t> zeroBlocks;      // blocks where panner produced ~silence despite input
         std::unordered_map<std::string, uint64_t> retargetBlocks;  // blocks retargeted to nearest speaker
