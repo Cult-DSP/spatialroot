@@ -1,6 +1,6 @@
 # Realtime Engine — Internal Reference
 
-**Last Updated:** April 1, 2026  
+**Last Updated:** May 7, 2026  
 **Source:** `spatial_engine/realtimeEngine/`  
 **Primary entry points:** `spatialroot_realtime` CLI binary, `gui/imgui/` (embeds `EngineSessionCore` in-process)
 
@@ -125,23 +125,130 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ### Closed Bugs
 
-| #   | Bug                                                                       | Fix                                                      |
-| --- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
-| 9.1 | Cross-block guard-transition blending — clicking at guard-zone entry/exit | Blended transition over several blocks                   |
-| 8.1 | Explicit device flag + GUI picker — device selection unreliable           | `--device` flag + GUI device enumeration                 |
-| 7.x | Guard-induced relocation and buzzing                                      | Guard transition logic overhaul                          |
-| 6.x | Channel relocation diagnostics                                            | Added per-source channel relocation counter              |
-| 5.1 | Smoother cold-start transient — initial pop on first block                | Ramped gain from zero on first `processBlock()`          |
-| 4.1 | Stale slider state — sliders not reflecting engine state after restart    | State flush on `engine_ready`                            |
-| 3.2 | Channel validation — crash on layout/device channel count mismatch        | Fast-fail with error message                             |
-| 2.1 | Fast-mover sub-stepping — blinking on rapid trajectory changes            | Sub-step at 16-sample hops when angular delta > 0.25 rad |
-| 1.1 | Source onset pop — click at source start                                  | Fade-in over first ~5ms of source playback               |
+| #    | Bug                                                                                     | Fix                                                                                      |
+| ---- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 11.5 | Spatializer anchor caching during steady pause — clicks on subsequent pauses            | New fast-path early-return before Step 1 skips all rendering during fully-paused state   |
+| 11.4 | Stop-after-recent-pause click — conditional sleep missed in-progress fade               | Moved 50ms sleep outside the `if (!paused)` guard; sleep is always unconditional         |
+| 11.3 | Resume mid-fade-out forced `mPauseFade = 0.0f` — gain discontinuity on rapid toggle    | Step computed as `(1.0f - mPauseFade) / fadeFrames`; ramp continues from current value  |
+| 11.2 | `stop()` called `mAudioIO.stop()` with no fade — content-dependent click               | Arm pause fade + 50ms sleep before hard stop; reset `mConfig.paused = false` afterward  |
+| 11.1 | `std::memset` in late early-return wiped completed pause fade — audible click           | Removed memset; Step 4's multiply-by-zero already zeroes buffer correctly                |
+| 10.1 | Normalized DBAP breaks fast-mover continuity anchor (`mPrevSafePos`)                   | Fast-mover branch writes its own state using last sub-step position                      |
+| 9.1  | Cross-block guard-transition blending — clicking at guard-zone entry/exit               | Blended transition over several blocks                                                   |
+| 8.1  | Explicit device flag + GUI picker — device selection unreliable                         | `--device` flag + GUI device enumeration                                                 |
+| 7.x  | Guard-induced relocation and buzzing                                                    | Guard transition logic overhaul                                                          |
+| 6.x  | Channel relocation diagnostics                                                          | Added per-source channel relocation counter                                              |
+| 5.1  | Smoother cold-start transient — initial pop on first block                              | Ramped gain from zero on first `processBlock()`                                          |
+| 4.1  | Stale slider state — sliders not reflecting engine state after restart                  | State flush on `engine_ready`                                                            |
+| 3.2  | Channel validation — crash on layout/device channel count mismatch                     | Fast-fail with error message                                                             |
+| 2.1  | Fast-mover sub-stepping — blinking on rapid trajectory changes                          | Sub-step at 16-sample hops when angular delta > 0.25 rad                                |
+| 1.1  | Source onset pop — click at source start                                                | Fade-in over first ~5ms of source playback                                               |
+
+### Bug 11.1 — memset wipes completed pause fade — PATCHED (May 7, 2026)
+
+**Problem:** Pausing produced an audible click. The 8ms linear ramp was computed correctly by Step 4, but then a `std::memset` in the late early-return block fired on the fade-completing block and wiped the entire output buffer. The hardware received silence for the whole block instead of the graceful ramp.
+
+**Root cause:** `processBlock()`, `RealtimeBackend.hpp`. After Step 4 applied the fade ramp (frames 0–383 attenuated to zero, frames 384–511 already zero via multiply), the condition `pausedNow && mPauseFadeFramesLeft == 0 && mPauseFade <= 0.0f` became true and the legacy early-return ran `std::memset(io.outBuffer(ch), 0, ...)` — overwriting the fade buffer before AudioIO read it.
+
+**Approach:** Removed the two `std::memset` lines from the late early-return. Step 4's multiply-by-zero already produces a correctly-zeroed buffer. Zeroing it again only destroys the graceful ramp on the completing block.
+
+**Files changed:**
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: removed memset from late early-return block; added explanatory comment.
+
+**RT-safety:** No concerns. No allocation or locks removed; just deletion of redundant memset.
+
+**Test result:** First pause after engine start: clean fade, no click. PATCHED.
+
+**Status:** PATCHED
+
+---
+
+### Bug 11.2 — stop() hard-stops with no fade — PATCHED (May 7, 2026)
+
+**Problem:** Pressing Stop produced a content-dependent click. The click was sometimes masked by CoreAudio's hardware buffer drain, but at high amplitude it was audible.
+
+**Root cause:** `stop()` in `RealtimeBackend.hpp` called `mAudioIO.stop()` directly with no prior fade. CoreAudio drains its internal buffer naturally, which provided some softening, but output amplitude at the cut point was non-zero.
+
+**Approach:** Arm the pause fade before the hard stop: set `mConfig.paused = true` (which triggers the 8ms ramp in the audio thread on the next callback), then unconditionally `sleep_for(50ms)` to guarantee the fade completes, then call `mAudioIO.stop()`. Reset `mConfig.paused = false` afterward so the next `start()` begins unpaused. Added `#include <thread>`.
+
+**Files changed:**
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: modified `stop()` to arm pause fade + unconditional 50ms sleep.
+
+**RT-safety:** Sleep is on the main thread only; audio callback is unaffected.
+
+**Test result:** Stop now sounds identical to pause — clean 8ms fade. PATCHED.
+
+**Status:** PATCHED
+
+---
+
+### Bug 11.3 — resume mid-fade-out forced mPauseFade = 0 — PATCHED (May 7, 2026)
+
+**Problem:** Rapidly toggling pause/resume (pause then immediately resume before the 8ms fade completed) produced an audible gain discontinuity.
+
+**Root cause:** The resume branch in Step C (`RealtimeBackend.hpp`) reset `mPauseFade = 0.0f` unconditionally before arming the fade-in ramp. If a fade-out was mid-ramp at e.g. `mPauseFade = 0.7f`, forcing it to `0.0f` caused an instantaneous gain jump from 0.7 to 0.
+
+**Approach:** Removed the `mPauseFade = 0.0f` reset. Compute the fade-in step as `(1.0f - mPauseFade) / fadeFrames` so the ramp continues from wherever the gain currently is, reaching 1.0 in `fadeFrames` regardless of starting value.
+
+**Files changed:**
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: Step C resume branch — removed forced reset, updated step calculation.
+
+**RT-safety:** No concerns. Pure arithmetic in the audio thread.
+
+**Test result:** Rapid toggle no longer clicks. PATCHED.
+
+**Status:** PATCHED
+
+---
+
+### Bug 11.4 — stop-after-recent-pause conditional sleep — PATCHED (May 7, 2026)
+
+**Problem:** After a recent pause (fade in progress or just completed), Stop still produced a soft click.
+
+**Root cause:** The initial Bug 11.2 fix put the 50ms sleep inside `if (!mConfig.paused)`. If the engine was already paused or a fade was in progress when Stop was called, the sleep was skipped — the hard stop fired before the fade completed.
+
+**Approach:** Moved the 50ms `sleep_for` outside the `if (!paused)` guard so it runs unconditionally. The sleep covers: `kPauseFadeMs` (8ms) + two max-buffer durations. This is conservative but sufficient.
+
+**Files changed:**
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `stop()` — sleep made unconditional.
+
+**RT-safety:** Sleep is main thread only.
+
+**Test result:** Stop after recent pause no longer clicks. PATCHED.
+
+**Status:** PATCHED
+
+---
+
+### Bug 11.5 — Spatializer anchor caching during steady pause — PATCHED (May 7, 2026)
+
+**Problem:** The first pause after engine start was clean. Subsequent pauses (resume → play → pause again) produced intermittent clicks.
+
+**Root cause:** During steady pause (after the 8ms fade completed), the old code still ran the full render path: Step 1 (zero buffers), Step 2 (pose), Step 3 (Spatializer `renderBlock()`), Step 4 (fade multiply by 0). The Spatializer updated its per-source cross-block interpolation anchors (`mPrevSafePos`, `mPrevGuardFired`, `mPrevWasFastMover`) on every steady-paused block using the frozen `currentFrame` position. After many paused blocks these anchors were "over-fit" to the paused position. When playback resumed and then paused again, the anchor mismatch at the resume point produced a transient.
+
+**Approach:** Added a new fast-path early-return before Step D/1/2/3: if `pausedNow && mPauseFadeFramesLeft == 0 && mPauseFade <= 0.0f` (steady pause, not the fade-completing block), memset the output buffer and return immediately without running the Spatializer. This preserves anchor state exactly as it was at the moment the fade completed, so subsequent resume/pause cycles have correct starting anchors.
+
+**Note:** The late early-return (after Step 4) still handles the fade-completing block — it plays the graceful ramp and then returns. The new early-return fires only on subsequent steady-paused blocks.
+
+**Files changed:**
+- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: new fast-path early-return block inserted before Step 1, with CPU load update and explanatory comment.
+
+**RT-safety:** memset in the early-return is RT-safe (known-size stack buffer, no allocation).
+
+**Test result:** Subsequent pauses now consistently clean. Intermittent soft clicks may still occur rarely — see Deferred below. PATCHED.
+
+**Status:** PATCHED
+
+---
 
 ### Deferred / Engineering Notes
 
 - Large interleaved buffer: `WavUtils.cpp` `writeMultichannelWav()` allocates one `std::vector<float>` for all samples × channels (56 × 27M ≈ 5.67 GB). Mitigation: chunked/streaming write.
 - `direct_speaker` nodes untested at render level (test files exercise `audio_object` + `LFE` only).
 - Do not use `std::atomic` in `RealtimeConfig` as copy-constructed function arguments — it deletes the implicit copy constructor. Pass by reference or use `session.config()` direct population.
+- **Intermittent soft clicks (pause/stop):** Some residual soft clicks persist after the Bug 11.x fixes, particularly at high gain or near fast-mover boundary transitions. Root cause unknown. Likely involves the 50ms exponential smoother (`mSmooth`) having residual gain on the first steady-paused block, or sub-block timing of paired pause/resume events within a single callback. Not reliably reproducible — deferred.
+- **Rapid toggle within one block:** If pause and resume are both requested within one audio block (< ~10ms), the `mPrevPaused` edge-detection in Step C may only see the final state. The intermediate transition is silently dropped. Observed only in stress testing; not a practical user scenario.
+- **50ms stop latency:** The unconditional 50ms sleep in `stop()` adds noticeable shutdown latency. Acceptable for the current GUI use case but should be revisited if stop() is called in a tight loop or during testing.
+- **`mPrevPaused = true` persists after stop:** `stop()` resets `mConfig.paused = false` but `mPrevPaused` in `processBlock()` is local state that resets on next start. On the first block of a new session, `mPrevPaused = false` and `pausedNow = false` → no spurious edge. Harmless, but worth noting if the session start sequence changes.
 
 ---
 
@@ -163,6 +270,13 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 6. **Master gain range** — expanded to 0.1–3.0
 
 **Phase 11 addition:** `ctrl.autoComp` wired from `mSmooth.smoothed.autoComp` in Step 3 so focus auto-compensation flag reaches `renderBlock()` correctly.
+
+**Bug 11.x additions to `processBlock()` and `stop()` (May 7, 2026):**
+
+- **Fast-path early-return (steady pause):** New block before Step 1. If fully paused (fade complete, `mPauseFade <= 0`), memset + return immediately — Spatializer is not called. Prevents anchor caching (Bug 11.5).
+- **Late early-return (no memset):** The existing early-return after Step 4 no longer runs memset. Step 4's multiply-by-zero is sufficient; the memset was wiping the graceful fade ramp on the completing block (Bug 11.1).
+- **Resume step calculation:** Fade-in step is now `(1.0f - mPauseFade) / fadeFrames` rather than always `1/fadeFrames`. Ramp continues from current gain instead of resetting to zero (Bug 11.3).
+- **`stop()` fade-before-hard-stop:** Arms pause fade and unconditionally sleeps 50ms before calling `mAudioIO.stop()`. Resets `mConfig.paused = false` afterward (Bugs 11.2, 11.4).
 
 ---
 

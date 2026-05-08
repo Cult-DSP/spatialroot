@@ -5,6 +5,28 @@
 
 ---
 
+## Pause / Stop Click Transient Fixes (May 7, 2026)
+
+**Status:** Fixes 11.1–11.5 patched and confirmed. Residual intermittent soft clicks deferred.
+
+**Problem:** Pausing produced an audible click. Stop was comparatively graceful (CoreAudio hardware buffer drain), but could also click at high amplitude. Rapid pause/resume toggling clicked. Subsequent pauses (after resume and re-pause) clicked even when the first pause was clean.
+
+**Root causes and fixes (`RealtimeBackend.hpp`):**
+
+- **11.1 — memset wipes fade:** The late early-return after Step 4 ran `std::memset(outBuffer, 0, ...)` on the fade-completing block, erasing the 8ms ramp that Step 4 had just computed. Hardware received silence for the entire block → click. Fix: removed the memset. Step 4's multiply-by-zero already zeroes the buffer correctly.
+
+- **11.2 — stop() no fade:** `stop()` called `mAudioIO.stop()` directly with no prior fade. Fix: arm `mConfig.paused = true` before the hard stop, sleep 50ms unconditionally, then call `mAudioIO.stop()`, then reset `mConfig.paused = false`.
+
+- **11.3 — resume mid-fade forced reset:** The resume branch in Step C set `mPauseFade = 0.0f` unconditionally, causing a gain jump when a fade-out was mid-ramp. Fix: removed the forced reset; step computed as `(1.0f - mPauseFade) / fadeFrames` so the ramp continues from current value.
+
+- **11.4 — stop-after-recent-pause conditional sleep:** The initial Bug 11.2 fix put the 50ms sleep inside `if (!paused)`, so it was skipped if a fade was already in progress. Fix: moved sleep outside the guard — unconditional.
+
+- **11.5 — Spatializer anchor caching:** During steady pause the full render path still ran, updating `mPrevSafePos` / `mPrevGuardFired` / `mPrevWasFastMover` on every block with the frozen `currentFrame` position. After many paused blocks these anchors were over-fit to the paused position; resume → re-pause produced a transient. Fix: new fast-path early-return before Step 1 — if fully paused (fade complete), memset + return without calling the Spatializer.
+
+**Deferred:** Some intermittent soft clicks persist, likely related to the 50ms exponential smoother having residual gain on the first steady-paused block, or sub-block timing of rapid toggle events. Not reliably reproducible. See `REALTIME_ENGINE.md § Deferred` for full notes.
+
+---
+
 ## Normalized DBAP — Fast-Mover Continuity Fix (May 7, 2026)
 
 **Status:** Fix confirmed working at translab. Bug 10.1 closed.
