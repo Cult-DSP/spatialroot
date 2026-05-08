@@ -140,10 +140,26 @@ private:
     static constexpr const char* kBufferSizeNames[] =
         {"64", "128", "256", "512", "1024"};
     static constexpr const char* kLayoutNames[] =
-        {"AlloSphere", "Translab", "Custom"};
+        {"AlloSphere", "Translab", "Stereo", "Krakow", "Layout Template",
+         "Circle 16", "Circle 12", "Cube 8", "Ring12 Top4", "Ring8 Top4",
+         "Dual Ring 16", "Octagon 8", "Quad 4", "Hexagon 6", "5.1",
+         "Custom"};
     static constexpr const char* kLayoutPaths[] = {
         "spatial_engine/speaker_layouts/allosphere_layout.json",
         "spatial_engine/speaker_layouts/translab-sono-layout.json",
+        "spatial_engine/speaker_layouts/stereo.json",
+        "spatial_engine/speaker_layouts/krakow_layout.json",
+        "spatial_engine/speaker_layouts/layout_template.json",
+        "spatial_engine/speaker_layouts/example_layouts/circle_16.json",
+        "spatial_engine/speaker_layouts/example_layouts/circle_12.json",
+        "spatial_engine/speaker_layouts/example_layouts/cube_8.json",
+        "spatial_engine/speaker_layouts/example_layouts/ring12_top4.json",
+        "spatial_engine/speaker_layouts/example_layouts/ring8_top4.json",
+        "spatial_engine/speaker_layouts/example_layouts/dual_ring_16.json",
+        "spatial_engine/speaker_layouts/example_layouts/octagon_8.json",
+        "spatial_engine/speaker_layouts/example_layouts/quad_4.json",
+        "spatial_engine/speaker_layouts/example_layouts/hexagon_6.json",
+        "spatial_engine/speaker_layouts/example_layouts/5_1.json",
         ""
     };
     static constexpr const char* kElevModeNames[] = {

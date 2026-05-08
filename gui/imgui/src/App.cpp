@@ -256,7 +256,7 @@ void App::renderEngineTab() {
         ImGui::TextDisabled("LAYOUT");
         ImGui::SameLine(120.f);
         ImGui::SetNextItemWidth(110.f);
-        if (ImGui::Combo("##layoutpreset", &mLayoutPreset, kLayoutNames, 3)) {
+        if (ImGui::Combo("##layoutpreset", &mLayoutPreset, kLayoutNames, IM_ARRAYSIZE(kLayoutNames))) {
             if (mLayoutPreset < 2) mLayoutPath = resolveProjectPath(kLayoutPaths[mLayoutPreset]);
         }
         ImGui::SameLine();
