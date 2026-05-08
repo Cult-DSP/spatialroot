@@ -42,12 +42,12 @@ Thumbs.db
 bin/
 
 # data 
-processedData/stageForRender/*
-processedData/*
-!processedData/stageForRender/
-!processedData/
-sourceData/*
-!sourceData/
+data/processedData/stageForRender/*
+data/processedData/*
+!data/processedData/stageForRender/
+!data/processedData/
+data/sourceData/*
+!data/sourceData/
 
 
 #jupyter 
