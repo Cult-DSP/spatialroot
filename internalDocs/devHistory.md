@@ -5,6 +5,29 @@
 
 ---
 
+## GUI Transcoder Tab — Three-Workflow Redesign (May 8, 2026)
+
+**Status:** Complete. Replaces the single ADM→LUSID panel with a three-workflow tab bar exposing the full current CULT transcoder CLI surface.
+
+**Motivation:** The previous Transcoder tab only exposed `cult-transcoder transcode` (ADM→LUSID Scene). CULT now supports two additional subcommands (`package-adm-wav`, `adm-author`) that were inaccessible from the GUI.
+
+**Files changed:**
+- `source/gui/imgui/src/App.hpp` — added workflow state members and constants for all three workflows
+- `source/gui/imgui/src/App.cpp` — `renderTranscodeTab()` rebuilt with `BeginTabBar("##tc_workflow")`
+
+**Three sub-tabs now exposed:**
+1. **ADM to LUSID Scene** (`cult-transcoder transcode`) — converts ADM XML or ADM WAV/BWF metadata to `scene.lusid.json`
+2. **ADM WAV to LUSID Package** (`cult-transcoder package-adm-wav`) — extracts ADM, converts metadata, splits interleaved audio into a LUSID package directory
+3. **LUSID to ADM Export** (`cult-transcoder adm-author`) — authors LUSID package material into Logic-compatible ADM BWF/WAV + sidecar ADM XML
+
+**Each tab has:** file/folder pickers with type-appropriate browse dialogs, inline validation warnings for missing required fields, run button disabled until required fields are filled, live command preview, run-status indicator. Experimental `adm-author` options (`--dbmd-source`, `--metadata-post-data`) gated behind a collapsible section with amber warning text. `--stdout-report` added to all workflows so report JSON appears in the shared log.
+
+**Architecture preserved:** subprocess CLI calls via `SubprocessRunner`, shared `mTcRunner`/`mTcLog`/status. No new integration style introduced.
+
+**Build validated:** `[100%] Built target spatialroot_gui`.
+
+---
+
 ## Offline Renderer Source Split (May 8, 2026)
 
 **Status:** Complete. Non-destructive source-layout separation only.

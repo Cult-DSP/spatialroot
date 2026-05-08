@@ -107,15 +107,32 @@ Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OS
 
 **Build:** `./init.sh` then `./build.sh --gui`. **Run:** `./run.sh`.
 
-### `cult-transcoder` — ADM → LUSID Tool
+### `cult-transcoder` — ADM ↔ LUSID Tool
+
+Three subcommands:
 
 ```bash
+# 1. ADM XML or ADM WAV/BWF → LUSID scene JSON
 build/internal/cult_transcoder/cult-transcoder transcode \
-    --in <adm_wav_path> --in-format adm_wav \
-    --out data/processedData/stageForRender/scene.lusid.json \
-    --out-format lusid_json \
-    [--lfe-mode hardcoded|speaker-label]
+    --in <path> --in-format adm_xml|adm_wav \
+    --out <scene.lusid.json> --out-format lusid_json \
+    [--lfe-mode hardcoded|speaker-label] [--report <path>] [--stdout-report]
+
+# 2. ADM WAV/BWF → self-contained LUSID package (metadata + split mono stems)
+build/internal/cult_transcoder/cult-transcoder package-adm-wav \
+    --in <source.wav> --out-package <package-dir> \
+    [--lfe-mode hardcoded|speaker-label] [--report <path>] [--stdout-report] [--quiet]
+
+# 3. LUSID scene/package → ADM BWF/WAV + sidecar ADM XML (export/authoring)
+build/internal/cult_transcoder/cult-transcoder adm-author \
+    --lusid <scene.lusid.json> --wav-dir <stem-dir> \
+    --out-xml <export.adm.xml> --out-wav <export.wav> \
+    [--report <path>] [--stdout-report] [--quiet]
+# alternate input:
+#   --lusid-package <package-dir>  (replaces --lusid + --wav-dir)
 ```
+
+The GUI Transcoder tab exposes all three workflows. See `source/gui/imgui/src/App.cpp::renderTranscodeTab()`.
 
 Source: `internal/cult_transcoder/` (git submodule). See `internal/cult_transcoder/internalDocs/AGENTS-CULT.md` for full cult-transcoder docs.
 

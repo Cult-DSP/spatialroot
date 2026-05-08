@@ -116,10 +116,29 @@ private:
     // Note: mEngineLog is only written from the main thread.
 
     // ── Transcode panel state ─────────────────────────────────────────────
-    std::string      mTcInput;          // input file/dir path
-    std::string      mTcOutput;         // output .lusid.json (empty = auto)
-    int              mTcInFormat = 0;   // 0=auto 1=adm_wav 2=adm_xml 3=lusid_json
+    int              mTcWorkflow = 0;   // 0=ADM→LUSID Scene, 1=ADM WAV→LUSID Package, 2=LUSID→ADM Export
+
+    // Workflow 0: ADM to LUSID Scene (cult-transcoder transcode)
+    std::string      mTcInput;          // input file path
+    std::string      mTcOutput;         // output .lusid.json (empty = auto temp session)
+    int              mTcInFormat = 0;   // 0=auto 1=adm_wav 2=adm_xml
     int              mTcLfeMode  = 0;   // 0=hardcoded 1=speaker-label
+
+    // Workflow 1: ADM WAV to LUSID Package (cult-transcoder package-adm-wav)
+    std::string      mTcPkgInput;       // source .wav path
+    std::string      mTcPkgOutput;      // output package directory
+    int              mTcPkgLfeMode = 0; // 0=hardcoded 1=speaker-label
+
+    // Workflow 2: LUSID to ADM Export (cult-transcoder adm-author)
+    int              mTcAdmInputMode = 0;       // 0=scene+wav-dir  1=lusid-package
+    std::string      mTcAdmLusid;               // scene.lusid.json (mode 0)
+    std::string      mTcAdmWavDir;              // wav directory (mode 0)
+    std::string      mTcAdmLusidPkg;            // lusid-package directory (mode 1)
+    std::string      mTcAdmOutXml;              // output .adm.xml
+    std::string      mTcAdmOutWav;              // output .wav
+    std::string      mTcAdmDbmdSrc;             // experimental: dbmd source path
+    bool             mTcAdmMetadataPostData = false;  // experimental chunk reorder
+
     SubprocessRunner mTcRunner;
     bool             mTcRunning  = false;
     bool             mTcSuccess  = false;
@@ -167,12 +186,21 @@ private:
         "Rescale Full Sphere (+-90 deg)",
         "Clamp to Layout"
     };
+    static constexpr const char* kTcWorkflowNames[] = {
+        "ADM to LUSID Scene",
+        "ADM WAV to LUSID Package",
+        "LUSID to ADM Export"
+    };
     static constexpr const char* kTcFormatNames[] =
-        {"Auto-detect", "ADM WAV", "ADM XML", "LUSID JSON"};
+        {"Auto-detect", "ADM WAV", "ADM XML"};
     static constexpr const char* kTcFormatValues[] =
-        {"adm_wav", "adm_wav", "adm_xml", "lusid_json"};  // [0] auto resolves at runtime
-    static constexpr const char* kTcLfeModeNames[]  = {"Hardcoded", "Speaker Label"};
+        {"adm_wav", "adm_wav", "adm_xml"};  // [0] auto resolves at runtime from extension
+    static constexpr const char* kTcLfeModeNames[]  = {"Hardcoded (default)", "Speaker Label"};
     static constexpr const char* kTcLfeModeValues[] = {"hardcoded", "speaker-label"};
+    static constexpr const char* kTcAdmInputModeNames[] = {
+        "Scene JSON + WAV Directory",
+        "LUSID Package Directory"
+    };
 
     // ── Private methods ───────────────────────────────────────────────────
 
