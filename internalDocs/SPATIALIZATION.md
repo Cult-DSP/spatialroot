@@ -1,7 +1,7 @@
 # Spatialization & Rendering — Internal Reference
 
 **Last Updated:** February 2026  
-**Source:** `spatial_engine/src/renderer/SpatialRenderer.cpp`, `spatial_engine/src/JSONLoader.cpp`
+**Source:** `source/spatial_engine/src/renderer/SpatialRenderer.cpp`, `source/spatial_engine/src/JSONLoader.cpp`
 
 See [DEPENDENCIES.md](DEPENDENCIES.md) for LUSID scene and speaker layout JSON format specs.
 
@@ -31,7 +31,7 @@ Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 ```bash
 # Default render with DBAP
 ./build/spatialroot_spatial_render \
-  --layout spatial_engine/speaker_layouts/allosphere_layout.json \
+  --layout source/spatial_engine/speaker_layouts/allosphere_layout.json \
   --positions processedData/stageForRender/scene.lusid.json \
   --sources processedData/stageForRender/ \
   --out render.wav
@@ -133,11 +133,11 @@ End-of-render diagnostics (`--debug_dir` writes `render_stats.json`, `block_stat
 
 ### Key Source Files
 
-- `spatial_engine/src/renderer/SpatialRenderer.cpp/.hpp` — core renderer
-- `spatial_engine/src/JSONLoader.cpp/.hpp` — LUSID scene parser
-- `spatial_engine/src/LayoutLoader.cpp/.hpp` — speaker layout parser
-- `spatial_engine/src/WavUtils.cpp/.hpp` — WAV/RF64 I/O
-- `spatial_engine/src/vbap_src/VBAPRenderer.cpp/.hpp` — VBAP implementation
+- `source/spatial_engine/src/renderer/SpatialRenderer.cpp/.hpp` — core renderer
+- `source/spatial_engine/src/JSONLoader.cpp/.hpp` — LUSID scene parser
+- `source/spatial_engine/src/LayoutLoader.cpp/.hpp` — speaker layout parser
+- `source/spatial_engine/src/WavUtils.cpp/.hpp` — WAV/RF64 I/O
+- `source/spatial_engine/src/vbap_src/VBAPRenderer.cpp/.hpp` — VBAP implementation
 
 ### Algorithm Details
 

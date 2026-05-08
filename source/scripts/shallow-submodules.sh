@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/shallow-submodules.sh
+# source/scripts/shallow-submodules.sh
 #
 # PURPOSE
 #   Re-initialize all spatialroot git submodules as shallow clones (--depth 1)
@@ -23,8 +23,8 @@
 #     5. Prints a before/after .git/modules size comparison.
 #
 # USAGE
-#   ./scripts/shallow-submodules.sh            # all submodules
-#   ./scripts/shallow-submodules.sh allolib    # allolib only (substring match)
+#   ./source/scripts/shallow-submodules.sh            # all submodules
+#   ./source/scripts/shallow-submodules.sh allolib    # allolib only (substring match)
 #
 # SAFETY
 #   - Idempotent: safe to run multiple times.
@@ -45,7 +45,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 FILTER="${1:-}"   # optional substring filter, e.g. "allolib"

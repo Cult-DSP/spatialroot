@@ -11,12 +11,12 @@
 ### Phase 1: Completed Removals ✅
 
 Files removed February 23, 2026:
-1. `LUSID/src/old_XML_parse/` — archived XML parser
-2. `LUSID/tests/old_XML_parse/` — archived XML parser tests
+1. `internal/LUSID/src/old_XML_parse/` — archived XML parser
+2. `internal/LUSID/tests/old_XML_parse/` — archived XML parser tests
 3. `src/analyzeADM/old_XML_parse/` — archived XML parser
 4. `src/packageADM/old_schema/` — old schema files
 5. `src/packageADM/createRenderInfo.py` — deprecated wrapper
-6. `spatial_engine/src/renderer/rendererUtils-TODO/` — empty directory
+6. `source/spatial_engine/src/renderer/rendererUtils-TODO/` — empty directory
 7. `src/adm_extract/build/` — build artifacts
 
 All 79 LUSID tests pass post-removal.
@@ -27,8 +27,8 @@ Per human review annotations in the audit:
 - `processedData/` — all contents (render outputs, scene data, debug artifacts)
 - `sourceData/` — 19 GB ADM WAV test files
 - `quickCommands.txt` — useful dev command examples
-- `LUSID/tests/fixtures/sample_scene_v0.5.json` — test fixtures
-- `internalDocsMD/` — all internal docs (superseded by current consolidation)
+- `internal/LUSID/tests/fixtures/sample_scene_v0.5.json` — test fixtures
+- `internalDocs/` — all internal docs (superseded by current consolidation)
 
 ### Repository Size Context
 
@@ -67,7 +67,7 @@ Note: Python virtual environment was removed in Phase 6 (2026-03-31) as part of 
 
 **Primary problem:** submodule git history dwarfed the working tree. Shallow init addresses the history cost; modular CMake now addresses the unnecessary build surface.
 
-**Status: Implemented.** `init.sh` initializes `internal/cult-allolib` with `--depth 1`, and `scripts/shallow-submodules.sh` remains the opt-in cleanup path for older deep clones. The current supported footprint reduction comes from the slimmed `cult-allolib` CMake defaults, not sparse checkout.
+**Status: Implemented.** `init.sh` initializes `internal/cult-allolib` with `--depth 1`, and `source/scripts/shallow-submodules.sh` remains the opt-in cleanup path for older deep clones. The current supported footprint reduction comes from the slimmed `cult-allolib` CMake defaults, not sparse checkout.
 
 ### AlloLib Modules — Usage Classification
 
@@ -111,5 +111,5 @@ Note: Python virtual environment was removed in Phase 6 (2026-03-31) as part of 
 | Slim `cult-allolib` CMake defaults | avoids graphics/app/VR/examples/tests/docs build overhead | Low | **✅ Done** — supported path |
 | Sparse checkout working tree | modest source-tree reduction only | Medium (stale + fragile) | **Not recommended** |
 
-**To apply to an existing deep clone:** `./scripts/shallow-submodules.sh`  
+**To apply to an existing deep clone:** `./source/scripts/shallow-submodules.sh`  
 **Current recommendation:** use the slimmed `cult-allolib` defaults and avoid sparse checkout unless you are doing one-off local experiments.

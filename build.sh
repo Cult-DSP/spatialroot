@@ -95,16 +95,16 @@ echo "============================================================"
 echo "✓ Build complete!"
 echo ""
 if [ "${BUILD_ENGINE}" = "ON" ]; then
-    echo "  spatialroot_realtime       : ${BUILD_DIR}/spatial_engine/realtimeEngine/spatialroot_realtime"
+    echo "  spatialroot_realtime       : ${BUILD_DIR}/source/spatial_engine/realtimeEngine/spatialroot_realtime"
 fi
 if [ "${BUILD_OFFLINE}" = "ON" ]; then
-    echo "  spatialroot_spatial_render : ${BUILD_DIR}/spatial_engine/spatialRender/spatialroot_spatial_render"
+    echo "  spatialroot_spatial_render : ${BUILD_DIR}/source/spatial_engine/spatialRender/spatialroot_spatial_render"
 fi
 if [ "${BUILD_CULT}" = "ON" ]; then
-    echo "  cult-transcoder            : ${BUILD_DIR}/cult_transcoder/cult-transcoder"
+    echo "  cult-transcoder            : ${BUILD_DIR}/internal/cult_transcoder/cult-transcoder"
 fi
 if [ "${BUILD_GUI}" = "ON" ]; then
-    echo "  spatialroot_gui            : ${BUILD_DIR}/gui/imgui/spatialroot_gui"
+    echo "  spatialroot_gui            : ${BUILD_DIR}/source/gui/imgui/spatialroot_gui"
 fi
 echo "============================================================"
 echo ""

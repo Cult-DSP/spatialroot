@@ -5,7 +5,7 @@
 **Lead Developer:** Lucian Parisi
 
 > **Phase 6 (2026-03-31): C++ refactor complete.** Python GUI, entrypoints, build tooling, and venv removed.
-> Primary entry points: `spatialroot_realtime` CLI binary and `gui/imgui/` Dear ImGui + GLFW desktop GUI (embeds `EngineSessionCore` in-process).
+> Primary entry points: `spatialroot_realtime` CLI binary and `source/gui/imgui/` Dear ImGui + GLFW desktop GUI (embeds `EngineSessionCore` in-process).
 > Build: `./init.sh` (once) then `./build.sh`. Run: `./run.sh`.
 
 ---
@@ -77,47 +77,47 @@ Runs the realtime spatial audio engine. Inputs: speaker layout (`--layout`), LUS
 
 ```bash
 # ADM direct streaming mode
-./build/spatialroot_realtime \
-    --layout spatial_engine/speaker_layouts/translab-sono-layout.json \
+./build/source/spatial_engine/realtimeEngine/spatialroot_realtime \
+    --layout source/spatial_engine/speaker_layouts/translab-sono-layout.json \
     --scene processedData/stageForRender/scene.lusid.json \
     --adm sourceData/SWALE-ATMOS-LFE.wav \
     --gain 0.5 --buffersize 512
 
 # Mono file mode (LUSID package with pre-split stems)
-./build/spatialroot_realtime \
-    --layout spatial_engine/speaker_layouts/allosphere_layout.json \
+./build/source/spatial_engine/realtimeEngine/spatialroot_realtime \
+    --layout source/spatial_engine/speaker_layouts/allosphere_layout.json \
     --scene processedData/stageForRender/scene.lusid.json \
     --sources sourceData/lusid_package \
     --gain 0.1 --buffersize 512
 ```
 
-Run `./build/spatialroot_realtime --help` for full flag list. See also `PUBLIC_DOCS/API.md`.
+Run `./build/source/spatial_engine/realtimeEngine/spatialroot_realtime --help` for full flag list. See also `PUBLIC_DOCS/API.md`.
 
-### `gui/imgui/` — Dear ImGui + GLFW Desktop GUI (Phase 6)
+### `source/gui/imgui/` — Dear ImGui + GLFW Desktop GUI (Phase 6)
 
 Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OSC dependency for local control.
 
 | File                                | Role                                                          |
 | ----------------------------------- | ------------------------------------------------------------- |
-| `gui/imgui/src/App.hpp`             | App class declaration — all state members                     |
-| `gui/imgui/src/App.cpp`             | All UI rendering and engine lifecycle logic — read this first |
-| `gui/imgui/src/main.cpp`            | GLFW setup, ImGui init, render loop                           |
-| `gui/imgui/src/FileDialog_macOS.mm` | NSOpenPanel file pickers + macOS Dock icon setter             |
-| `gui/imgui/CMakeLists.txt`          | GUI build — includes xxd embed step for miniLogo.png          |
+| `source/gui/imgui/src/App.hpp`             | App class declaration — all state members                     |
+| `source/gui/imgui/src/App.cpp`             | All UI rendering and engine lifecycle logic — read this first |
+| `source/gui/imgui/src/main.cpp`            | GLFW setup, ImGui init, render loop                           |
+| `source/gui/imgui/src/FileDialog_macOS.mm` | NSOpenPanel file pickers + macOS Dock icon setter             |
+| `source/gui/imgui/CMakeLists.txt`          | GUI build — includes xxd embed step for miniLogo.png          |
 
 **Build:** `./init.sh` then `./build.sh --gui`. **Run:** `./run.sh`.
 
 ### `cult-transcoder` — ADM → LUSID Tool
 
 ```bash
-build/cult_transcoder/cult-transcoder transcode \
+build/internal/cult_transcoder/cult-transcoder transcode \
     --in <adm_wav_path> --in-format adm_wav \
     --out processedData/stageForRender/scene.lusid.json \
     --out-format lusid_json \
     [--lfe-mode hardcoded|speaker-label]
 ```
 
-Source: `cult_transcoder/` (git submodule). See `cult_transcoder/internalDocsMD/AGENTS-CULT.md` for full cult-transcoder docs.
+Source: `internal/cult_transcoder/` (git submodule). See `internal/cult_transcoder/internalDocs/AGENTS-CULT.md` for full cult-transcoder docs.
 
 ### `spatialroot_spatial_render` — Offline Batch Renderer
 
@@ -129,7 +129,7 @@ Renders a LUSID scene + sources to an N-channel WAV file (offline, not real-time
 
 ### LUSID Schema
 
-`LUSID/` submodule. Schema: `LUSID/schema/lusid_scene_v0.5.schema.json`. The Python LUSID runtime/library was removed in Phase 6 — only the schema and docs remain.
+`internal/LUSID/` submodule. Schema: `internal/LUSID/schema/lusid_scene_v0.5.schema.json`. The Python LUSID runtime/library was removed in Phase 6 — only the schema and docs remain.
 
 ---
 
@@ -140,18 +140,21 @@ spatialroot/
 ├── init.sh / build.sh / run.sh / engine.sh       # macOS/Linux
 ├── init.ps1 / build.ps1 / run.ps1                # Windows
 ├── build/                                         # CMake output
-│   ├── spatialroot_realtime
-│   ├── spatialroot_spatial_render
-│   ├── cult_transcoder/cult-transcoder
-│   └── gui/imgui/Spatial Root
-├── gui/imgui/                                     # Dear ImGui + GLFW GUI
-├── spatial_engine/
+│   ├── internal/cult_transcoder/cult-transcoder
+│   ├── source/gui/imgui/Spatial Root
+│   ├── source/spatial_engine/realtimeEngine/spatialroot_realtime
+│   └── source/spatial_engine/spatialRender/spatialroot_spatial_render
+├── source/
+│   ├── gui/imgui/                               # Dear ImGui + GLFW GUI
+│   ├── scripts/                                 # Repo helper scripts
+│   └── spatial_engine/
 │   ├── realtimeEngine/                            # Realtime engine source
 │   │   └── src/  (EngineSession.hpp, Spatializer.hpp, Streaming.hpp, ...)
 │   ├── src/                                       # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
 │   └── spatialRender/                             # Offline renderer source
-├── cult_transcoder/                               # ADM↔LUSID transcoder (submodule)
 ├── internal/
+│   ├── cult_transcoder/                           # ADM↔LUSID transcoder (submodule)
+│   ├── LUSID/                                     # LUSID schema + docs (no Python runtime)
 │   ├── cult-allolib/                              # Internal AlloLib fork: Audio I/O, DBAP, OSC
 │   └── ...                                        # Other internal dependencies / forks
 ├── thirdparty/
@@ -161,9 +164,8 @@ spatialroot/
 ├── processedData/                                 # Working outputs (scene, caches)
 │   └── stageForRender/scene.lusid.json            # Canonical scene input for engine
 ├── sourceData/                                    # Input audio + LUSID packages
-├── spatial_engine/speaker_layouts/               # JSON speaker layout files
-├── LUSID/                                         # LUSID schema + docs (no Python runtime)
-├── internalDocsMD/                                # Internal docs (this file + consolidated files)
+├── source/spatial_engine/speaker_layouts/         # JSON speaker layout files
+├── internalDocs/                                  # Internal docs (this file + consolidated files)
 └── PUBLIC_DOCS/                                   # Public-facing API docs
 ```
 
@@ -234,20 +236,20 @@ spatialroot/
 
 ### Making Changes to Realtime Engine
 
-1. Edit files in `spatial_engine/realtimeEngine/src/`
+1. Edit files in `source/spatial_engine/realtimeEngine/src/`
 2. Rebuild: `./build.sh --engine-only`
 3. Test: `./run.sh` (launches GUI) or run `spatialroot_realtime` directly
 
 ### Making Changes to Offline Renderer
 
-1. Edit files in `spatial_engine/src/` or `spatial_engine/spatialRender/`
+1. Edit files in `source/spatial_engine/src/` or `source/spatial_engine/spatialRender/`
 2. Rebuild: `./build.sh --offline-only`
 3. Test manually — see [SPATIALIZATION.md § CLI Usage](SPATIALIZATION.md#cli-usage)
 
 ### Adding a New Node Type to LUSID
 
-1. Update JSON schema: `LUSID/schema/lusid_scene_v0.5.schema.json`
-2. Update C++ loaders if renderer needs to consume it: `spatial_engine/src/JSONLoader.cpp`
+1. Update JSON schema: `internal/LUSID/schema/lusid_scene_v0.5.schema.json`
+2. Update C++ loaders if renderer needs to consume it: `source/spatial_engine/src/JSONLoader.cpp`
 3. Document in `PUBLIC_DOCS/API.md` and relevant internal docs
 
 ### Build Targets Reference
@@ -266,7 +268,7 @@ spatialroot/
 **Status:** Lightweight `cult-allolib` build implemented. See [REPO_AUDITING.md § AlloLib Dependency Audit](REPO_AUDITING.md#allolib-dependency-audit) for the current keep/disable/future-work notes.
 
 `init.sh` initializes `internal/cult-allolib` with `--depth 1` to keep submodule history small.  
-For existing deep clones: `./scripts/shallow-submodules.sh`  
+For existing deep clones: `./source/scripts/shallow-submodules.sh`  
 Sparse checkout is no longer the recommended approach; the supported path is the slimmed CMake configuration in `internal/cult-allolib`.
 
 ---
@@ -277,7 +279,7 @@ Sparse checkout is no longer the recommended approach; the supported path is the
 
 **Planned work:**
 
-- C++ classes inside `cult-transcoder/src/adm_profiles/`: `detect_profile.cpp`, `atmos_adapter.cpp`, `sony360_adapter.cpp`, `common.cpp`
+- C++ classes inside `internal/cult_transcoder/src/adm_profiles/`: `detect_profile.cpp`, `atmos_adapter.cpp`, `sony360_adapter.cpp`, `common.cpp`
 - Sony 360RA needs: opaque string IDs (hex-like suffixes `...0a`), `rtime/duration` with `S####` suffix, mute-block handling (gain=0 segments), block compaction to avoid massive frame counts
 
 **Status:** Document only. Await instructions before implementing.

@@ -1,4 +1,4 @@
-# gui/imgui/CMakeLists.txt
+# source/gui/imgui/CMakeLists.txt
 # Dear ImGui + GLFW OpenGL3 desktop GUI for Spatial Root (Stage 3).
 #
 # Submodule prerequisites — add once, then init.sh handles initialization:

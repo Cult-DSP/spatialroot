@@ -7,8 +7,8 @@ DBAP Focus Investigation Report
    thirdparty/allolib/src/sound/al_Dbap.cpp The entire DBAP implementation: gain formula, focus, no normalization
    thirdparty/allolib/include/al/sound/al_Dbap.hpp Public API; focus setter; comment describing focus as an exponent
    thirdparty/allolib/src/sound/al_Speaker.cpp vec() returns speaker Cartesian in audio space
-   spatial_engine/realtimeEngine/src/Spatializer.hpp Calls setFocus() and renderBuffer(); disabled compensation at line 1092
-   spatial_engine/realtimeEngine/src/Pose.hpp directionToDBAPPosition() applies pre-compensating coord flip at line 480
+   source/spatial_engine/realtimeEngine/src/Spatializer.hpp Calls setFocus() and renderBuffer(); disabled compensation at line 1092
+   source/spatial_engine/realtimeEngine/src/Pose.hpp directionToDBAPPosition() applies pre-compensating coord flip at line 480
 2. Call Path
 
 RealtimeBackend::processBlock()

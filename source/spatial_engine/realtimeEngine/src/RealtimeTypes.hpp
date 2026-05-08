@@ -98,11 +98,11 @@
 //
 // PROVENANCE:
 // - SpeakerLayoutData, SpeakerData, subwooferData → reused directly from
-//   spatial_engine/src/LayoutLoader.hpp (shared via include path)
+//   source/spatial_engine/src/LayoutLoader.hpp (shared via include path)
 // - SpatialData, Keyframe, TimeUnit → reused directly from
-//   spatial_engine/src/JSONLoader.hpp (shared via include path)
+//   source/spatial_engine/src/JSONLoader.hpp (shared via include path)
 // - MonoWavData, MultiWavData → reused directly from
-//   spatial_engine/src/WavUtils.hpp (shared via include path)
+//   source/spatial_engine/src/WavUtils.hpp (shared via include path)
 //
 // This file defines ONLY the additional types needed for real-time operation
 // that don't exist in the offline renderer's headers.

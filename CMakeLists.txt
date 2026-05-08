@@ -83,27 +83,26 @@ endif()
 
 # ── Components ────────────────────────────────────────────────────────────────
 if(SPATIALROOT_BUILD_CULT)
-    add_subdirectory(cult_transcoder)
+    add_subdirectory(internal/cult_transcoder)
 endif()
 
 if(SPATIALROOT_BUILD_ENGINE)
-    add_subdirectory(spatial_engine/realtimeEngine)
+    add_subdirectory(source/spatial_engine/realtimeEngine)
 endif()
 
 if(SPATIALROOT_BUILD_OFFLINE)
-    add_subdirectory(spatial_engine/spatialRender)
+    add_subdirectory(source/spatial_engine/spatialRender)
 endif()
 
 if(SPATIALROOT_BUILD_GUI)
-    # gui/imgui/ does not yet exist — created in Stage 3.
-    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/gui/imgui/CMakeLists.txt)
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/source/gui/imgui/CMakeLists.txt)
         message(FATAL_ERROR
-            "SPATIALROOT_BUILD_GUI=ON but gui/imgui/CMakeLists.txt does not exist.\n"
+            "SPATIALROOT_BUILD_GUI=ON but source/gui/imgui/CMakeLists.txt does not exist.\n"
             "The ImGui + GLFW GUI is implemented in Stage 3 of the refactor.\n"
             "Set SPATIALROOT_BUILD_GUI=OFF or wait until Stage 3 is complete."
         )
     endif()
-    add_subdirectory(gui/imgui)
+    add_subdirectory(source/gui/imgui)
 endif()
 
 # ── Summary ───────────────────────────────────────────────────────────────────

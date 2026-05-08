@@ -5,6 +5,19 @@
 
 ---
 
+## Repository Layout Reorganization (May 8, 2026)
+
+**Status:** Non-destructive path cleanup complete.
+
+- Active application code moved under `source/`: `source/gui/`, `source/spatial_engine/`, and `source/scripts/`
+- Bundled internal toolchain components moved under `internal/`: `internal/cult_transcoder/` and `internal/LUSID/`
+- Root CMake, nested CMake files, launcher scripts, GUI path helpers, and onboarding/build docs were updated to resolve from the new layout
+- Submodule paths were preserved via tracked moves, including root `.gitmodules` updates for `internal/cult_transcoder` and `internal/LUSID`
+- No engine, GUI, transcoder, or schema logic was intentionally refactored during this pass; changes were limited to path resolution and repository organization
+- One pre-existing untracked local artifact remains at `source/spatial_engine/realtimeEngine/build/`; it moved with the directory rename and was left untouched to avoid destructive cleanup of local generated files
+
+---
+
 ## Temporary Session Cache Cleanup (May 7, 2026)
 
 **Status:** Complete in the ImGui GUI layer.
@@ -55,8 +68,8 @@
 
 **Key insight:** Normalized DBAP moved the dangerous gain discontinuity from the speaker surface (where the proximity guard operates) to the normalization basin boundary (where one speaker becomes clearly dominant). The guard still functions correctly but is no longer the primary discontinuity risk. Any cross-block anchor mismatch that was previously sub-threshold under the old smooth gain function can now be audible.
 
-**Full diagnosis + code locations:** `internalDocsMD/engine_testing/5-7-engine_fix.md`  
-**Bug audit entry:** `internalDocsMD/engine_testing/4_1_bug_audit.md` — Bug 10 / Bug 10.1  
+**Full diagnosis + code locations:** `internalDocs/engine_testing/5-7-engine_fix.md`  
+**Bug audit entry:** `internalDocs/engine_testing/4_1_bug_audit.md` — Bug 10 / Bug 10.1  
 **Deferred follow-up:** Bug 10 (per-sub-step guard variability) — endpoint pre-guarding. Implement if pops persist.
 
 ---
@@ -69,7 +82,7 @@
 - `al_Dbap.cpp` now uses max-scaled L2 normalization in both `renderSample()` and `renderBuffer()`, enforcing `sum(v_k^2) = 1`
 - DBAP focus now has a minimum supported value of `0.1`, clamped across construction, runtime configuration, direct setters, and OSC callbacks
 - Focus auto-compensation was removed from engine, GUI, CLI, OSC, and current API-facing docs because normalized DBAP no longer needs a corrective gain layer
-- `internalDocsMD/dbapMath.md` was established as the DBAP math source of truth; onboarding and plan docs were updated to match
+- `internalDocs/DBAP/dbapMath.md` was established as the DBAP math source of truth; onboarding and plan docs were updated to match
 
 Historical note: older entries below may mention `autoCompensation`, `mPendingAutoComp`, or `thirdparty/allolib` because they describe the pre-normalization engine state at the time those entries were written.
 
@@ -91,7 +104,7 @@ Historical note: older entries below may mention `autoCompensation`, `mPendingAu
 **Deferred items:**
 
 - macOS Dock icon: in-app Dock tile icon via `[NSApp setApplicationIconImage:]` works while running. The desktop/Finder file icon does not update — requires packaging as a `.app` bundle. Deferred to a future phase.
-- `SPATIALROOT_BUILD_GUI=ON` flag: GUI build disabled in CI until `gui/imgui/CMakeLists.txt` integration is verified.
+- `SPATIALROOT_BUILD_GUI=ON` flag: GUI build disabled in CI until `source/gui/imgui/CMakeLists.txt` integration is verified.
 
 ### Stage 3 — ImGui + GLFW GUI
 
@@ -105,9 +118,9 @@ Historical note: older entries below may mention `autoCompensation`, `mPendingAu
 - Device scan: `al::AudioDevice` enumeration via Scan button + combo
 - `osascript` blocked main thread and appeared behind GLFW window; `NSOpenPanel` runs its own Cocoa modal
 
-**ImGui + GLFW CMake target** (03-30): Created `gui/imgui/CMakeLists.txt`. Uses `imgui_impl_opengl3_loader.h` — no GLAD or GLEW needed. Links `EngineSessionCore + glfw + OpenGL::GL`.
+**ImGui + GLFW CMake target** (03-30): Created `source/gui/imgui/CMakeLists.txt`. Uses `imgui_impl_opengl3_loader.h` — no GLAD or GLEW needed. Links `EngineSessionCore + glfw + OpenGL::GL`.
 
-**App class** (`App.hpp`/`App.cpp`) (03-30): `AppState` enum, `EngineSession mSession` (unique_ptr for restart), UI state, runtime controls (gain/focus/spkMixDb/subMixDb/autoComp/elevMode), `SubprocessRunner` for cult-transcoder invocation, thread-safe log. Full `tick()` → `tickEngine()` + `renderUI()`. `doLaunchEngine()` implements 5-stage lifecycle. `findCultTranscoder()` checks `build/cult_transcoder/cult-transcoder` then `cult_transcoder/build/cult-transcoder`. Historical note: the `autoComp` control mentioned here was removed on 2026-04-17 after DBAP normalization landed.
+**App class** (`App.hpp`/`App.cpp`) (03-30): `AppState` enum, `EngineSession mSession` (unique_ptr for restart), UI state, runtime controls (gain/focus/spkMixDb/subMixDb/autoComp/elevMode), `SubprocessRunner` for cult-transcoder invocation, thread-safe log. Full `tick()` → `tickEngine()` + `renderUI()`. `doLaunchEngine()` implements 5-stage lifecycle. `findCultTranscoder()` checks `build/internal/cult_transcoder/cult-transcoder` then `internal/cult_transcoder/build/cult-transcoder`. Historical note: the `autoComp` control mentioned here was removed on 2026-04-17 after DBAP normalization landed.
 
 **Aesthetic overhaul** (03-30): Menlo 13.5px font. `StyleColorsLight()` base + dark/cream palette. Workflow breadcrumb header. Four bordered card layout for engine tab: INPUT CONFIGURATION (186px), TRANSPORT (108px), RUNTIME CONTROLS (220px), ENGINE LOG.
 
@@ -147,7 +160,7 @@ Historical note: older entries below may mention `autoCompensation`, `mPendingAu
 
 - `runRealtime.py` — top-level launcher; calls `setupCppTools()` then invokes cult-transcoder + `spatialroot_realtime` as subprocesses
 - Python GUI (`gui/realtimeGUI/`) — PySide6, 3 process-hops from audio thread: GUI → Python QProcess → runRealtime.py → C++ binary
-- Python LUSID library (`LUSID/src/`) — parallel Python implementation of what JSONLoader.cpp does; maintenance liability
+- Python LUSID library (`internal/LUSID/src/`) — parallel Python implementation of what JSONLoader.cpp does; maintenance liability
 - Python venv at repo root — 1.6 GB, only PySide6 and python-osc actually needed
 - `EngineSession` already implements exact lifecycle described in API.md; CMake builds `EngineSessionCore` static library
 
@@ -298,7 +311,7 @@ else:
 | Tool             | POSIX                                                           | Windows                             |
 | ---------------- | --------------------------------------------------------------- | ----------------------------------- |
 | ADM Extractor    | `src/adm_extract/build/spatialroot_adm_extract`                 | `...spatialroot_adm_extract.exe`    |
-| Spatial Renderer | `spatial_engine/spatialRender/build/spatialroot_spatial_render` | `...spatialroot_spatial_render.exe` |
+| Spatial Renderer | `source/spatial_engine/spatialRender/build/spatialroot_spatial_render` | `...spatialroot_spatial_render.exe` |
 
 All of `src/config/configCPP*.py` removed in Phase 6.
 
@@ -483,12 +496,12 @@ Locked v1 design decisions documented at the time:
 | `src/analyzeADM/checkAudioChannels.py` | Per-channel audio activity scan                                       |
 | `src/packageADM/splitStems.py`         | Mono WAV stem splitter                                                |
 | `src/analyzeRender.py`                 | PDF render analysis                                                   |
-| `LUSID/src/`                           | Python LUSID library (scene.py, xml_etree_parser.py, parser.py)       |
+| `internal/LUSID/src/`                           | Python LUSID library (scene.py, xml_etree_parser.py, parser.py)       |
 
 ### cult-transcoder CLI Invocation (historical reference)
 
 ```bash
-cult_transcoder/build/cult-transcoder transcode \
+internal/cult_transcoder/build/cult-transcoder transcode \
     --in         <adm_wav_path> \
     --in-format  adm_wav \
     --out        processedData/stageForRender/scene.lusid.json \

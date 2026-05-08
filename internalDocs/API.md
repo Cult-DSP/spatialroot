@@ -1,7 +1,7 @@
 # EngineSession API — Internal Reference
 
 **Last Updated:** March 2026  
-**Source files:** `spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
+**Source files:** `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
 
 ---
 
@@ -122,7 +122,7 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 
 **Key file pointers:**
 
-- Public API entry point: `spatial_engine/realtimeEngine/src/EngineSession.hpp`
-- Core library CMake target: `spatial_engine/realtimeEngine/CMakeLists.txt` (`EngineSessionCore`)
-- Working reference: `spatial_engine/realtimeEngine/src/internal_validation_runner.cpp`
-- Test assets: `sourceData/lusid_package/scene.lusid.json`, `spatial_engine/speaker_layouts/stereo.json`
+- Public API entry point: `source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+- Core library CMake target: `source/spatial_engine/realtimeEngine/CMakeLists.txt` (`EngineSessionCore`)
+- Working reference: `source/spatial_engine/realtimeEngine/src/internal_validation_runner.cpp`
+- Test assets: `sourceData/lusid_package/scene.lusid.json`, `source/spatial_engine/speaker_layouts/stereo.json`

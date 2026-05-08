@@ -143,23 +143,23 @@ echo ""
 # ── Step 3: Initialize cult_transcoder submodule ──────────────────────────────
 echo "Step 3: Initializing cult_transcoder submodule..."
 
-CULT_CMAKE="${PROJECT_ROOT}/cult_transcoder/CMakeLists.txt"
+CULT_CMAKE="${PROJECT_ROOT}/internal/cult_transcoder/CMakeLists.txt"
 if [ -f "${CULT_CMAKE}" ]; then
     echo "✓ cult_transcoder already initialized"
 else
     echo "Fetching cult_transcoder..."
-    git submodule update --init --depth 1 --checkout cult_transcoder
+    git submodule update --init --depth 1 --checkout internal/cult_transcoder
     echo "✓ cult_transcoder initialized"
 fi
 
 # cult_transcoder owns nested vendored deps that must be present before configure.
-LIBBW64_HEADER="${PROJECT_ROOT}/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp"
-R8BRAIN_HEADER="${PROJECT_ROOT}/cult_transcoder/thirdparty/r8brain/CDSPResampler.h"
+LIBBW64_HEADER="${PROJECT_ROOT}/internal/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp"
+R8BRAIN_HEADER="${PROJECT_ROOT}/internal/cult_transcoder/thirdparty/r8brain/CDSPResampler.h"
 if [ -f "${LIBBW64_HEADER}" ] && [ -f "${R8BRAIN_HEADER}" ]; then
     echo "✓ cult_transcoder nested submodules already initialized"
 else
     echo "Fetching cult_transcoder nested submodules recursively..."
-    git -C "${PROJECT_ROOT}/cult_transcoder" submodule update --init --recursive --depth 1 --checkout
+    git -C "${PROJECT_ROOT}/internal/cult_transcoder" submodule update --init --recursive --depth 1 --checkout
     echo "✓ cult_transcoder nested submodules initialized"
 fi
 echo ""
@@ -221,9 +221,9 @@ echo "============================================================"
 echo "✓ Initialization complete!"
 echo ""
 echo "Binaries:"
-echo "  spatialroot_realtime       : build/spatial_engine/realtimeEngine/spatialroot_realtime"
-echo "  spatialroot_spatial_render : build/spatial_engine/spatialRender/spatialroot_spatial_render"
-echo "  cult-transcoder            : build/cult_transcoder/cult-transcoder"
+echo "  spatialroot_realtime       : build/source/spatial_engine/realtimeEngine/spatialroot_realtime"
+echo "  spatialroot_spatial_render : build/source/spatial_engine/spatialRender/spatialroot_spatial_render"
+echo "  cult-transcoder            : build/internal/cult_transcoder/cult-transcoder"
 echo ""
 echo "For quick dev rebuilds of the realtime engine only:"
 echo "  ./engine.sh"

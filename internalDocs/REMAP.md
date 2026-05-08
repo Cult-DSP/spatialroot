@@ -136,14 +136,14 @@ No internal DSP code reads `mConfig.outputChannels` as internal-bus width.
 
 | File | Change |
 |---|---|
-| `spatial_engine/realtimeEngine/src/Spatializer.hpp` | Validation gate; two-space init; `mSubwooferInternalChannels` + `mSubwooferOutputChannels`; `internalChannelCount` / `outputChannelCount`; `mOutputRouting.buildAuto()`; `mRemap = &mOutputRouting`; Phase 7 scatter; `isInternalSubwooferChannel` / `isOutputSubwooferChannel`; `numInternalChannels()` + deprecated `numRenderChannels()` |
-| `spatial_engine/realtimeEngine/src/OutputRemap.hpp` | `buildAuto()` method; `checkIdentity()` enforces width equality; header updated; `load()` deprecation notice |
-| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp` | `outputChannels` comment updated to reflect output-bus-only role |
-| `spatial_engine/realtimeEngine/src/EngineSession.cpp` | Fixed stale bug (`outputChannels` passed as both args to `load()`); deprecation warning on CSV path; updated log strings |
-| `spatial_engine/realtimeEngine/src/EngineSession.hpp` | Deprecation comment on `remapCsvPath` |
-| `spatial_engine/realtimeEngine/src/main.cpp` | `--remap` help text marked deprecated; comment at parse site |
-| `gui/imgui/src/App.cpp` | CSV field moved into collapsed `Legacy / Internal` section |
-| `gui/imgui/src/App.hpp` | Deprecation comment on `mRemapPath` |
+| `source/spatial_engine/realtimeEngine/src/Spatializer.hpp` | Validation gate; two-space init; `mSubwooferInternalChannels` + `mSubwooferOutputChannels`; `internalChannelCount` / `outputChannelCount`; `mOutputRouting.buildAuto()`; `mRemap = &mOutputRouting`; Phase 7 scatter; `isInternalSubwooferChannel` / `isOutputSubwooferChannel`; `numInternalChannels()` + deprecated `numRenderChannels()` |
+| `source/spatial_engine/realtimeEngine/src/OutputRemap.hpp` | `buildAuto()` method; `checkIdentity()` enforces width equality; header updated; `load()` deprecation notice |
+| `source/spatial_engine/realtimeEngine/src/RealtimeTypes.hpp` | `outputChannels` comment updated to reflect output-bus-only role |
+| `source/spatial_engine/realtimeEngine/src/EngineSession.cpp` | Fixed stale bug (`outputChannels` passed as both args to `load()`); deprecation warning on CSV path; updated log strings |
+| `source/spatial_engine/realtimeEngine/src/EngineSession.hpp` | Deprecation comment on `remapCsvPath` |
+| `source/spatial_engine/realtimeEngine/src/main.cpp` | `--remap` help text marked deprecated; comment at parse site |
+| `source/gui/imgui/src/App.cpp` | CSV field moved into collapsed `Legacy / Internal` section |
+| `source/gui/imgui/src/App.hpp` | Deprecation comment on `mRemapPath` |
 
 ---
 

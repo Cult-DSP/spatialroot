@@ -26,11 +26,11 @@ set(CULT_ALLOLIB_ENABLE_EXAMPLES   OFF CACHE BOOL "Disable cult-allolib examples
 set(CULT_ALLOLIB_ENABLE_TESTS      OFF CACHE BOOL "Disable cult-allolib tests by default")
 
 # cult-allolib lives at <project_root>/internal/cult-allolib
-# From realtimeEngine/, that is ../../internal/cult-allolib
+# From source/spatial_engine/realtimeEngine/, that is ../../../internal/cult-allolib
 # Guard: when built via the root CMakeLists.txt, cult-allolib is already added there.
 if(NOT TARGET al)
     add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
     )
 endif()
@@ -44,7 +44,7 @@ add_library(EngineSessionCore
 )
 
 target_include_directories(EngineSessionCore PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/renderer
     ${CMAKE_CURRENT_SOURCE_DIR}/src

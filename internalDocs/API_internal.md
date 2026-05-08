@@ -1,7 +1,7 @@
 # EngineSession API — Internal Reference
 
 **Last Updated:** April 2026  
-**Source files:** `spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
+**Source files:** `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
 
 ---
 
@@ -186,8 +186,8 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 **`dbapFocus` default divergence:** `RealtimeConfig` atomic default is `1.0f`; `RuntimeParams::dbapFocus` default is `1.5f`. The `1.5f` value from `RuntimeParams` is written to the atomic by `configureRuntime()`. The `1.0f` atomic default is only ever seen if the engine is started without calling `configureRuntime()` first — do not do this.
 
 **Key file pointers:**
-- Public API entry point: `spatial_engine/realtimeEngine/src/EngineSession.hpp`
-- Implementation: `spatial_engine/realtimeEngine/src/EngineSession.cpp`
-- Core library CMake target: `spatial_engine/realtimeEngine/CMakeLists.txt` (`EngineSessionCore`)
-- Working reference: `spatial_engine/realtimeEngine/src/internal_validation_runner.cpp`
-- Test assets: `sourceData/lusid_package/scene.lusid.json`, `spatial_engine/speaker_layouts/stereo.json`
+- Public API entry point: `source/spatial_engine/realtimeEngine/src/EngineSession.hpp`
+- Implementation: `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- Core library CMake target: `source/spatial_engine/realtimeEngine/CMakeLists.txt` (`EngineSessionCore`)
+- Working reference: `source/spatial_engine/realtimeEngine/src/internal_validation_runner.cpp`
+- Test assets: `sourceData/lusid_package/scene.lusid.json`, `source/spatial_engine/speaker_layouts/stereo.json`

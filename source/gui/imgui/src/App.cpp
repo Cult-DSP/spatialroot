@@ -830,8 +830,8 @@ std::string App::resolveProjectPath(const std::string& relPath) const {
 
 std::string App::findCultTranscoder() const {
     std::vector<std::string> candidates = {
-        resolveProjectPath("build/cult_transcoder/cult-transcoder"),
-        resolveProjectPath("cult_transcoder/build/cult-transcoder"),
+        resolveProjectPath("build/internal/cult_transcoder/cult-transcoder"),
+        resolveProjectPath("internal/cult_transcoder/build/cult-transcoder"),
     };
 #ifdef _WIN32
     for (auto& c : candidates) c += ".exe";

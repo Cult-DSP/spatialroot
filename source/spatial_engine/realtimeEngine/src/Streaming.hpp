@@ -82,13 +82,13 @@
 // DEPENDENCY:
 // - <sndfile.h> comes transitively through Gamma (AlloLib external).
 //   Gamma's CMake does: find_package(LibSndFile QUIET) and exports via PUBLIC.
-//   Same API that spatial_engine/src/WavUtils.cpp already uses.
+//   Same API that source/spatial_engine/src/WavUtils.cpp already uses.
 //   No new dependencies introduced.
 //
 // PROVENANCE:
 // - Double-buffer pattern adapted from mainplayer.hpp prototype
-//   (internalDocsMD/realtime_planning/mainplayer.hpp)
-// - File loading pattern adapted from WavUtils.cpp (spatial_engine/src/)
+//   (internalDocs/realtime_planning/mainplayer.hpp)
+// - File loading pattern adapted from WavUtils.cpp (source/spatial_engine/src/)
 // - Design follows realtimeEngine_designDoc.md §Streaming Module
 
 #pragma once
@@ -106,7 +106,7 @@
 #include <sndfile.h>  // via Gamma (AlloLib external) — NOT a new dependency
 
 #include "RealtimeTypes.hpp"
-#include "JSONLoader.hpp"  // SpatialData, Keyframe — shared from spatial_engine/src/
+#include "JSONLoader.hpp"  // SpatialData, Keyframe — shared from source/spatial_engine/src/
 #include "MultichannelReader.hpp"  // ADM direct streaming — multichannel reader
 
 namespace fs = std::filesystem;

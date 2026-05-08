@@ -123,7 +123,7 @@ Per-sub-step guard creates non-monotonic gains under normalized DBAP Confirmed a
 Normal-path doBlend (Bug 9.1) is also broken Speculative — may still be sound for pure normal-path sources; no evidence to reopen without testing
 360RA isolated pop at ~96 s was an early symptom of this mechanism Plausible but speculative
 Files to Modify
-spatial_engine/realtimeEngine/src/Spatializer.hpp
+source/spatial_engine/realtimeEngine/src/Spatializer.hpp
 Private section: add mPrevWasFastMover vector
 prepareForSources(): assign mPrevWasFastMover (default 0)
 Fast-mover loop end: capture lastSubSafePos

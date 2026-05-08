@@ -5,7 +5,7 @@ Lead Developer: Lucian Parisi
 
 Spatial Root is a C++ spatial audio engine for decoding ADM BW64 files and rendering to multichannel speaker arrays using DBAP spatialization. It includes a real-time streaming engine, an offline batch renderer, and the CULT transcoder for ADM→LUSID scene conversion.
 
-A C++ Dear ImGui + GLFW desktop GUI (`gui/imgui/`) is the replacement for the legacy Python GUI (archived/removed in Phase 6).
+A C++ Dear ImGui + GLFW desktop GUI (`source/gui/imgui/`) is the replacement for the legacy Python GUI (archived/removed in Phase 6).
 
 ---
 
@@ -38,9 +38,9 @@ After setup, binaries are at:
 
 | Binary                       | Path                                                            |
 | ---------------------------- | --------------------------------------------------------------- |
-| `spatialroot_realtime`       | `build/spatial_engine/realtimeEngine/spatialroot_realtime`      |
-| `spatialroot_spatial_render` | `build/spatial_engine/spatialRender/spatialroot_spatial_render` |
-| `cult-transcoder`            | `build/cult_transcoder/cult-transcoder`                         |
+| `spatialroot_realtime`       | `build/source/spatial_engine/realtimeEngine/spatialroot_realtime`      |
+| `spatialroot_spatial_render` | `build/source/spatial_engine/spatialRender/spatialroot_spatial_render` |
+| `cult-transcoder`            | `build/internal/cult_transcoder/cult-transcoder`                         |
 
 ### Subsequent Builds
 
@@ -63,22 +63,22 @@ The engine requires a LUSID scene JSON file. For ADM input, use `cult-transcoder
 
 ```bash
 # Step 1: transcode ADM → LUSID scene
-./build/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
+./build/internal/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
 
 # Step 2: play with the realtime engine
-./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+./build/source/spatial_engine/realtimeEngine/spatialroot_realtime \
     --scene processedData/stageForRender/scene.lusid.json \
     --adm   sourceData/myfile.wav \
-    --layout spatial_engine/speaker_layouts/allosphere_layout.json
+    --layout source/spatial_engine/speaker_layouts/allosphere_layout.json
 ```
 
 ### LUSID package (mono stems) workflow
 
 ```bash
-./build/spatial_engine/realtimeEngine/spatialroot_realtime \
+./build/source/spatial_engine/realtimeEngine/spatialroot_realtime \
     --scene   processedData/stageForRender/scene.lusid.json \
     --sources processedData/stageForRender/ \
-    --layout  spatial_engine/speaker_layouts/allosphere_layout.json
+    --layout  source/spatial_engine/speaker_layouts/allosphere_layout.json
 ```
 
 ### All flags
@@ -125,10 +125,10 @@ Converts ADM BW64 WAV files to the LUSID scene JSON format required by the engin
 
 ```bash
 # Transcode an ADM file → LUSID JSON
-./build/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
+./build/internal/cult_transcoder/cult-transcoder transcode sourceData/myfile.wav
 
 # Show all options
-./build/cult_transcoder/cult-transcoder --help
+./build/internal/cult_transcoder/cult-transcoder --help
 ```
 
 ---
@@ -138,7 +138,7 @@ Converts ADM BW64 WAV files to the LUSID scene JSON format required by the engin
 Batch multichannel WAV rendering from a LUSID scene. Direct binary invocation is the post-refactor path.
 
 ```bash
-./build/spatial_engine/spatialRender/spatialroot_spatial_render \
+./build/source/spatial_engine/spatialRender/spatialroot_spatial_render \
     <scene.lusid.json> <layout.json> <output.wav> [options]
 
 Options:
@@ -169,7 +169,7 @@ The root `CMakeLists.txt` builds all components via option flags:
 SPATIALROOT_BUILD_ENGINE   ON   # spatialroot_realtime
 SPATIALROOT_BUILD_OFFLINE  ON   # spatialroot_spatial_render
 SPATIALROOT_BUILD_CULT     ON   # cult-transcoder
-SPATIALROOT_BUILD_GUI      OFF  # ImGui + GLFW GUI (gui/imgui/)
+SPATIALROOT_BUILD_GUI      OFF  # ImGui + GLFW GUI (source/gui/imgui/)
 ```
 
 Each component can also be built standalone from its own CMakeLists.txt.
@@ -211,7 +211,7 @@ The realtime engine exposes a C++ embedding API (`EngineSessionCore` static libr
 
 ## C++ GUI
 
-The Dear ImGui + GLFW desktop GUI at `gui/imgui/` is the primary GUI. Build it with:
+The Dear ImGui + GLFW desktop GUI at `source/gui/imgui/` is the primary GUI. Build it with:
 
 ```bash
 ./build.sh --gui          # macOS / Linux
@@ -241,17 +241,26 @@ Temporary generated sessions are deleted when the app closes unless you preserve
 
 ```
 spatialroot/
-├── spatial_engine/
-│   ├── realtimeEngine/     # spatialroot_realtime engine + EngineSessionCore library
-│   ├── spatialRender/      # spatialroot_spatial_render offline renderer
-│   └── src/                # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
-├── cult_transcoder/        # cult-transcoder (git submodule, standalone)
-├── thirdparty/
-│   ├── allolib/            # AlloLib (audio I/O, DBAP, OSC; git submodule)
-│   └── libsndfile/         # libsndfile (WAV I/O; git submodule, vendored)
-├── gui/
-│   ├── imgui/              # C++ Dear ImGui + GLFW desktop GUI (primary)
+├── source/
+│   ├── gui/
+│   │   └── imgui/          # C++ Dear ImGui + GLFW desktop GUI (primary)
+│   ├── scripts/            # Repo-level developer helper scripts
+│   └── spatial_engine/
+│       ├── realtimeEngine/ # spatialroot_realtime engine + EngineSessionCore
+│       ├── spatialRender/  # spatialroot_spatial_render offline renderer
+│       ├── speaker_layouts/
+│       └── src/            # Shared loaders (JSONLoader, LayoutLoader, WavUtils)
+├── internal/
+│   ├── cult_transcoder/    # cult-transcoder (git submodule, standalone)
+│   ├── LUSID/              # LUSID schema + docs (git submodule)
+│   └── cult-allolib/       # Internal AlloLib fork
+├── docs/                   # If/when public docs are split from repo root docs
+├── examples/               # If/when shared examples are promoted from subtrees
+├── thirdparty/             # Additional vendored dependencies
+├── processedData/          # Working outputs
+├── sourceData/             # Input audio + LUSID packages
 ├── PUBLIC_DOCS/API.md      # EngineSession C++ embedding API documentation
+├── internalDocs/           # Internal onboarding, build, engine, and history notes
 ├── CMakeLists.txt          # Root build — all components
 ├── build.sh / init.sh      # macOS/Linux build scripts
 └── build.ps1 / init.ps1    # Windows build scripts

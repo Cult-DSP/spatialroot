@@ -1,5 +1,5 @@
 [submodule "LUSID"]
-	path = LUSID
+	path = internal/LUSID
 	url = https://github.com/Cult-DSP/LUSID
 
 [submodule "thirdparty/libbw64"]
@@ -17,7 +17,7 @@
 # 	url = https://github.com/ebu/ebu-adm-toolbox
 
 [submodule "cult_transcoder"]
-	path = cult_transcoder
+	path = internal/cult_transcoder
 	url = https://github.com/Cult-DSP/cult_transcoder
 [submodule "thirdparty/imgui"]
 	path = thirdparty/imgui

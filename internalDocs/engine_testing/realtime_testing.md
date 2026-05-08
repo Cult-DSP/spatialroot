@@ -1,6 +1,6 @@
 # 5- 7 - 26
 
-post cult-allolib normalized dbap fix for fast movers documented in internalDocsMD/engine_testing/5-7-engine_fix.md
+post cult-allolib normalized dbap fix for fast movers documented in internalDocs/engine_testing/5-7-engine_fix.md
 
 # 4 - 1 - 26 realtime testing
 
@@ -2292,7 +2292,7 @@ Hold Track B as-is. Test Canyon first. If Ascent pops persist at the same timest
 
 ## Pre Test Dev Notes:
 
-Switched the buffer size from 512 to 128. Change was maid in spatial_engine/realtimeEngine/src/main.cpp && gui/realtimeGUI/realtime_runner.py. overwritten in the gui with tests as follows:
+Switched the buffer size from 512 to 128. Change was maid in source/spatial_engine/realtimeEngine/src/main.cpp && gui/realtimeGUI/realtime_runner.py. overwritten in the gui with tests as follows:
 
 Offering test 1 [buffer 256 ]
 

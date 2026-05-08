@@ -19,19 +19,19 @@ Spatial Root does not currently include or link against AlloLib graphics, window
 
 Direct `al/` includes found in Spatial Root:
 
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `al/io/al_AudioIO.hpp`
-- `spatial_engine/realtimeEngine/src/EngineSession.cpp`: `al/ui/al_Parameter.hpp`, `al/ui/al_ParameterServer.hpp`
-- `spatial_engine/realtimeEngine/src/main.cpp`: `al/io/al_AudioIO.hpp`
-- `spatial_engine/realtimeEngine/src/Pose.hpp`: `al/math/al_Vec.hpp`
-- `spatial_engine/realtimeEngine/src/Spatializer.hpp`: `al/io/al_AudioIO.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Speaker.hpp`
-- `spatial_engine/src/LayoutLoader.hpp`: `al/sound/al_Speaker.hpp`
-- `spatial_engine/src/renderer/SpatialRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Lbap.hpp`, `al/sound/al_Spatializer.hpp`, `al/io/al_AudioIOData.hpp`
-- `spatial_engine/src/vbap_src/VBAPRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/io/al_AudioIOData.hpp`
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `al/io/al_AudioIO.hpp`
+- `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`: `al/ui/al_Parameter.hpp`, `al/ui/al_ParameterServer.hpp`
+- `source/spatial_engine/realtimeEngine/src/main.cpp`: `al/io/al_AudioIO.hpp`
+- `source/spatial_engine/realtimeEngine/src/Pose.hpp`: `al/math/al_Vec.hpp`
+- `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`: `al/io/al_AudioIO.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Speaker.hpp`
+- `source/spatial_engine/src/LayoutLoader.hpp`: `al/sound/al_Speaker.hpp`
+- `source/spatial_engine/src/renderer/SpatialRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/sound/al_Dbap.hpp`, `al/sound/al_Lbap.hpp`, `al/sound/al_Spatializer.hpp`, `al/io/al_AudioIOData.hpp`
+- `source/spatial_engine/src/vbap_src/VBAPRenderer.hpp`: `al/math/al_Vec.hpp`, `al/sound/al_Vbap.hpp`, `al/io/al_AudioIOData.hpp`
 
 Direct target links found in Spatial Root:
 
-- `spatial_engine/realtimeEngine/CMakeLists.txt`: `al`, `Gamma`, `SndFile::sndfile`
-- `spatial_engine/spatialRender/CMakeLists.txt`: `al`, `Gamma`, `SndFile::sndfile`
+- `source/spatial_engine/realtimeEngine/CMakeLists.txt`: `al`, `Gamma`, `SndFile::sndfile`
+- `source/spatial_engine/spatialRender/CMakeLists.txt`: `al`, `Gamma`, `SndFile::sndfile`
 
 ## Dependency Notes
 
@@ -40,7 +40,7 @@ Direct target links found in Spatial Root:
 - `al/ui/al_Parameter.cpp` additionally uses `al/io/al_File.hpp`.
 - `al/protocol/al_OSC.hpp` depends on `al/system/al_Thread.hpp` and `al/system/al_Time.hpp`.
 - `al/sound/al_Dbap.hpp`, `al_Vbap.hpp`, `al_Lbap.hpp`, and `al_Spatializer.hpp` depend on `al/math/al_Vec.hpp`, `al/sound/al_Speaker.hpp`, `al/spatial/al_Pose.hpp`, and `al/io/al_AudioIOData.hpp`.
-- GUI code in `gui/imgui/src/App.cpp` uses `al/io/al_AudioIO.hpp`, but the GUI's actual graphics stack is native `GLFW`/OpenGL/ImGui rather than AlloLib graphics.
+- GUI code in `source/gui/imgui/src/App.cpp` uses `al/io/al_AudioIO.hpp`, but the GUI's actual graphics stack is native `GLFW`/OpenGL/ImGui rather than AlloLib graphics.
 
 ## Audit Table
 

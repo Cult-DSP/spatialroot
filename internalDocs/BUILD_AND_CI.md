@@ -47,8 +47,8 @@ cmake --build build --parallel
 `actions/checkout@v4` with `submodules: recursive`:
 
 - `internal/cult-allolib`
-- `cult_transcoder` → `thirdparty/libbw64`, `thirdparty/libadm`
-- `LUSID`
+- `internal/cult_transcoder` → `thirdparty/libbw64`, `thirdparty/libadm`
+- `internal/LUSID`
 - `thirdparty/imgui`, `thirdparty/glfw` — checked out but unused (GUI off)
 
 ### Ubuntu System Packages
@@ -72,9 +72,9 @@ All C++ dependencies are git submodules — no package manager installs required
 | ---------- | ------------------------------------ | ---------------------------------------------- |
 | AlloLib    | `internal/cult-allolib`              | Internal fork: audio I/O, DBAP, OSC            |
 | libsndfile | `thirdparty/libsndfile`              | WAV file I/O; built static, no external codecs |
-| libbw64    | `cult_transcoder/thirdparty/libbw64` | BW64 container reader (transcoder)             |
+| libbw64    | `internal/cult_transcoder/thirdparty/libbw64` | BW64 container reader (transcoder)             |
 | pugixml    | FetchContent (transcoder)            | XML parsing                                    |
-| LUSID      | `LUSID/`                             | Scene schema                                   |
+| LUSID      | `internal/LUSID/`                             | Scene schema                                   |
 
 libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` and `BUILD_PROGRAMS/EXAMPLES/TESTING=OFF`. Exports `SndFile::sndfile` CMake target. The vendored build is also detected by AlloLib's Gamma via pre-set `SNDFILE_INCLUDE_DIR`/`SNDFILE_LIBRARY` cache variables.
 
@@ -82,7 +82,7 @@ libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` and `BUILD_PROGRAMS/EXAMPLES
 
 **Fix 1 — `sndfile.h` not found (macOS + Ubuntu):** `thirdparty/libsndfile` was never initialized or vendored. Fixed by adding it as a git submodule and wiring into root CMake before AlloLib.
 
-**Fix 2 — `std::strcmp` not in `std` (Ubuntu/gcc):** `cult_transcoder/src/adm_to_lusid.cpp` called `std::strcmp` without `<cstring>`. Resolves transitively on macOS/clang but not gcc. Fixed with `#include <cstring>`.
+**Fix 2 — `std::strcmp` not in `std` (Ubuntu/gcc):** `internal/cult_transcoder/src/adm_to_lusid.cpp` called `std::strcmp` without `<cstring>`. Resolves transitively on macOS/clang but not gcc. Fixed with `#include <cstring>`.
 
 **Fix 3 — libbw64 header warning → error under `-Werror` (Ubuntu):** `libbw64` declared as plain `INTERFACE` library, so gcc treated headers as project headers. `bw64/parser.hpp:58` has a signed/unsigned comparison that became a hard error. Fixed: `target_include_directories(libbw64 SYSTEM INTERFACE ...)`.
 
@@ -91,7 +91,7 @@ libsndfile is built with `ENABLE_EXTERNAL_LIBS=OFF` and `BUILD_PROGRAMS/EXAMPLES
 - No audio device testing — hardware I/O untestable on headless runners
 - No build caching — submodules and AlloLib rebuild fresh each run
 - No artifact upload — binaries discarded after job
-- No GUI — excluded until `gui/imgui/` is implemented
+- No GUI — excluded until `source/gui/imgui/` is implemented
 
 ### Extending CI
 
@@ -173,15 +173,15 @@ Root CMake had already moved to `internal/cult-allolib`, but the Windows bootstr
 The PowerShell init path always invoked `build.ps1 -GuiBuild` but did not initialize `thirdparty/imgui` or `thirdparty/glfw`. Fixed: `init.ps1` now mirrors `init.sh` and conditionally initializes `thirdparty/imgui` and `thirdparty/glfw` when they are registered in `.gitmodules`.
 
 **3. GUI logo embedding depended on `xxd`**
-`gui/imgui/CMakeLists.txt` previously used `xxd -i` to generate `miniLogo_data.h`. `xxd` is common on Unix-like systems but not a standard Windows/Visual Studio tool. Fixed: logo embedding now uses a portable CMake script (`gui/imgui/cmake/EmbedBinaryAsHeader.cmake`), removing the external `xxd` dependency from Windows GUI builds.
+`source/gui/imgui/CMakeLists.txt` previously used `xxd -i` to generate `miniLogo_data.h`. `xxd` is common on Unix-like systems but not a standard Windows/Visual Studio tool. Fixed: logo embedding now uses a portable CMake script (`source/gui/imgui/cmake/EmbedBinaryAsHeader.cmake`), removing the external `xxd` dependency from Windows GUI builds.
 
 **4. Live engine / renderer files still used `M_PI` without MSVC opt-in**
 Some active realtime and offline spatialization files still used `M_PI` directly, but only a historical test-file fix was documented. MSVC requires `_USE_MATH_DEFINES` before `<cmath>` for `M_PI` to exist. Fixed in the active code paths by adding the MSVC guard before `<cmath>` in:
 
-- `spatial_engine/realtimeEngine/src/Pose.hpp`
-- `spatial_engine/realtimeEngine/src/Spatializer.hpp`
-- `spatial_engine/src/renderer/SpatialRenderer.cpp`
-- `spatial_engine/src/vbap_src/VBAPRenderer.cpp`
+- `source/spatial_engine/realtimeEngine/src/Pose.hpp`
+- `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`
+- `source/spatial_engine/src/renderer/SpatialRenderer.cpp`
+- `source/spatial_engine/src/vbap_src/VBAPRenderer.cpp`
 
 ### Stale Submodule Entries
 
@@ -189,7 +189,7 @@ Some active realtime and offline spatialization files still used `M_PI` directly
 
 ### FetchContent Requires Network
 
-`cult_transcoder/CMakeLists.txt` fetches Catch2 (v3.5.3) and pugixml (v1.14) from GitHub at first configure. Air-gapped builds will fail on first run.
+`internal/cult_transcoder/CMakeLists.txt` fetches Catch2 (v3.5.3) and pugixml (v1.14) from GitHub at first configure. Air-gapped builds will fail on first run.
 
 ---
 
@@ -204,30 +204,30 @@ Some active realtime and offline spatialization files still used `M_PI` directly
 | Catch2     | v3.5.3  | `https://github.com/catchorg/Catch2.git` |
 | pugixml    | v1.14   | `https://github.com/zeux/pugixml.git`    |
 
-Fetched into `cult_transcoder/build/_deps/` at configure time. Network required on first run.
+Fetched into `internal/cult_transcoder/build/_deps/` at configure time. Network required on first run.
 
 ### cult-transcoder Submodule Nesting
 
-`cult_transcoder` is a git submodule of spatialroot **and** has its own nested submodule (`thirdparty/libbw64`). From spatialroot root:
+`internal/cult_transcoder` is a git submodule of spatialroot **and** has its own nested submodule (`thirdparty/libbw64`). From spatialroot root:
 
 ```bash
-git submodule update --init cult_transcoder
-cd cult_transcoder
+git submodule update --init internal/cult_transcoder
+cd internal/cult_transcoder
 git submodule update --init thirdparty/libbw64
 ```
 
-`init.sh` / `init.ps1` handle this automatically via `initializeCultTranscoderSubmodules()` which runs `git submodule update --init --depth 1 thirdparty/libbw64` from within `cult_transcoder/`.
+`init.sh` / `init.ps1` handle this automatically via `initializeCultTranscoderSubmodules()` which runs `git submodule update --init --depth 1 thirdparty/libbw64` from within `internal/cult_transcoder/`.
 
-Presence check: `cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp` — the same path that `cult_transcoder/CMakeLists.txt` checks in its `FATAL_ERROR` guard.
+Presence check: `internal/cult_transcoder/thirdparty/libbw64/include/bw64/bw64.hpp` — the same path that `internal/cult_transcoder/CMakeLists.txt` checks in its `FATAL_ERROR` guard.
 
 ### cult-transcoder Binary Paths
 
-- macOS/Linux: `build/cult_transcoder/cult-transcoder`
-- Windows: `build/cult_transcoder/Release/cult-transcoder.exe` (VS multi-config) or `build/cult_transcoder/cult-transcoder.exe` (Ninja single-config); check both.
+- macOS/Linux: `build/internal/cult_transcoder/cult-transcoder`
+- Windows: `build/internal/cult_transcoder/Release/cult-transcoder.exe` (VS multi-config) or `build/internal/cult_transcoder/cult-transcoder.exe` (Ninja single-config); check both.
 
 ### SPATIALROOT_BUILD_GUI Flag
 
-`SPATIALROOT_BUILD_GUI=OFF` (default) disables GUI build. Enable with `SPATIALROOT_BUILD_GUI=ON`. GUI build is not yet enabled in CI — verify `gui/imgui/CMakeLists.txt` integration before enabling there.
+`SPATIALROOT_BUILD_GUI=OFF` (default) disables GUI build. Enable with `SPATIALROOT_BUILD_GUI=ON`. GUI build is not yet enabled in CI — verify `source/gui/imgui/CMakeLists.txt` integration before enabling there.
 
 ### Current Bootstrap Expectations
 

@@ -35,11 +35,11 @@ With the structural contract verified in code, the next priority is transitionin
 
 ## Technical Artifacts for Token Savings & Quick Context
 
-- **Validation Runner Path:** `spatial_engine/realtimeEngine/src/internal_validation_runner.cpp` (The active, working reference code for calling the core API).
-- **Core Library Target Location:** `spatial_engine/realtimeEngine/CMakeLists.txt` holds the `EngineSessionCore` CMake target containing the `EngineSession`, `JSONLoader`, `LayoutLoader`, and `WavUtils` components.
-- **Header Files:** Wait to read `RealtimeBackend.hpp`, `Spatializer.hpp`, `Streaming.hpp` unless diagnosing engine faults; the primary public interface is exclusively `spatial_engine/realtimeEngine/src/EngineSession.hpp`.
+- **Validation Runner Path:** `source/spatial_engine/realtimeEngine/src/internal_validation_runner.cpp` (The active, working reference code for calling the core API).
+- **Core Library Target Location:** `source/spatial_engine/realtimeEngine/CMakeLists.txt` holds the `EngineSessionCore` CMake target containing the `EngineSession`, `JSONLoader`, `LayoutLoader`, and `WavUtils` components.
+- **Header Files:** Wait to read `RealtimeBackend.hpp`, `Spatializer.hpp`, `Streaming.hpp` unless diagnosing engine faults; the primary public interface is exclusively `source/spatial_engine/realtimeEngine/src/EngineSession.hpp`.
 - **Test Asset Paths:**
   - Valid LUSID scene configuration: `/Users/lucian/projects/spatialroot/sourceData/lusid_package/scene.lusid.json`
   - Valid audio source directory: `/Users/lucian/projects/spatialroot/sourceData/lusid_package/`
-  - Stereo fallback layout (crucial for local testing on macOS built-in output): `spatial_engine/speaker_layouts/stereo.json`
+  - Stereo fallback layout (crucial for local testing on macOS built-in output): `source/spatial_engine/speaker_layouts/stereo.json`
 - **Known Structural Gotcha:** In `EngineSession.hpp`, core structs like `EngineConfig` and `SceneConfig` were specifically decoupled from the `spatial::` namespace to avoid polluting public interfaces with internal legacy types; so they are global structs.

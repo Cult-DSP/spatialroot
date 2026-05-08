@@ -3,8 +3,8 @@
 This document is the compact current-state reference for Spatial Root's `cult-allolib` DBAP work.
 
 Supporting documents:
-- Math source of truth: `internalDocsMD/dbapMath.md`
-- Build / CI notes: `internalDocsMD/BUILD_AND_CI.md`
+- Math source of truth: `internalDocs/dbapMath.md`
+- Build / CI notes: `internalDocs/BUILD_AND_CI.md`
 
 Rule: if DBAP math, invariants, or focus semantics change, update `dbapMath.md` first, then update this file.
 
@@ -262,7 +262,7 @@ Determine exactly what newly arose from the normalized DBAP algorithm, and wheth
 
 Read the prior bug audit first and treat it as the canonical record of earlier failures and fixes:
 
-- `internalDocsMD/engine_testing/4_1_bug_audit.md`
+- `internalDocs/engine_testing/4_1_bug_audit.md`
 
 Pay particular attention to:
 
@@ -312,7 +312,7 @@ Do not re-derive what is already established there.
 
 ### Investigation Procedure
 
-1. Read `internalDocsMD/engine_testing/4_1_bug_audit.md` fully before touching code.
+1. Read `internalDocs/engine_testing/4_1_bug_audit.md` fully before touching code.
 2. Identify the exact code changes made for normalized DBAP in `cult-allolib`.
 3. Trace the realtime path:
    - source pose

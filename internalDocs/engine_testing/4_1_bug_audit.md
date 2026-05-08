@@ -20,7 +20,7 @@ Bugs are listed **newest first**. Closed bugs follow open ones.
 
 ### What this engine does
 
-The realtime engine reads a `.lusid.json` scene file, streams audio from a multitrack WAV or ADM file, and renders spatial audio to a multichannel audio device in real time using DBAP panning. It is a C++ process. A Dear ImGui / GLFW desktop GUI (`gui/imgui/`) owns the engine and drives it via a direct C++ session API. OSC (port 9009) is a secondary control path available for external tools.
+The realtime engine reads a `.lusid.json` scene file, streams audio from a multitrack WAV or ADM file, and renders spatial audio to a multichannel audio device in real time using DBAP panning. It is a C++ process. A Dear ImGui / GLFW desktop GUI (`source/gui/imgui/`) owns the engine and drives it via a direct C++ session API. OSC (port 9009) is a secondary control path available for external tools.
 
 **No Python GUI exists.** The Python/PySide6 GUI was replaced in the C++ refactor. Any references to `gui/realtimeGUI/*.py` in older documents are obsolete.
 
@@ -42,15 +42,15 @@ The realtime engine reads a `.lusid.json` scene file, streams audio from a multi
 ./run.sh
 
 # Run engine directly from the CLI (headless testing):
-./build/spatial_engine/realtimeEngine/spatialroot_realtime \
-    --layout spatial_engine/speaker_layouts/translab-sono-layout.json \
+./build/source/spatial_engine/realtimeEngine/spatialroot_realtime \
+    --layout source/spatial_engine/speaker_layouts/translab-sono-layout.json \
     --scene  processedData/stageForRender/SWALE-ATMOS-LFE.lusid.json \
     --adm    sourceData/SWALE-ATMOS-LFE.wav \
     --device "MOTU Pro Audio"     # omit to use system default
     --list-devices                # enumerate output devices then exit
 ```
 
-Note: `./engine.sh` is a legacy standalone build script that outputs to `spatial_engine/realtimeEngine/build/`. Prefer `./build.sh` — it uses the unified CMake build at `build/` and is the canonical path.
+Note: `./engine.sh` is a legacy standalone build script that outputs to `source/spatial_engine/realtimeEngine/build/`. Prefer `./build.sh` — it uses the unified CMake build at `build/` and is the canonical path.
 
 ### Test content
 
@@ -64,7 +64,7 @@ All test content lives in `sourceData/`. Corresponding LUSID scenes are in `proc
 | Canyon | `sourceData/CANYON-ATMOS-LFE.wav` | *(no pre-built scene — transcode via GUI TRANSCODE tab or cult-transcoder)* |
 | 360RA | `sourceData/360RA_test.wav` | `processedData/stageForRender/360RA_test.lusid.json` |
 
-Speaker layouts: `spatial_engine/speaker_layouts/translab-sono-layout.json` (primary test), `allosphere_layout.json` (56-ch).
+Speaker layouts: `source/spatial_engine/speaker_layouts/translab-sono-layout.json` (primary test), `allosphere_layout.json` (56-ch).
 
 ---
 
@@ -74,21 +74,21 @@ Speaker layouts: `spatial_engine/speaker_layouts/translab-sono-layout.json` (pri
 
 | File | Role |
 |---|---|
-| `spatial_engine/realtimeEngine/src/Spatializer.hpp` | Core DBAP render loop. Proximity guard (Pass 1 soft zone + Pass 2 hard floor), fast-mover sub-stepping, cross-block guard-transition blending (`mPrevSafePos`/`mPrevSafeValid`/`mPrevGuardFired` — Bug 9.1), Phase 6 mix trims (spkMix/lfeMix), Phase 7 device copy, Phase 14 diagnostic measurement points. **Most bugs touch this file.** |
-| `spatial_engine/realtimeEngine/src/Pose.hpp` | Keyframe interpolation pipeline: SLERP → `safeDirForSource` → `sanitizeDirForLayout` → `directionToDBAPPosition`. Computes `SourcePose::position` (block center), `positionStart`, `positionEnd`. Pose is known clean — do not suspect it without evidence. |
-| `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Audio callback controller. Owns `ControlSmooth` (50 ms exponential smoother for gain/focus), `processBlock()` Steps 1–6, per-block timing, CPU meter. All config values reach the audio thread exclusively via `mSmooth`. |
-| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp` | Shared types: `RealtimeConfig` atomics (written by OSC/session API, snapshotted by audio thread). `EngineState` diagnostic counters. `EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams`, `EngineStatus`, `DiagnosticEvents` structs. Threading model documented in header comments — read them. |
-| `spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp` | Public session API. Wraps all subsystems. `main.cpp` and the GUI both use this exclusively. Contains the OSC `ParameterServer` and `OscParams` inner struct. |
-| `spatial_engine/realtimeEngine/src/main.cpp` | Headless CLI entry point. Parses args, builds `EngineOptions`/`SceneInput`/`LayoutInput`/`RuntimeParams`, calls `EngineSession` API, runs the monitoring loop. |
-| `spatial_engine/realtimeEngine/src/Streaming.hpp` | Per-source audio streaming from the multichannel ADM WAV. `parseChannelIndex()` maps source name → 0-based ADM channel: `"N.1" → N-1`, `"LFE" → 3`. |
+| `source/spatial_engine/realtimeEngine/src/Spatializer.hpp` | Core DBAP render loop. Proximity guard (Pass 1 soft zone + Pass 2 hard floor), fast-mover sub-stepping, cross-block guard-transition blending (`mPrevSafePos`/`mPrevSafeValid`/`mPrevGuardFired` — Bug 9.1), Phase 6 mix trims (spkMix/lfeMix), Phase 7 device copy, Phase 14 diagnostic measurement points. **Most bugs touch this file.** |
+| `source/spatial_engine/realtimeEngine/src/Pose.hpp` | Keyframe interpolation pipeline: SLERP → `safeDirForSource` → `sanitizeDirForLayout` → `directionToDBAPPosition`. Computes `SourcePose::position` (block center), `positionStart`, `positionEnd`. Pose is known clean — do not suspect it without evidence. |
+| `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` | Audio callback controller. Owns `ControlSmooth` (50 ms exponential smoother for gain/focus), `processBlock()` Steps 1–6, per-block timing, CPU meter. All config values reach the audio thread exclusively via `mSmooth`. |
+| `source/spatial_engine/realtimeEngine/src/RealtimeTypes.hpp` | Shared types: `RealtimeConfig` atomics (written by OSC/session API, snapshotted by audio thread). `EngineState` diagnostic counters. `EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams`, `EngineStatus`, `DiagnosticEvents` structs. Threading model documented in header comments — read them. |
+| `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp` | Public session API. Wraps all subsystems. `main.cpp` and the GUI both use this exclusively. Contains the OSC `ParameterServer` and `OscParams` inner struct. |
+| `source/spatial_engine/realtimeEngine/src/main.cpp` | Headless CLI entry point. Parses args, builds `EngineOptions`/`SceneInput`/`LayoutInput`/`RuntimeParams`, calls `EngineSession` API, runs the monitoring loop. |
+| `source/spatial_engine/realtimeEngine/src/Streaming.hpp` | Per-source audio streaming from the multichannel ADM WAV. `parseChannelIndex()` maps source name → 0-based ADM channel: `"N.1" → N-1`, `"LFE" → 3`. |
 
 **C++ GUI:**
 
 | File | Role |
 |---|---|
-| `gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching (fix for Bug 4 pattern). Controls engine via direct C++ setters (`mSession->setMasterGainDb()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
-| `gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs the `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion. |
-| `gui/imgui/src/main.cpp` | GLFW window setup, render loop, calls `App::tick()` each frame. |
+| `source/gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching (fix for Bug 4 pattern). Controls engine via direct C++ setters (`mSession->setMasterGainDb()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
+| `source/gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs the `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion. |
+| `source/gui/imgui/src/main.cpp` | GLFW window setup, render loop, calls `App::tick()` each frame. |
 
 ---
 
@@ -290,7 +290,7 @@ The unconditional state update block (Bug 9.1) is now guarded by `!isFastMover` 
 A new per-source state vector `mPrevWasFastMover` (same pattern as `mPrevGuardFired`) is allocated in `prepareForSources()` and defaults to 0.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/Spatializer.hpp`:
+- `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`:
   - Private section: added `mPrevWasFastMover` vector with updated comment block
   - `prepareForSources()`: `mPrevWasFastMover.assign(numSources, 0u)`
   - Fast-mover loop: `lastSubSafePos` capture at `j == kNumSubSteps - 1`; in-branch state write
@@ -331,7 +331,7 @@ A new per-source state vector `mPrevWasFastMover` (same pattern as `mPrevGuardFi
 **Approach:** Added three per-source state vectors (`mPrevSafePos`, `mPrevSafeValid`, `mPrevGuardFired`) to `Spatializer.hpp`. When Pass 2 fired on the current or previous block, the normal path splits into 4 sub-steps using `mFastMoverScratch`: first two sub-steps use `mPrevSafePos[si]` (previous block's guard-resolved position), last two use `safePos` (current block). State is updated unconditionally at the end of each source's render so fast-mover blocks also leave a valid anchor. `subFrames` hoisted above the `isFastMover` branch so both paths share it. No allocation in the audio callback.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/Spatializer.hpp`: state vectors (private section), `prepareForSources()` allocation, normal-path `doBlend` branch, `subFrames` hoist, end-of-source state update.
+- `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`: state vectors (private section), `prepareForSources()` allocation, normal-path `doBlend` branch, `subFrames` hoist, end-of-source state update.
 
 **RT-safety:** Zero allocation. All state vectors are audio-thread-owned after `start()`. Negligible memory overhead (3 × numSources scalars).
 
@@ -366,7 +366,7 @@ A new per-source state vector `mPrevWasFastMover` (same pattern as `mPrevGuardFi
 
 **CLI** (`main.cpp`): `--device <name>` sets `opts.outputDeviceName`; `--list-devices` enumerates all output devices and exits.
 
-**GUI** (`gui/imgui/src/App.cpp`): `scanDevices()` populates `mDeviceList` via `al::AudioDevice`. Rendered as a Scan button + combo dropdown in the ENGINE tab. Selected name passed through `EngineOptions::outputDeviceName` at start.
+**GUI** (`source/gui/imgui/src/App.cpp`): `scanDevices()` populates `mDeviceList` via `al::AudioDevice`. Rendered as a Scan button + combo dropdown in the ENGINE tab. Selected name passed through `EngineOptions::outputDeviceName` at start.
 
 **Status:** PATCHED
 
@@ -436,7 +436,7 @@ DOM events too sensitive to single-channel threshold crossings. Added O(4 × cha
 
 `RealtimeBackend` constructor seeds `mSmooth.smoothed` and `mSmooth.target` from `mConfig` atomics before any block runs. Was patched in Session 3 but absent from the file by Session 5 — re-applied.
 
-**File:** `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` — constructor body.
+**File:** `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` — constructor body.
 
 **Status:** PATCHED
 
@@ -476,7 +476,7 @@ Used `mAudioIO.channelsOut()` which returns `mNumO` (the requested count, always
 
 Changed `mAudioIO.channelsOut()` → `mAudioIO.channelsOutDevice()`. Returns `oParams.nChannels` — clamped to `min(requested, deviceMax)` by RtAudio. Engine now correctly refuses to start when negotiated hardware channels < layout requirements.
 
-**File:** `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` — `init()`, `actualOutChannels` variable.
+**File:** `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp` — `init()`, `actualOutChannels` variable.
 
 **Status:** PATCHED
 

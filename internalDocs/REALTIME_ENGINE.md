@@ -1,8 +1,8 @@
 # Realtime Engine — Internal Reference
 
 **Last Updated:** May 7, 2026  
-**Source:** `spatial_engine/realtimeEngine/`  
-**Primary entry points:** `spatialroot_realtime` CLI binary, `gui/imgui/` (embeds `EngineSessionCore` in-process)
+**Source:** `source/spatial_engine/realtimeEngine/`  
+**Primary entry points:** `spatialroot_realtime` CLI binary, `source/gui/imgui/` (embeds `EngineSessionCore` in-process)
 
 All phases complete: Phases 1–10 + OSC timing fix + Phase 11 bug-fix pass.  
 See [API_internal.md](API_internal.md) for the `EngineSession` public API contract.
@@ -27,7 +27,7 @@ The engine follows a sequential agent model. Each agent owns one stage of the pr
 | 7     | Output Remap          | ✅ Complete | `OutputRemap.hpp`                  |
 | 8     | Threading and Safety  | ✅ Complete | `RealtimeTypes.hpp` (audit + docs) |
 | 9     | Init / Config         | ✅ Complete | `init.sh`, build scripts           |
-| 10    | GUI                   | ✅ Complete | `gui/imgui/` (ImGui + GLFW)        |
+| 10    | GUI                   | ✅ Complete | `source/gui/imgui/` (ImGui + GLFW)        |
 | 10.1  | OSC Timing Fix        | ✅ Complete | `EngineSession.cpp`                |
 | 11    | Bug-Fix Pass          | ✅ Complete | multiple                           |
 
@@ -78,14 +78,14 @@ Use this format for every new patch attempt:
 
 # Headless CLI testing:
 ./build/spatialroot_realtime \
-    --layout spatial_engine/speaker_layouts/translab-sono-layout.json \
+    --layout source/spatial_engine/speaker_layouts/translab-sono-layout.json \
     --scene  processedData/stageForRender/SWALE-ATMOS-LFE.lusid.json \
     --adm    sourceData/SWALE-ATMOS-LFE.wav \
     --device "MOTU Pro Audio"   # omit for system default
     --list-devices              # enumerate output devices then exit
 ```
 
-Note: `./engine.sh` is a legacy standalone build script outputting to `spatial_engine/realtimeEngine/build/`. Prefer `./build.sh` — it uses the unified CMake build at `build/` and is the canonical path.
+Note: `./engine.sh` is a legacy standalone build script outputting to `source/spatial_engine/realtimeEngine/build/`. Prefer `./build.sh` — it uses the unified CMake build at `build/` and is the canonical path.
 
 ### Test Content
 
@@ -97,7 +97,7 @@ Note: `./engine.sh` is a legacy standalone build script outputting to `spatial_e
 | Canyon  | `sourceData/CANYON-ATMOS-LFE.wav`   | _(no pre-built scene — transcode via GUI TRANSCODE tab or cult-transcoder)_ |
 | 360RA   | `sourceData/360RA_test.wav`         | `processedData/stageForRender/360RA_test.lusid.json`                        |
 
-Speaker layouts: `spatial_engine/speaker_layouts/translab-sono-layout.json` (primary test), `allosphere_layout.json` (56-ch).
+Speaker layouts: `source/spatial_engine/speaker_layouts/translab-sono-layout.json` (primary test), `allosphere_layout.json` (56-ch).
 
 ### Key Source Files
 
@@ -105,21 +105,21 @@ Speaker layouts: `spatial_engine/speaker_layouts/translab-sono-layout.json` (pri
 
 | File                                                       | Role                                                                                                                                                                                                                                                                                         |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spatial_engine/realtimeEngine/src/Spatializer.hpp`        | Core DBAP render loop. Proximity guard (Pass 1 soft zone + Pass 2 hard floor), fast-mover sub-stepping, cross-block guard-transition blending (`mPrevSafePos`/`mPrevSafeValid`/`mPrevGuardFired`), Phase 6 mix trims, Phase 14 diagnostic measurement points. **Most bugs touch this file.** |
-| `spatial_engine/realtimeEngine/src/Pose.hpp`               | Keyframe interpolation pipeline: SLERP → `safeDirForSource` → `sanitizeDirForLayout` → `directionToDBAPPosition`. Computes `SourcePose::position` (block center), `positionStart`, `positionEnd`.                                                                                            |
-| `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`    | Audio callback controller. Owns `ControlSmooth` (50 ms exponential smoother for gain/focus), `processBlock()` Steps 1–6, per-block timing, CPU meter. All config values reach the audio thread exclusively via `mSmooth`.                                                                    |
-| `spatial_engine/realtimeEngine/src/RealtimeTypes.hpp`      | Shared types: `RealtimeConfig` atomics, `EngineState` diagnostic counters, all public structs. Threading model documented in header comments — read them.                                                                                                                                    |
-| `spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp` | Public session API. Wraps all subsystems. Contains OSC `ParameterServer` and `OscParams` inner struct.                                                                                                                                                                                       |
-| `spatial_engine/realtimeEngine/src/main.cpp`               | Headless CLI entry point. Parses args, builds config structs, calls `EngineSession` API, runs monitoring loop.                                                                                                                                                                               |
-| `spatial_engine/realtimeEngine/src/Streaming.hpp`          | Per-source audio streaming from multichannel ADM WAV. `parseChannelIndex()` maps source name → 0-based ADM channel: `"N.1" → N-1`, `"LFE" → 3`.                                                                                                                                              |
+| `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`        | Core DBAP render loop. Proximity guard (Pass 1 soft zone + Pass 2 hard floor), fast-mover sub-stepping, cross-block guard-transition blending (`mPrevSafePos`/`mPrevSafeValid`/`mPrevGuardFired`), Phase 6 mix trims, Phase 14 diagnostic measurement points. **Most bugs touch this file.** |
+| `source/spatial_engine/realtimeEngine/src/Pose.hpp`               | Keyframe interpolation pipeline: SLERP → `safeDirForSource` → `sanitizeDirForLayout` → `directionToDBAPPosition`. Computes `SourcePose::position` (block center), `positionStart`, `positionEnd`.                                                                                            |
+| `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`    | Audio callback controller. Owns `ControlSmooth` (50 ms exponential smoother for gain/focus), `processBlock()` Steps 1–6, per-block timing, CPU meter. All config values reach the audio thread exclusively via `mSmooth`.                                                                    |
+| `source/spatial_engine/realtimeEngine/src/RealtimeTypes.hpp`      | Shared types: `RealtimeConfig` atomics, `EngineState` diagnostic counters, all public structs. Threading model documented in header comments — read them.                                                                                                                                    |
+| `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp` | Public session API. Wraps all subsystems. Contains OSC `ParameterServer` and `OscParams` inner struct.                                                                                                                                                                                       |
+| `source/spatial_engine/realtimeEngine/src/main.cpp`               | Headless CLI entry point. Parses args, builds config structs, calls `EngineSession` API, runs monitoring loop.                                                                                                                                                                               |
+| `source/spatial_engine/realtimeEngine/src/Streaming.hpp`          | Per-source audio streaming from multichannel ADM WAV. `parseChannelIndex()` maps source name → 0-based ADM channel: `"N.1" → N-1`, `"LFE" → 3`.                                                                                                                                              |
 
 **C++ GUI:**
 
 | File                                      | Role                                                                                                                                                                                                    |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gui/imgui/src/App.hpp` / `App.cpp`       | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching. Controls engine via direct C++ setters — not OSC. Two tabs: ENGINE and TRANSCODE. |
-| `gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion.                                                                                                                                 |
-| `gui/imgui/src/main.cpp`                  | GLFW window setup, render loop, calls `App::tick()` each frame.                                                                                                                                         |
+| `source/gui/imgui/src/App.hpp` / `App.cpp`       | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching. Controls engine via direct C++ setters — not OSC. Two tabs: ENGINE and TRANSCODE. |
+| `source/gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion.                                                                                                                                 |
+| `source/gui/imgui/src/main.cpp`                  | GLFW window setup, render loop, calls `App::tick()` each frame.                                                                                                                                         |
 
 Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O), main thread (lifecycle + update()). See [Threading and Safety](#threading-and-safety) below.
 
@@ -152,7 +152,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Removed the two `std::memset` lines from the late early-return. Step 4's multiply-by-zero already produces a correctly-zeroed buffer. Zeroing it again only destroys the graceful ramp on the completing block.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: removed memset from late early-return block; added explanatory comment.
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: removed memset from late early-return block; added explanatory comment.
 
 **RT-safety:** No concerns. No allocation or locks removed; just deletion of redundant memset.
 
@@ -171,7 +171,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Arm the pause fade before the hard stop: set `mConfig.paused = true` (which triggers the 8ms ramp in the audio thread on the next callback), then unconditionally `sleep_for(50ms)` to guarantee the fade completes, then call `mAudioIO.stop()`. Reset `mConfig.paused = false` afterward so the next `start()` begins unpaused. Added `#include <thread>`.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: modified `stop()` to arm pause fade + unconditional 50ms sleep.
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: modified `stop()` to arm pause fade + unconditional 50ms sleep.
 
 **RT-safety:** Sleep is on the main thread only; audio callback is unaffected.
 
@@ -190,7 +190,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Removed the `mPauseFade = 0.0f` reset. Compute the fade-in step as `(1.0f - mPauseFade) / fadeFrames` so the ramp continues from wherever the gain currently is, reaching 1.0 in `fadeFrames` regardless of starting value.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: Step C resume branch — removed forced reset, updated step calculation.
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: Step C resume branch — removed forced reset, updated step calculation.
 
 **RT-safety:** No concerns. Pure arithmetic in the audio thread.
 
@@ -209,7 +209,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Moved the 50ms `sleep_for` outside the `if (!paused)` guard so it runs unconditionally. The sleep covers: `kPauseFadeMs` (8ms) + two max-buffer durations. This is conservative but sufficient.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `stop()` — sleep made unconditional.
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `stop()` — sleep made unconditional.
 
 **RT-safety:** Sleep is main thread only.
 
@@ -230,7 +230,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Note:** The late early-return (after Step 4) still handles the fade-completing block — it plays the graceful ramp and then returns. The new early-return fires only on subsequent steady-paused blocks.
 
 **Files changed:**
-- `spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: new fast-path early-return block inserted before Step 1, with CPU load update and explanatory comment.
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: new fast-path early-return block inserted before Step 1, with CPU load update and explanatory comment.
 
 **RT-safety:** memset in the early-return is RT-safe (known-size stack buffer, no allocation).
 
@@ -411,7 +411,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 **CSV format:** Headers `layout,device` (0-based indices). Multiple `layout` → same `device` entries accumulate. Out-of-range indices ignored with logging. Comments via `#`. Case-insensitive headers.
 
-**Example:** `spatial_engine/remapping/exampleRemap.csv`
+**Example:** `source/spatial_engine/remapping/exampleRemap.csv`
 
 **Runtime:** Identity fast-path when no remap is loaded. Accumulation loop in callback. No allocations, read-only table during playback (RT-safe).
 
@@ -429,7 +429,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 | ----------------- | -------------------------- | ----------------------------------------------- |
 | **Audio thread**  | AlloLib `AudioIO`          | `processBlock()` — RT, no locks, no allocations |
 | **Loader thread** | `Streaming`                | Disk I/O, buffer filling, chunk loading         |
-| **Main thread**   | Host (`gui/imgui/` or CLI) | Lifecycle, `update()`, OSC if enabled           |
+| **Main thread**   | Host (`source/gui/imgui/` or CLI) | Lifecycle, `update()`, OSC if enabled           |
 
 ### Memory Order Rules
 

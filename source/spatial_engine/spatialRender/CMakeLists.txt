@@ -24,11 +24,12 @@ set(CULT_ALLOLIB_ENABLE_SERIAL     OFF CACHE BOOL "Disable cult-allolib serial A
 set(CULT_ALLOLIB_ENABLE_EXAMPLES   OFF CACHE BOOL "Disable cult-allolib examples by default")
 set(CULT_ALLOLIB_ENABLE_TESTS      OFF CACHE BOOL "Disable cult-allolib tests by default")
 
-# cult-allolib is in internal at project root (two levels up from spatial_engine/spatialRender)
+# cult-allolib is in internal at project root.
+# From source/spatial_engine/spatialRender/, that is ../../../internal/cult-allolib.
 # Guard: when built via the root CMakeLists.txt, cult-allolib is already added there.
 if(NOT TARGET al)
     add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
     )
 endif()
@@ -45,7 +46,7 @@ add_executable(spatialroot_spatial_render
 
 # Include cult-allolib headers and renderer for SpatialRenderer.hpp
 target_include_directories(spatialroot_spatial_render PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../internal/cult-allolib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/renderer
 )
 

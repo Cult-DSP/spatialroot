@@ -6,7 +6,7 @@
 
 ## LUSID Scene JSON Format
 
-> `json_schema_info.md` — Primary format spec. See also `LUSID/schema/lusid_scene_v0.5.schema.json` and `LUSID/internalDocs/DEVELOPMENT.md`.
+> `json_schema_info.md` — Primary format spec. See also `internal/LUSID/schema/lusid_scene_v0.5.schema.json` and `internal/LUSID/internalDocs/DEVELOPMENT.md`.
 
 **LUSID `scene.lusid.json` is the canonical spatial data format** read directly by the C++ renderer. The old `renderInstructions.json` format is deprecated and removed.
 

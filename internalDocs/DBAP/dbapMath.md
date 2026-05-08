@@ -7,7 +7,7 @@ Implementation files:
 - `internal/cult-allolib/include/al/sound/al_Dbap.hpp`
 
 Reference paper:
-- `internalDocsMD/dbap_paper.pdf` — Ville Pulkki / Trond Lossius / et al., ICMC 2009
+- `internalDocs/dbap_paper.pdf` — Ville Pulkki / Trond Lossius / et al., ICMC 2009
 
 Any change to DBAP math, invariants, or focus semantics must be documented here before the work is considered complete.
 
@@ -97,9 +97,9 @@ The engine enforces a minimum of `0.1`.
 Clamp points:
 - `Dbap` constructor in `internal/cult-allolib/src/sound/al_Dbap.cpp`
 - `Dbap::setFocus()` in `internal/cult-allolib/include/al/sound/al_Dbap.hpp`
-- `EngineSession::configureRuntime()` in `spatial_engine/realtimeEngine/src/EngineSession.cpp`
-- `EngineSession::setDbapFocus()` in `spatial_engine/realtimeEngine/src/EngineSession.cpp`
-- OSC focus callback in `EngineSession::start()` in `spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- `EngineSession::configureRuntime()` in `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- `EngineSession::setDbapFocus()` in `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
+- OSC focus callback in `EngineSession::start()` in `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
 
 Values below `0.1` are not supported because they move toward inverted distance weighting, where far speakers can become louder than near speakers.
 
@@ -318,4 +318,4 @@ These are intentionally fixed unless a new design decision is documented here fi
 - `internal/cult-allolib/src/sound/al_Dbap.cpp:28`
 - `internal/cult-allolib/src/sound/al_Dbap.cpp:78`
 - `internal/cult-allolib/include/al/sound/al_Dbap.hpp:81`
-- `spatial_engine/realtimeEngine/src/EngineSession.cpp:278`
+- `source/spatial_engine/realtimeEngine/src/EngineSession.cpp:278`
