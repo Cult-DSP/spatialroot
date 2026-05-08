@@ -46,8 +46,10 @@ data/processedData/stageForRender/*
 data/processedData/*
 !data/processedData/stageForRender/
 !data/processedData/
+!data/processedData/.gitkeep
 data/sourceData/*
 !data/sourceData/
+!data/sourceData/.gitkeep
 
 
 #jupyter 
