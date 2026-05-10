@@ -343,6 +343,16 @@ void App::renderEngineTab() {
         ImGui::SameLine(120.f);
         ImGui::SetNextItemWidth(100.f);
         ImGui::Combo("##bufsize", &mBufferSizeIdx, kBufferSizeNames, 5);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(
+                "Buffer size affects realtime stability.\n"
+                "\n"
+                "Smaller buffers reduce latency but increase CPU load and the risk of xruns, clicks, or dropouts.\n"
+                "Larger buffers improve stability but increase latency.\n"
+                "Changing buffer size may require restarting the engine or playback session.\n"
+                "Safest workflow: stop playback before changing this setting."
+            );
+        }
 
         if (isRunning) ImGui::EndDisabled();
     }

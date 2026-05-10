@@ -4,7 +4,6 @@
 
 ## Crucial CLI / GUI Features:
 
-- add more info to engine log - terminal output should be similar - option to expand engine log - mostly upon failer - more info
 - allow for setting runtime params prior to starting engine, add reset button
 - limit buffer size selectiom - potentially dangerous / produce warnings
 
