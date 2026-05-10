@@ -26,6 +26,20 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BuildDir = Join-Path $ProjectRoot "build"
 
+function Test-SubmoduleRegistered([string]$Path) {
+    $gitmodulesPath = Join-Path $ProjectRoot ".gitmodules"
+    if (-not (Test-Path $gitmodulesPath)) { return $false }
+
+    $registeredPaths = git config -f $gitmodulesPath --get-regexp '^submodule\..*\.path$' 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $registeredPaths) { return $false }
+
+    foreach ($line in $registeredPaths) {
+        $parts = $line -split '\s+', 2
+        if ($parts.Count -eq 2 -and $parts[1] -eq $Path) { return $true }
+    }
+    return $false
+}
+
 function Test-SubmoduleMissingRecursive([string]$Path) {
     $status = git submodule status --recursive $Path 2>$null
     foreach ($line in $status) {
@@ -77,6 +91,13 @@ if ($BuildCult -eq "ON") {
 }
 
 if ($BuildGUI -eq "ON") {
+    if (-not (Test-SubmoduleRegistered "thirdparty/imgui") -or -not (Test-SubmoduleRegistered "thirdparty/glfw")) {
+        Write-Host "✗ GUI build requested, but GUI submodules are not fully registered in .gitmodules." -ForegroundColor Red
+        Write-Host "  Required: thirdparty/imgui and thirdparty/glfw"
+        Write-Host "  Try: .\init.ps1"
+        Write-Host "  Or build without -GuiBuild."
+        exit 1
+    }
     Ensure-SubmoduleForBuild -Path "thirdparty/imgui" -Sentinel (Join-Path $ProjectRoot "thirdparty\imgui\imgui.h")
     Ensure-SubmoduleForBuild -Path "thirdparty/glfw" -Sentinel (Join-Path $ProjectRoot "thirdparty\glfw\CMakeLists.txt")
 }

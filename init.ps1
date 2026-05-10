@@ -19,6 +19,20 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
 
+function Test-SubmoduleRegistered([string]$Path) {
+    $gitmodulesPath = Join-Path $ProjectRoot ".gitmodules"
+    if (-not (Test-Path $gitmodulesPath)) { return $false }
+
+    $registeredPaths = git config -f $gitmodulesPath --get-regexp '^submodule\..*\.path$' 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $registeredPaths) { return $false }
+
+    foreach ($line in $registeredPaths) {
+        $parts = $line -split '\s+', 2
+        if ($parts.Count -eq 2 -and $parts[1] -eq $Path) { return $true }
+    }
+    return $false
+}
+
 function Test-SubmoduleMissingRecursive([string]$Path) {
     $status = git submodule status --recursive $Path 2>$null
     foreach ($line in $status) {
@@ -130,12 +144,14 @@ Write-Host ""
 # ── Step 6: Initialize Dear ImGui submodule (optional — needed for GUI build) ─
 Write-Host "Step 6: Initializing Dear ImGui submodule..."
 
-$GitmodulesPath = Join-Path $ProjectRoot ".gitmodules"
 $ImGuiDir = Join-Path $ProjectRoot "thirdparty\imgui"
-if ((Test-Path $GitmodulesPath) -and (Select-String -Path $GitmodulesPath -Pattern "thirdparty/imgui" -Quiet)) {
+$GuiImgSubmodule = $false
+$GuiGlfwSubmodule = $false
+if (Test-SubmoduleRegistered "thirdparty/imgui") {
+    $GuiImgSubmodule = $true
     Ensure-Submodule -Path "thirdparty/imgui" -Sentinel (Join-Path $ImGuiDir "imgui.h")
 } else {
-    Write-Host "ℹ  thirdparty/imgui not registered (GUI build not enabled)"
+    Write-Host "ℹ  thirdparty/imgui not registered"
 }
 Write-Host ""
 
@@ -143,10 +159,11 @@ Write-Host ""
 Write-Host "Step 7: Initializing GLFW submodule..."
 
 $GlfwDir = Join-Path $ProjectRoot "thirdparty\glfw"
-if ((Test-Path $GitmodulesPath) -and (Select-String -Path $GitmodulesPath -Pattern "thirdparty/glfw" -Quiet)) {
+if (Test-SubmoduleRegistered "thirdparty/glfw") {
+    $GuiGlfwSubmodule = $true
     Ensure-Submodule -Path "thirdparty/glfw" -Sentinel (Join-Path $GlfwDir "CMakeLists.txt")
 } else {
-    Write-Host "ℹ  thirdparty/glfw not registered (GUI build not enabled)"
+    Write-Host "ℹ  thirdparty/glfw not registered"
 }
 Write-Host ""
 
@@ -155,7 +172,18 @@ Write-Host "Step 8: Building all C++ components..."
 Write-Host ""
 
 $buildScript = Join-Path $ProjectRoot "build.ps1"
-& $buildScript -GuiBuild
+$GuiBuildEnabled = $false
+if ($GuiImgSubmodule -and $GuiGlfwSubmodule) {
+    $GuiBuildEnabled = $true
+    Write-Host "GUI submodules detected — building GUI target too."
+    Write-Host ""
+    & $buildScript -GuiBuild
+} else {
+    Write-Host "GUI submodules are not fully registered — building non-GUI targets only."
+    Write-Host "Register both thirdparty/imgui and thirdparty/glfw in .gitmodules to enable GUI builds."
+    Write-Host ""
+    & $buildScript
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "✗ Build failed. Check CMake output above." -ForegroundColor Red
@@ -169,8 +197,14 @@ Write-Host "Binaries:"
 Write-Host "  spatialroot_realtime       : build\source\spatial_engine\realtimeEngine\Release\spatialroot_realtime.exe"
 Write-Host "  spatialroot_spatial_render : build\source\spatial_engine\spatialRender\Release\spatialroot_spatial_render.exe"
 Write-Host "  cult-transcoder            : build\internal\cult_transcoder\Release\cult-transcoder.exe"
-Write-Host "  spatialroot_gui            : build\source\gui\imgui\Release\Spatial Root.exe"
+if ($GuiBuildEnabled) {
+    Write-Host "  spatialroot_gui            : build\source\gui\imgui\Release\Spatial Root.exe"
+}
 Write-Host ""
 Write-Host "For subsequent full builds:"
-Write-Host "  .\build.ps1"
+if ($GuiBuildEnabled) {
+    Write-Host "  .\build.ps1 -GuiBuild"
+} else {
+    Write-Host "  .\build.ps1"
+}
 Write-Host ""

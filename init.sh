@@ -15,6 +15,13 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${PROJECT_ROOT}"
 
+submodule_is_registered() {
+    local path="$1"
+    [ -f "${PROJECT_ROOT}/.gitmodules" ] &&
+        git config -f "${PROJECT_ROOT}/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null |
+        awk '{print $2}' | grep -Fxq "$path"
+}
+
 submodule_has_missing_recursive() {
     local path="$1"
     git submodule status --recursive "$path" 2>/dev/null | grep -q '^-'
@@ -173,33 +180,44 @@ ensure_submodule "thirdparty/libsndfile" "${PROJECT_ROOT}/thirdparty/libsndfile/
 echo ""
 
 # ── Step 6: Initialize Dear ImGui submodule (optional — needed for GUI build) ─
-# Only initialized when thirdparty/imgui has been added via:
-#   git submodule add https://github.com/ocornut/imgui.git thirdparty/imgui
 IMGUI_DIR="${PROJECT_ROOT}/thirdparty/imgui"
-if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/imgui" "${PROJECT_ROOT}/.gitmodules" 2>/dev/null; then
+GUI_IMG_SUBMODULE=0
+GUI_GLFW_SUBMODULE=0
+if submodule_is_registered "thirdparty/imgui"; then
+    GUI_IMG_SUBMODULE=1
     echo "Step 6: Initializing Dear ImGui submodule..."
     ensure_submodule "thirdparty/imgui" "${IMGUI_DIR}/imgui.h"
 else
-    echo "ℹ  thirdparty/imgui not registered (GUI build not enabled)"
+    echo "ℹ  thirdparty/imgui not registered"
 fi
 echo ""
 
 # ── Step 7: Initialize GLFW submodule (optional — needed for GUI build) ───────
-# Only initialized when thirdparty/glfw has been added via:
-#   git submodule add https://github.com/glfw/glfw.git thirdparty/glfw
 GLFW_DIR="${PROJECT_ROOT}/thirdparty/glfw"
-if [ -f "${PROJECT_ROOT}/.gitmodules" ] && grep -q "thirdparty/glfw" "${PROJECT_ROOT}/.gitmodules" 2>/dev/null; then
+if submodule_is_registered "thirdparty/glfw"; then
+    GUI_GLFW_SUBMODULE=1
     echo "Step 7: Initializing GLFW submodule..."
     ensure_submodule "thirdparty/glfw" "${GLFW_DIR}/CMakeLists.txt"
 else
-    echo "ℹ  thirdparty/glfw not registered (GUI build not enabled)"
+    echo "ℹ  thirdparty/glfw not registered"
 fi
 echo ""
 
 # ── Step 8: Build all C++ components ─────────────────────────────────────────
 echo "Step 8: Building all C++ components..."
 echo ""
-"${PROJECT_ROOT}/build.sh" --gui "$@"
+BUILD_ARGS=("$@")
+GUI_BUILD_ENABLED=0
+if [ "${GUI_IMG_SUBMODULE}" -eq 1 ] && [ "${GUI_GLFW_SUBMODULE}" -eq 1 ]; then
+    GUI_BUILD_ENABLED=1
+    BUILD_ARGS=(--gui "${BUILD_ARGS[@]}")
+    echo "GUI submodules detected — building GUI target too."
+else
+    echo "GUI submodules are not fully registered — building non-GUI targets only."
+    echo "Register both thirdparty/imgui and thirdparty/glfw in .gitmodules to enable GUI builds."
+fi
+echo ""
+"${PROJECT_ROOT}/build.sh" "${BUILD_ARGS[@]}"
 
 echo ""
 echo "============================================================"
@@ -209,12 +227,18 @@ echo "Binaries:"
 echo "  spatialroot_realtime       : build/source/spatial_engine/realtimeEngine/spatialroot_realtime"
 echo "  spatialroot_spatial_render : build/source/spatial_engine/spatialRender/spatialroot_spatial_render"
 echo "  cult-transcoder            : build/internal/cult_transcoder/cult-transcoder"
-echo "  spatialroot_gui            : build/source/gui/imgui/Spatial Root"
+if [ "${GUI_BUILD_ENABLED}" -eq 1 ]; then
+    echo "  spatialroot_gui            : build/source/gui/imgui/Spatial Root"
+fi
 echo ""
 echo "For quick dev rebuilds of the realtime engine only:"
 echo "  ./build.sh --engine-only"
 echo ""
 echo "For subsequent full builds:"
-echo "  ./build.sh"
+if [ "${GUI_BUILD_ENABLED}" -eq 1 ]; then
+    echo "  ./build.sh --gui"
+else
+    echo "  ./build.sh"
+fi
 echo "============================================================"
 echo ""

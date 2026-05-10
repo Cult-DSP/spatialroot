@@ -18,6 +18,13 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${PROJECT_ROOT}/build"
 
+submodule_is_registered() {
+    local path="$1"
+    [ -f "${PROJECT_ROOT}/.gitmodules" ] &&
+        git config -f "${PROJECT_ROOT}/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null |
+        awk '{print $2}' | grep -Fxq "$path"
+}
+
 submodule_has_missing_recursive() {
     local path="$1"
     git submodule status --recursive "$path" 2>/dev/null | grep -q '^-'
@@ -86,6 +93,13 @@ if [ "${BUILD_CULT}" = "ON" ]; then
 fi
 
 if [ "${BUILD_GUI}" = "ON" ]; then
+    if ! submodule_is_registered "thirdparty/imgui" || ! submodule_is_registered "thirdparty/glfw"; then
+        echo "✗ GUI build requested, but GUI submodules are not fully registered in .gitmodules."
+        echo "  Required: thirdparty/imgui and thirdparty/glfw"
+        echo "  Try: ./init.sh"
+        echo "  Or build without GUI by omitting --gui."
+        exit 1
+    fi
     ensure_submodule_for_build "thirdparty/imgui" "${PROJECT_ROOT}/thirdparty/imgui/imgui.h"
     ensure_submodule_for_build "thirdparty/glfw" "${PROJECT_ROOT}/thirdparty/glfw/CMakeLists.txt"
 fi
