@@ -5,6 +5,7 @@
 ## next tasks
 
 - fix bugs in transcoder tab
+  -packaging bugs
 
 ## audit
 

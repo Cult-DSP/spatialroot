@@ -5,6 +5,47 @@
 
 ---
 
+## Release-Hardening Audit — Packaging / Runtime Path Audit (May 11, 2026)
+
+**Status:** Complete. Minimal surgical changes only.
+
+**What changed:**
+
+- `source/gui/imgui/src/App.cpp` — `resolveProjectPath()`: now checks `SPATIALROOT_ASSET_ROOT` env var first. If set, all relative layout preset paths resolve from that root instead of `mProjectRoot`. This is the packaged-build override for layout presets. Developer builds using `--root` or run from repo root are unaffected.
+- `source/gui/imgui/src/App.cpp` — `findCultTranscoder()`: now checks `SPATIALROOT_CULT_TRANSCODER` env var first. If set and the path exists, it is used immediately (skipping build-tree search). If set but the binary is not found at that path, returns `""` and the caller surfaces an error. Developer build-tree lookup (`build/internal/cult_transcoder/cult-transcoder`) is unchanged as a fallback.
+- `source/gui/imgui/src/App.cpp` — `findSpatialRenderer()`: now checks `SPATIALROOT_SPATIAL_RENDER` env var first, consistent with cult-transcoder handling. Developer build-tree lookup is unchanged as fallback.
+- `source/gui/imgui/src/App.cpp` — constructor: logs `SPATIALROOT_ASSET_ROOT` value at startup if set.
+- `source/gui/imgui/src/App.cpp` — three call-site error messages for `findCultTranscoder()` updated to mention `SPATIALROOT_CULT_TRANSCODER` as a resolution path.
+- `source/gui/imgui/src/App.cpp` — removed `layout.remapCsvPath = mRemapPath;` (mRemapPath was always `""`; LayoutInput field defaults to `""`).
+- `source/gui/imgui/src/App.hpp` — removed `std::string mRemapPath;` member variable (was DEPRECATED; no GUI control ever set it; layout-routing validation uses JSON-derived routing exclusively).
+
+**Supported packaging env vars (new):**
+
+| Env var | Purpose |
+|---|---|
+| `SPATIALROOT_ASSET_ROOT` | Base path for layout preset resolution (overrides project root). Set to the directory containing `source/speaker_layouts/` in a packaged build. |
+| `SPATIALROOT_CULT_TRANSCODER` | Full path to the `cult-transcoder` binary. Set when bundling the binary outside the build tree. |
+| `SPATIALROOT_SPATIAL_RENDER` | Full path to `spatialroot_spatial_render`. Set when bundling the offline renderer. |
+
+**Pre-existing packaging env vars (unchanged):**
+
+| Env var | Purpose |
+|---|---|
+| `SPATIALROOT_TEMP_ROOT` | Override for temp/cache session root |
+| `SPATIALROOT_SETTINGS_ROOT` | Override for persistent app settings root |
+
+**Developer path behavior (unchanged):**
+- Run from repo root (or with `--root /path/to/repo`): layouts resolve from `source/speaker_layouts/`, cult-transcoder from `build/internal/cult_transcoder/cult-transcoder`.
+- No env vars required for developer builds.
+
+**Deferred:**
+- No CMake install rules added. Full staging (copy layouts + helper binaries next to GUI binary) is deferred to the distribution pass.
+- App-relative binary lookup (finding binaries relative to the GUI executable using platform APIs) is deferred. Env var overrides are sufficient for the current OS compatibility testing phase.
+- Full macOS `.app` bundle structure and Windows installer are deferred.
+- `LayoutInput::remapCsvPath` field and `--remap` CLI flag remain in `EngineSession` / `spatialroot_realtime` for any future CSV-based layout routing use. Only the GUI's dead scaffolding variable was removed.
+
+---
+
 ## Release-Hardening Audit — GUI Code Audit (May 11, 2026)
 
 **Status:** Complete. Small surgical fixes only; no backend or architecture changes.

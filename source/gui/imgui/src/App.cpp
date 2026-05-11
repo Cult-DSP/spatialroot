@@ -67,6 +67,8 @@ App::App(std::string projectRoot, bool keepTempSessions, std::string tempRootOve
 
     appendEngineLog("[GUI] Spatial Root — ImGui + GLFW GUI started.");
     appendEngineLog("[GUI] Project root: " + mProjectRoot);
+    if (const char* assetRoot = std::getenv("SPATIALROOT_ASSET_ROOT"); assetRoot && *assetRoot)
+        appendEngineLog(std::string("[GUI] Asset root override: ") + assetRoot, {0.7f, 0.9f, 0.7f, 1.f});
     appendEngineLog("[GUI] Temp session root: " + pathString(tempSessionsRoot()));
     if (mKeepTempSessions) {
         appendEngineLog("[GUI] Keeping temporary sessions for debugging is enabled.",
@@ -667,7 +669,7 @@ void App::renderTranscodeTab() {
             if (ImGui::Button("Convert", {120.f, 0.f})) {
                 const std::string cultBin = findCultTranscoder();
                 if (cultBin.empty()) {
-                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
+                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh or set SPATIALROOT_CULT_TRANSCODER=/path/to/cult-transcoder.");
                 } else {
                     std::string fmt = kTcFormatValues[mTcInFormat];
                     if (mTcInFormat == 0) {
@@ -836,7 +838,7 @@ void App::renderTranscodeTab() {
             if (ImGui::Button("Export ADM/BW64", {140.f, 0.f})) {
                 const std::string cultBin = findCultTranscoder();
                 if (cultBin.empty()) {
-                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
+                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh or set SPATIALROOT_CULT_TRANSCODER=/path/to/cult-transcoder.");
                 } else {
                     clearStandaloneTranscodeTempState();
                     mTcDone = false; mTcSuccess = false; mTcRunning = true;
@@ -949,7 +951,7 @@ void App::onStart() {
     if (mSourceIsAdm) {
         const std::string cultBin = findCultTranscoder();
         if (cultBin.empty()) {
-            mLastError = "cult-transcoder binary not found. Build with ./build.sh first.";
+            mLastError = "cult-transcoder binary not found. Build with ./build.sh or set SPATIALROOT_CULT_TRANSCODER.";
             mState = AppState::Error;
             appendEngineLog("[GUI] " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
             return;
@@ -1040,7 +1042,6 @@ void App::doLaunchEngine(const std::string& scenePath,
 
     LayoutInput layout;
     layout.layoutPath = mLayoutPath;
-    layout.remapCsvPath = mRemapPath;
     if (!mSession->applyLayout(layout)) {
         mLastError = mSession->getLastError();
         mState = AppState::Error;
@@ -1248,10 +1249,18 @@ void App::detectSource() {
 
 std::string App::resolveProjectPath(const std::string& relPath) const {
     if (relPath.empty()) return "";
+    if (const char* assetRoot = std::getenv("SPATIALROOT_ASSET_ROOT"); assetRoot && *assetRoot)
+        return (fs::path(assetRoot) / relPath).string();
     return (fs::path(mProjectRoot) / relPath).string();
 }
 
 std::string App::findCultTranscoder() const {
+    // Explicit env var override — set by packaged builds or for testing.
+    if (const char* env = std::getenv("SPATIALROOT_CULT_TRANSCODER"); env && *env) {
+        if (fs::exists(env)) return env;
+        return "";  // env var set but binary not found; caller surfaces the error
+    }
+    // Developer build-tree fallback.
     std::vector<std::string> candidates = {
         resolveProjectPath("build/internal/cult_transcoder/cult-transcoder"),
         resolveProjectPath("internal/cult_transcoder/build/cult-transcoder"),
@@ -1266,6 +1275,12 @@ std::string App::findCultTranscoder() const {
 }
 
 std::string App::findSpatialRenderer() const {
+    // Explicit env var override — set by packaged builds or for testing.
+    if (const char* env = std::getenv("SPATIALROOT_SPATIAL_RENDER"); env && *env) {
+        if (fs::exists(env)) return env;
+        return "";
+    }
+    // Developer build-tree fallback.
     std::string candidate = resolveProjectPath(
         "build/source/spatial_engine/spatialRender/spatialroot_spatial_render");
 #ifdef _WIN32

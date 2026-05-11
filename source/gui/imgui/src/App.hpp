@@ -90,7 +90,6 @@ private:
     // ── Input configuration ───────────────────────────────────────────────
     std::string mSourcePath;   // ADM WAV file or LUSID package directory
     std::string mLayoutPath;   // speaker layout JSON
-    std::string mRemapPath;    // DEPRECATED — CSV remap; remove after layout-routing validation
     std::string              mDeviceName;   // "" = system default
     std::vector<std::string> mDeviceList;  // populated by scanDevices(); [0] = system default
     int                      mDeviceIdx = 0;

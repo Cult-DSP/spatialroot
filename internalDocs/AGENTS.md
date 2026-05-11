@@ -109,17 +109,19 @@ Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OS
 
 **Build:** `./init.sh` then `./build.sh --gui`. **Run:** `./run.sh`.
 
-**GUI path assumptions (packaging audit required):**
+**GUI path resolution (packaging audit complete — May 2026):**
 
-| Path | How resolved | Risk |
-|------|--------------|------|
-| `source/speaker_layouts/**` (layout presets) | `mProjectRoot / kLayoutPaths[i]` | Fails in packaged build unless root is set or layouts are bundled |
-| `build/internal/cult_transcoder/cult-transcoder` | `findCultTranscoder()` checks two build-tree paths | Must be bundled or PATH-available in packaged build |
-| `build/source/spatial_engine/spatialRender/spatialroot_spatial_render` | `findSpatialRenderer()` checks one build-tree path | Must be bundled for offline render feature to work |
-| Temp sessions root | `SpatialRootPaths::defaultCacheRoot()` (platform XDG/AppData paths) | Safe; platform-correct |
-| Persistent settings root | `SpatialRootPaths::defaultAppSettingsRoot()` (platform paths) | Safe; platform-correct |
+| Path | How resolved | Packaged-build override |
+|------|--------------|------------------------|
+| `source/speaker_layouts/**` (layout presets) | `SPATIALROOT_ASSET_ROOT / kLayoutPaths[i]`, falls back to `mProjectRoot / kLayoutPaths[i]` | Set `SPATIALROOT_ASSET_ROOT` to the directory containing `source/speaker_layouts/` |
+| `cult-transcoder` binary | `SPATIALROOT_CULT_TRANSCODER` env var, falls back to `build/internal/cult_transcoder/cult-transcoder` | Set `SPATIALROOT_CULT_TRANSCODER=/path/to/cult-transcoder` |
+| `spatialroot_spatial_render` binary | `SPATIALROOT_SPATIAL_RENDER` env var, falls back to `build/source/spatial_engine/spatialRender/…` | Set `SPATIALROOT_SPATIAL_RENDER=/path/to/spatialroot_spatial_render` |
+| Temp sessions root | `SpatialRootPaths::defaultCacheRoot()` (platform XDG/AppData paths) | `SPATIALROOT_TEMP_ROOT` |
+| Persistent settings root | `SpatialRootPaths::defaultAppSettingsRoot()` (platform paths) | `SPATIALROOT_SETTINGS_ROOT` |
 
-Override: pass `--root <path>` at launch or set `SPATIALROOT_TEMP_ROOT` / `SPATIALROOT_SETTINGS_ROOT` env vars.
+**Developer path:** run from repo root (or pass `--root /path/to/repo`). No env vars required.
+
+**Packaged path:** set env vars before launch, or (future) CMake install rules to stage assets and binaries next to the GUI executable. CMake install rules not yet implemented — deferred to distribution pass.
 
 ### `cult-transcoder` — ADM ↔ LUSID Tool
 
