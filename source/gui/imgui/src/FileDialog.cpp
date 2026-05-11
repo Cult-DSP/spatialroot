@@ -48,9 +48,37 @@ std::string pickFile(const std::string&              title,
 }
 
 std::string pickFileOrDirectory(const std::string& title) {
-    // No standard Win32 combined file+folder dialog without COM/IFileOpenDialog.
-    // Fall back to file-only; directories must be typed.
-    return pickFile(title, {}, "All files");
+    // Use IFileOpenDialog with FOS_PICKFOLDERS | FOS_ALLFILESYSTEMED to allow both files and folders.
+    // Double-clicking a folder navigates into it; selecting and clicking Open returns the path.
+    IFileOpenDialog* pDialog = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDialog));
+    if (FAILED(hr)) return {};
+
+    wchar_t titleW[MAX_PATH] = {};
+    mbstowcs_s(nullptr, titleW, title.c_str(), MAX_PATH - 1);
+    pDialog->SetTitle(titleW);
+    DWORD opts = 0;
+    pDialog->GetOptions(&opts);
+    pDialog->SetOptions(opts | FOS_PICKFOLDERS | FOS_ALLFILESYSTEMED);
+
+    if (pDialog->Show(nullptr) == S_OK) {
+        IShellItem* pItem = nullptr;
+        if (pDialog->GetResult(&pItem) == S_OK) {
+            PWSTR pszPath = nullptr;
+            if (pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszPath) == S_OK) {
+                char pathA[MAX_PATH] = {};
+                wcstombs_s(nullptr, pathA, pszPath, MAX_PATH - 1);
+                std::string result(pathA);
+                CoTaskMemFree(pszPath);
+                pItem->Release();
+                pDialog->Release();
+                return result;
+            }
+            pItem->Release();
+        }
+    }
+    pDialog->Release();
+    return {};
 }
 
 std::string pickDirectory(const std::string& title) {
@@ -100,7 +128,22 @@ std::string pickFile(const std::string&              title,
 }
 
 std::string pickFileOrDirectory(const std::string& title) {
-    return pickFile(title, {}, "All files");
+    // zenity --file-selection (without --directory) allows both files and folders.
+    // Double-clicking a folder navigates into it.
+    std::string cmd = "zenity --file-selection --title=\"" + title + "\" 2>/dev/null";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) return {};
+
+    char buf[4096] = {};
+    bool got = (std::fgets(buf, sizeof(buf), pipe) != nullptr);
+    pclose(pipe);
+    if (!got) return {};
+
+    std::string result(buf);
+    while (!result.empty() &&
+           (result.back() == '\n' || result.back() == '\r'))
+        result.pop_back();
+    return result;
 }
 
 std::string pickDirectory(const std::string& title) {

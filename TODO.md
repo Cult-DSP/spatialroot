@@ -4,7 +4,7 @@
 
 ## next tasks
 
-- clean up transcode tab
+- fix bugs in transcoder tab
 
 ## audit
 

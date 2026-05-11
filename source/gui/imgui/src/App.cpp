@@ -746,7 +746,7 @@ void App::renderTranscodeTab() {
                 ImGui::InputText("##tc1lusid", &mTcAdmLusid);
                 ImGui::SameLine();
                 if (ImGui::Button("Browse##tc1lusid")) {
-                    const std::string p = pickFile("Select scene.lusid.json", {"*.json"}, "JSON files");
+                    const std::string p = pickFileOrDirectory("Select scene.lusid.json or folder");
                     if (!p.empty()) mTcAdmLusid = p;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: scene.lusid.json");
@@ -757,7 +757,7 @@ void App::renderTranscodeTab() {
                 ImGui::InputText("##tc1wavdir", &mTcAdmWavDir);
                 ImGui::SameLine();
                 if (ImGui::Button("Browse##tc1wavdir")) {
-                    const std::string p = pickDirectory("Select Stem WAV Directory");
+                    const std::string p = pickFileOrDirectory("Select Stem WAV Directory");
                     if (!p.empty()) mTcAdmWavDir = p;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: directory containing mono stem WAVs");
@@ -768,7 +768,7 @@ void App::renderTranscodeTab() {
                 ImGui::InputText("##tc1pkg", &mTcAdmLusidPkg);
                 ImGui::SameLine();
                 if (ImGui::Button("Browse##tc1pkg")) {
-                    const std::string p = pickDirectory("Select LUSID Package Directory");
+                    const std::string p = pickFileOrDirectory("Select LUSID Package Directory");
                     if (!p.empty()) mTcAdmLusidPkg = p;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: LUSID package directory");
