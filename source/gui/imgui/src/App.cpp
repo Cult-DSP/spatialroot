@@ -1509,6 +1509,28 @@ void App::appendOrLog(const std::string& line) {
 }
 
 void App::renderOfflineRenderTab() {
+    // Frontend guard — controls are intentionally hidden until the offline render path
+    // is validated against Spatial Root's realtime ADM/LUSID behavior and device-indexed
+    // output routing. Backend state, callbacks, and wiring remain intact below this guard.
+    // Re-enable by setting this flag to true after validation.
+    const bool kShowOfflineRenderControls = false;
+
+    if (!kShowOfflineRenderControls) {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f}, "UNDER CONSTRUCTION");
+        ImGui::Spacing();
+        ImGui::TextWrapped(
+            "Offline rendering is being rebuilt to match Spatial Root's realtime ADM/LUSID "
+            "behavior and device-indexed output routing. "
+            "Rendering controls are intentionally hidden until this path is validated."
+        );
+        ImGui::Spacing();
+        ImGui::Separator();
+        return;
+    }
+
     const ImVec4 kGreen = {0.20f, 0.62f, 0.25f, 1.f};
     const ImVec4 kAmber = {0.70f, 0.45f, 0.08f, 1.f};
     const ImVec4 kRed   = {0.72f, 0.18f, 0.15f, 1.f};

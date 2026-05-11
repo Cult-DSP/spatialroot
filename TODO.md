@@ -2,13 +2,9 @@
 
 ## immediate
 
-## Crucial CLI / GUI Features:
-
-- allow for setting runtime params prior to starting engine, add reset button
-- limit buffer size selectiom - potentially dangerous / produce warnings
-
 ## next tasks
 
+- allow for setting runtime params prior to starting engine, add reset button
 - duplicate api docs in internal and public, which is most up to date? ---
 - clean up documentation
   - public facing

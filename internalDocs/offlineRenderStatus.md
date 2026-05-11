@@ -2,6 +2,43 @@
 
 _Last updated: May 2026_
 
+## GUI frontend status (May 10, 2026)
+
+The Offline Render tab is visible in the Dear ImGui GUI, but its controls are intentionally
+hidden behind a frontend-only UI guard in `source/gui/imgui/src/App.cpp`:
+
+```cpp
+const bool kShowOfflineRenderControls = false;
+```
+
+**What this means:**
+
+- The Offline Render tab appears in the GUI tab bar.
+- The tab body shows "UNDER CONSTRUCTION" and an explanatory message.
+- No usable render buttons, file pickers, or CULT-invocation controls are visible.
+- The offline render backend, state variables, subprocess callbacks, CLI wiring, and
+  internal render handlers remain intact in the code — nothing was deleted or rolled back.
+- This is a frontend-only visibility decision, not a deletion or architectural rollback.
+
+**To re-enable the controls** after the offline render path is validated, change the guard:
+
+```cpp
+const bool kShowOfflineRenderControls = true;
+```
+
+The hidden controls cover two modes: ADM WAV Offline Render (Experimental) and LUSID Package
+Render. Both modes construct and fire `spatialroot_spatial_render` via the existing
+`SubprocessRunner`. The backend state (`mOrAdmInput`, `mOrLayout`, `mOrOutput`,
+`mOrLusidPackage`, `mOrLusidLayout`, `mOrLusidOutput`, `mOrRunner`, `mOrLog`, etc.) and
+callbacks (`appendOrLog`, `findSpatialRenderer`, `tickEngine` polling, `requestShutdown`
+cleanup) all remain active.
+
+The controls are withheld because the offline render path has not yet been validated against
+Spatial Root's realtime ADM/LUSID behavior and device-indexed output routing. See the
+sections below for the full rationale and v2 return plan.
+
+---
+
 ## Current decision
 
 Offline rendering should be deferred from the main v1 scope of Spatial Root. It remains an important future capability, but it is currently causing enough engineering drag that it should not block the core project.
