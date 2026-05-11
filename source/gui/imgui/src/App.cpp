@@ -1547,12 +1547,18 @@ void App::renderOfflineRenderTab() {
 
                 ImGui::TextDisabled("LAYOUT");
                 ImGui::SameLine(160.f);
+                ImGui::SetNextItemWidth(110.f);
+                if (ImGui::Combo("##or0layoutpreset", &mOrLayoutPreset, kLayoutNames, IM_ARRAYSIZE(kLayoutNames))) {
+                    if (mOrLayoutPreset < IM_ARRAYSIZE(kLayoutNames) - 1)
+                        mOrLayout = resolveProjectPath(kLayoutPaths[mOrLayoutPreset]);
+                }
+                ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
                 ImGui::InputText("##or0layout", &mOrLayout);
                 ImGui::SameLine();
                 if (ImGui::Button("Browse##or0layout")) {
                     const std::string p = pickFile("Select Speaker Layout", {"*.json"}, "JSON files");
-                    if (!p.empty()) mOrLayout = p;
+                    if (!p.empty()) { mOrLayout = p; mOrLayoutPreset = IM_ARRAYSIZE(kLayoutNames) - 1; }
                 }
                 if (mOrLayout.empty()) {
                     ImGui::SetCursorPosX(160.f);
@@ -1704,12 +1710,18 @@ void App::renderOfflineRenderTab() {
 
                 ImGui::TextDisabled("LAYOUT");
                 ImGui::SameLine(160.f);
+                ImGui::SetNextItemWidth(110.f);
+                if (ImGui::Combo("##or1layoutpreset", &mOrLusidLayoutPreset, kLayoutNames, IM_ARRAYSIZE(kLayoutNames))) {
+                    if (mOrLusidLayoutPreset < IM_ARRAYSIZE(kLayoutNames) - 1)
+                        mOrLusidLayout = resolveProjectPath(kLayoutPaths[mOrLusidLayoutPreset]);
+                }
+                ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
                 ImGui::InputText("##or1layout", &mOrLusidLayout);
                 ImGui::SameLine();
                 if (ImGui::Button("Browse##or1layout")) {
                     const std::string p = pickFile("Select Speaker Layout", {"*.json"}, "JSON files");
-                    if (!p.empty()) mOrLusidLayout = p;
+                    if (!p.empty()) { mOrLusidLayout = p; mOrLusidLayoutPreset = IM_ARRAYSIZE(kLayoutNames) - 1; }
                 }
                 if (mOrLusidLayout.empty()) {
                     ImGui::SetCursorPosX(160.f);

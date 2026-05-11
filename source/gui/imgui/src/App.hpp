@@ -126,16 +126,18 @@ private:
     // ── Offline Render panel state ────────────────────────────────────────
 
     // ADM WAV mode fields
-    std::string      mOrAdmInput;       // ADM WAV path
-    std::string      mOrLayout;         // speaker layout JSON
-    std::string      mOrOutput;         // output WAV path
-    std::string      mOrCultOverride;   // optional --cult-transcoder path
+    std::string      mOrAdmInput;           // ADM WAV path
+    std::string      mOrLayout;             // speaker layout JSON
+    int              mOrLayoutPreset  = 0;  // index into kLayoutNames[]
+    std::string      mOrOutput;             // output WAV path
+    std::string      mOrCultOverride;       // optional --cult-transcoder path
     bool             mOrKeepTempDir = false;
 
     // LUSID package mode fields
-    std::string      mOrLusidPackage;   // directory containing scene.lusid.json + stems
-    std::string      mOrLusidLayout;    // speaker layout JSON
-    std::string      mOrLusidOutput;    // output WAV path
+    std::string      mOrLusidPackage;          // directory containing scene.lusid.json + stems
+    std::string      mOrLusidLayout;           // speaker layout JSON
+    int              mOrLusidLayoutPreset = 0; // index into kLayoutNames[]
+    std::string      mOrLusidOutput;           // output WAV path
 
     SubprocessRunner mOrRunner;
     bool             mOrRunning  = false;

@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc libcult_allolib_file.a CMakeFiles/cult_allolib_file.dir/src/io/al_File.cpp.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib libcult_allolib_file.a
