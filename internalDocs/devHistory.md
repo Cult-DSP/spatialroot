@@ -1,7 +1,41 @@
 # Development History
 
-**Last Updated:** May 10, 2026  
+**Last Updated:** May 10, 2026
 **Note:** Newest entries at top, oldest at bottom.
+
+---
+
+## TRANSCODE Tab UI Cleanup — Workflow Consolidation (May 10, 2026)
+
+**Status:** Complete. No backend changes.
+
+**Motivation:** TRANSCODE tab had a nested horizontal sub-tab row ("ADM to LUSID Scene", "ADM WAV to LUSID Package", "LUSID to ADM Export") creating a visually cluttered stacked-tab appearance. Desired a cleaner Spatial Root-style workflow panel with fewer visual tiers.
+
+**What changed:**
+
+- `source/gui/imgui/src/App.hpp`:
+  - Reduced `kTcWorkflowNames[]` from 3 to 2: "ADM/BW64 to LUSID" and "LUSID to ADM/BW64"
+  - Added `kTcOutputTypeNames[]` for output type selector: "Scene JSON only", "Full LUSID package"
+  - Added `mTcOutputType` state variable to track output type selection
+  - Unified the two ADM-to-LUSID workflows (formerly separate tabs) into a single UI with output type dispatch
+
+- `source/gui/imgui/src/App.cpp`:
+  - Refactored `renderTranscodeTab()`: removed nested `ImGui::BeginTabBar("##tc_workflow")` sub-tab bar
+  - Replaced with button-based workflow selector at the top: `[ADM/BW64 to LUSID]` / `[LUSID to ADM/BW64]`
+  - Added top-level description: "Convert ADM, BW64/WAV, and LUSID assets for Spatial Root workflows."
+  - Added output type dropdown inside "ADM/BW64 to LUSID" workflow (Scene JSON only vs Full LUSID package)
+  - Output type selection routes to appropriate backend command:
+    - Scene JSON only → `cult-transcoder transcode` (preserved)
+    - Full LUSID package → `cult-transcoder package-adm-wav` (preserved)
+  - LUSID to ADM/BW64 workflow uses `cult-transcoder adm-author` (preserved)
+  - Updated all form labels to sentence-case: "Source", "Detected format", "Output type", "Output path", "Options", "Keep temp files for debugging"
+  - Button labels changed to "Convert" and "Export ADM/BW64" (not all-caps)
+  - Status display shows "Status: Idle/Running/Complete/Failed"
+
+- Backend preservation:
+  - All three cult-transcoder subcommands remain wired: `transcode`, `package-adm-wav`, `adm-author`
+  - All existing state fields retained (though workflow 1 fields now unused in UI but remain in class)
+  - File browse behavior, temp-file toggle, format detection, LFE mode all preserved
 
 ---
 

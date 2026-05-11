@@ -150,18 +150,16 @@ private:
     bool                 mOrLogAutoScroll = true;
 
     // ── Transcode panel state ─────────────────────────────────────────────
-    int              mTcWorkflow = 0;   // 0=ADM→LUSID Scene, 1=ADM WAV→LUSID Package, 2=LUSID→ADM Export
+    int              mTcWorkflow = 0;   // 0=ADM/BW64→LUSID, 1=LUSID→ADM/BW64
 
-    // Workflow 0: ADM to LUSID Scene (cult-transcoder transcode)
+    // Workflow 0: ADM/BW64 to LUSID (unifies transcode + package-adm-wav)
     std::string      mTcInput;          // input file path
-    std::string      mTcOutput;         // output .lusid.json (empty = auto temp session)
-    int              mTcInFormat = 0;   // 0=auto 1=adm_wav 2=adm_xml
+    std::string      mTcOutput;         // output path (json or package dir)
+    int              mTcInFormat = 0;    // 0=auto 1=adm_wav 2=adm_xml
     int              mTcLfeMode  = 0;   // 0=hardcoded 1=speaker-label
+    int              mTcOutputType = 0; // 0=Scene JSON only, 1=Full LUSID package
 
-    // Workflow 1: ADM WAV to LUSID Package (cult-transcoder package-adm-wav)
-    std::string      mTcPkgInput;       // source .wav path
-    std::string      mTcPkgOutput;      // output package directory
-    int              mTcPkgLfeMode = 0; // 0=hardcoded 1=speaker-label
+    // Workflow 1: LUSID to ADM/BW64 Export (cult-transcoder adm-author)
 
     // Workflow 2: LUSID to ADM Export (cult-transcoder adm-author)
     int              mTcAdmInputMode = 0;       // 0=scene+wav-dir  1=lusid-package
@@ -221,9 +219,12 @@ private:
         "Clamp to Layout"
     };
     static constexpr const char* kTcWorkflowNames[] = {
-        "ADM to LUSID Scene",
-        "ADM WAV to LUSID Package",
-        "LUSID to ADM Export"
+        "ADM/BW64 to LUSID",
+        "LUSID to ADM/BW64"
+    };
+    static constexpr const char* kTcOutputTypeNames[] = {
+        "Scene JSON only",
+        "Full LUSID package"
     };
     static constexpr const char* kTcFormatNames[] =
         {"Auto-detect", "ADM WAV", "ADM XML"};

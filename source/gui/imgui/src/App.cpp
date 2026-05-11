@@ -566,109 +566,124 @@ void App::renderTranscodeTab() {
     const ImVec4 kRed   = {0.72f, 0.18f, 0.15f, 1.f};
     const bool tcBusy = mTcRunner.isRunning();
 
-    // ── Workflow selector tabs ────────────────────────────────────────────────
-    // Each tab exposes one cult-transcoder subcommand.
-    // The shared log and run-status section sit below the tab bar.
+    ImGui::Text("Transcode");
+    ImGui::SameLine();
+    ImGui::TextDisabled("Convert ADM, BW64/WAV, and LUSID assets for Spatial Root workflows.");
+    ImGui::Spacing();
 
-    std::string cmdPreview;  // built by whichever tab is active
+    ImGui::TextDisabled("Workflow");
+    ImGui::SameLine();
+    const float segW = 180.f;
+    ImGui::SetNextItemWidth(segW);
+    if (ImGui::Combo("##tcworkflow", &mTcWorkflow, kTcWorkflowNames, 2)) {
+    }
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
 
-    if (ImGui::BeginTabBar("##tc_workflow")) {
+    std::string cmdPreview;
 
-        // ── Tab 0: ADM to LUSID Scene (cult-transcoder transcode) ────────────
-        if (ImGui::BeginTabItem(kTcWorkflowNames[0])) {
-            mTcWorkflow = 0;
-            if (ImGui::BeginChild("##tc0config", {0.f, 196.f}, true)) {
-                ImGui::TextDisabled("ADM TO LUSID SCENE");
-                ImGui::SameLine(); ImGui::TextDisabled("— convert ADM XML or ADM WAV/BWF metadata into a LUSID scene JSON");
-                ImGui::Spacing();
-                if (tcBusy) ImGui::BeginDisabled(true);
-
-                ImGui::TextDisabled("INPUT");
-                ImGui::SameLine(140.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                ImGui::InputText("##tc0in", &mTcInput);
-                ImGui::SameLine();
-                if (ImGui::Button("Browse##tc0in")) {
-                    const std::string p = pickFile("Select ADM Input", {"*.wav", "*.xml"}, "ADM files");
-                    if (!p.empty()) mTcInput = p;
-                }
-                if (mTcInput.empty()) {
-                    ImGui::SetCursorPosX(140.f);
-                    ImGui::TextColored(kAmber, "Required: ADM WAV (.wav) or ADM XML (.xml)");
-                }
-
-                ImGui::TextDisabled("FORMAT");
-                ImGui::SameLine(140.f);
-                ImGui::SetNextItemWidth(160.f);
-                ImGui::Combo("##tc0fmt", &mTcInFormat, kTcFormatNames, 3);
-                ImGui::SameLine(); ImGui::TextDisabled("(Auto-detect uses file extension)");
-
-                ImGui::TextDisabled("LFE MODE");
-                ImGui::SameLine(140.f);
-                ImGui::SetNextItemWidth(180.f);
-                ImGui::Combo("##tc0lfe", &mTcLfeMode, kTcLfeModeNames, 2);
-
-                ImGui::TextDisabled("OUTPUT");
-                ImGui::SameLine(140.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
-                ImGui::InputText("##tc0out", &mTcOutput);
-                ImGui::SameLine(140.f);
-                ImGui::TextDisabled("scene.lusid.json path — empty = temp session");
-
-                ImGui::TextDisabled("TEMP FILES");
-                ImGui::SameLine(140.f);
-                ImGui::Checkbox("Keep temp files for debugging##tc0", &mKeepTempSessions);
-
-                if (tcBusy) ImGui::EndDisabled();
+    if (mTcWorkflow == 0) {
+        if (ImGui::BeginChild("##tc0config", {0.f, 0.f}, true)) {
+            ImGui::TextDisabled("Source");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+            ImGui::InputText("##tc0in", &mTcInput);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##tc0in")) {
+                const std::string p = pickFile("Select ADM/BW64 Input", {"*.wav", "*.xml"}, "ADM/BW64 files");
+                if (!p.empty()) mTcInput = p;
             }
-            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM WAV/BWF or ADM XML");
 
-            // Build command preview for workflow 0
-            {
-                std::string fmt = kTcFormatValues[mTcInFormat];
-                if (mTcInFormat == 0) {
-                    std::string lower = mTcInput;
-                    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-                    fmt = (lower.size() > 4 && lower.substr(lower.size() - 4) == ".xml") ? "adm_xml" : "adm_wav";
-                }
-                const std::string outDisp = mTcOutput.empty() ? "<temp>/scene.lusid.json" : mTcOutput;
+            ImGui::TextDisabled("Format");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(180.f);
+            ImGui::Combo("##tc0fmt", &mTcInFormat, kTcFormatNames, 3);
+            ImGui::SameLine();
+            ImGui::TextDisabled("(auto-detect uses file extension)");
+
+            ImGui::TextDisabled("Source type");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(200.f);
+            ImGui::Combo("##tc0outtype", &mTcOutputType, kTcOutputTypeNames, 2);
+            ImGui::SameLine();
+            ImGui::TextDisabled(mTcOutputType == 0 ? "scene.lusid.json only" : "scene.lusid.json + mono stems + reports");
+
+            ImGui::TextDisabled("Output path");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+            if (mTcOutputType == 0) {
+                ImGui::InputText("##tc0out", &mTcOutput);
+            } else {
+                ImGui::InputText("##tc0pkgout", &mTcOutput);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(mTcOutputType == 0 ? "Browse##tc0out" : "Browse##tc0pkgout")) {
+                const std::string p = mTcOutputType == 0
+                    ? pickFile("Select Output JSON", {"*.json"}, "JSON files")
+                    : pickDirectory("Select Package Output Directory");
+                if (!p.empty()) mTcOutput = p;
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled(mTcOutputType == 0 ? "Expected: scene.lusid.json" : "Expected: package directory");
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("Options");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(180.f);
+            ImGui::Combo("##tc0lfe", &mTcLfeMode, kTcLfeModeNames, 2);
+
+            ImGui::SameLine();
+            ImGui::Checkbox("Keep temp files for debugging##tc0", &mKeepTempSessions);
+        }
+        ImGui::EndChild();
+
+        {
+            std::string fmt = kTcFormatValues[mTcInFormat];
+            if (mTcInFormat == 0) {
+                std::string lower = mTcInput;
+                std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+                fmt = (lower.size() > 4 && lower.substr(lower.size() - 4) == ".xml") ? "adm_xml" : "adm_wav";
+            }
+            const std::string outDisp = mTcOutput.empty() ? "<temp>" : mTcOutput;
+            if (mTcOutputType == 0) {
                 cmdPreview = "cult-transcoder transcode"
                     " --in " + (mTcInput.empty() ? "<input>" : mTcInput) +
                     " --in-format " + fmt +
                     " --out " + outDisp +
                     " --out-format lusid_json"
                     " --lfe-mode " + kTcLfeModeValues[mTcLfeMode];
+            } else {
+                cmdPreview = "cult-transcoder package-adm-wav"
+                    " --in " + (mTcInput.empty() ? "<input>" : mTcInput) +
+                    " --out-package " + outDisp +
+                    " --lfe-mode " + kTcLfeModeValues[mTcLfeMode] +
+                    " --stdout-report";
             }
+        }
 
-            // ── Run controls for workflow 0 ──────────────────────────────────
-            if (ImGui::BeginChild("##tc0ctrl", {0.f, 58.f}, true)) {
-                if (tcBusy) ImGui::BeginDisabled(true);
-                if (ImGui::Button("Run — ADM to LUSID Scene", {220.f, 0.f})) {
-                    const std::string cultBin = findCultTranscoder();
-                    if (cultBin.empty()) {
-                        appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
-                    } else if (mTcInput.empty()) {
-                        appendTcLog("[error] Input path is required.");
-                    } else {
-                        std::string fmt = kTcFormatValues[mTcInFormat];
-                        if (mTcInFormat == 0) {
-                            std::string lower = mTcInput;
-                            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-                            fmt = (lower.size() > 4 && lower.substr(lower.size() - 4) == ".xml") ? "adm_xml" : "adm_wav";
-                        }
-                        clearStandaloneTranscodeTempState();
-                        mTcDone = false; mTcSuccess = false; mTcRunning = true;
+        if (ImGui::BeginChild("##tc0ctrl", {0.f, 58.f}, true)) {
+            const bool canRun0 = !mTcInput.empty() && !mTcOutput.empty();
+            if (!canRun0) ImGui::BeginDisabled(true);
+            if (ImGui::Button("Convert", {120.f, 0.f})) {
+                const std::string cultBin = findCultTranscoder();
+                if (cultBin.empty()) {
+                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
+                } else {
+                    std::string fmt = kTcFormatValues[mTcInFormat];
+                    if (mTcInFormat == 0) {
+                        std::string lower = mTcInput;
+                        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+                        fmt = (lower.size() > 4 && lower.substr(lower.size() - 4) == ".xml") ? "adm_xml" : "adm_wav";
+                    }
+                    clearStandaloneTranscodeTempState();
+                    mTcDone = false; mTcSuccess = false; mTcRunning = true;
 
-                        fs::path outputPath;
-                        fs::path reportPath;
-                        if (!mTcOutput.empty()) {
-                            outputPath = fs::path(mTcOutput);
-                            reportPath = outputPath.parent_path() / (outputPath.stem().string() + "_report.json");
-                        } else {
-                            mTcTempSessionRoot = createOwnedTempSession("manual_transcode", mTcInput, mTcTempManifest);
-                            outputPath = *mTcTempSessionRoot / "scene.lusid.json";
-                            reportPath = *mTcTempSessionRoot / "reports" / "transcode_report.json";
-                        }
+                    if (mTcOutputType == 0) {
+                        fs::path outputPath = fs::path(mTcOutput);
+                        fs::path reportPath = outputPath.parent_path() / (outputPath.stem().string() + "_report.json");
                         try { fs::create_directories(outputPath.parent_path()); } catch (...) {}
                         try { fs::create_directories(reportPath.parent_path()); } catch (...) {}
 
@@ -682,312 +697,200 @@ void App::renderTranscodeTab() {
                         };
                         appendTcLog("[GUI] Running: cult-transcoder transcode ...");
                         mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); });
-                    }
-                }
-                if (tcBusy) ImGui::EndDisabled();
-
-                const char* st = tcBusy ? "Running..." : mTcDone ? (mTcSuccess ? "Complete" : "Failed") : "Idle";
-                const ImVec4 sc = tcBusy ? kAmber : mTcDone ? (mTcSuccess ? kGreen : kRed)
-                                                             : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-                const float sw = ImGui::CalcTextSize(st).x + 20.f;
-                ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - sw);
-                ImGui::TextColored(sc, "●  %s", st);
-            }
-            ImGui::EndChild();
-
-            ImGui::EndTabItem();
-        }
-
-        // ── Tab 1: ADM WAV to LUSID Package (cult-transcoder package-adm-wav) ─
-        if (ImGui::BeginTabItem(kTcWorkflowNames[1])) {
-            mTcWorkflow = 1;
-            if (ImGui::BeginChild("##tc1config", {0.f, 196.f}, true)) {
-                ImGui::TextDisabled("ADM WAV TO LUSID PACKAGE");
-                ImGui::SameLine(); ImGui::TextDisabled("— extract ADM XML, convert metadata, split audio into a LUSID package");
-                ImGui::Spacing();
-                if (tcBusy) ImGui::BeginDisabled(true);
-
-                ImGui::TextDisabled("INPUT WAV");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                ImGui::InputText("##tc1in", &mTcPkgInput);
-                ImGui::SameLine();
-                if (ImGui::Button("Browse##tc1in")) {
-                    const std::string p = pickFile("Select ADM WAV/BWF", {"*.wav"}, "WAV files");
-                    if (!p.empty()) mTcPkgInput = p;
-                }
-                if (mTcPkgInput.empty()) {
-                    ImGui::SetCursorPosX(160.f);
-                    ImGui::TextColored(kAmber, "Required: ADM BWF/WAV source file (.wav)");
-                }
-
-                ImGui::TextDisabled("OUTPUT PACKAGE");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                ImGui::InputText("##tc1out", &mTcPkgOutput);
-                ImGui::SameLine();
-                if (ImGui::Button("Browse##tc1out")) {
-                    const std::string p = pickDirectory("Select Output Package Directory");
-                    if (!p.empty()) mTcPkgOutput = p;
-                }
-                if (mTcPkgOutput.empty()) {
-                    ImGui::SetCursorPosX(160.f);
-                    ImGui::TextColored(kAmber, "Required: output directory for LUSID package");
-                }
-
-                ImGui::TextDisabled("LFE MODE");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(180.f);
-                ImGui::Combo("##tc1lfe", &mTcPkgLfeMode, kTcLfeModeNames, 2);
-
-                ImGui::Spacing();
-                ImGui::SetCursorPosX(160.f);
-                ImGui::TextDisabled("Output: scene.lusid.json + mono stems + channel_order.txt + scene_report.json");
-
-                if (tcBusy) ImGui::EndDisabled();
-            }
-            ImGui::EndChild();
-
-            // Build command preview for workflow 1
-            cmdPreview = "cult-transcoder package-adm-wav"
-                " --in " + (mTcPkgInput.empty() ? "<source.wav>" : mTcPkgInput) +
-                " --out-package " + (mTcPkgOutput.empty() ? "<package-dir>" : mTcPkgOutput) +
-                " --lfe-mode " + kTcLfeModeValues[mTcPkgLfeMode] +
-                " --stdout-report";
-
-            // ── Run controls for workflow 1 ──────────────────────────────────
-            if (ImGui::BeginChild("##tc1ctrl", {0.f, 58.f}, true)) {
-                if (tcBusy) ImGui::BeginDisabled(true);
-                const bool canRun1 = !mTcPkgInput.empty() && !mTcPkgOutput.empty();
-                if (!canRun1) ImGui::BeginDisabled(true);
-                if (ImGui::Button("Run — ADM WAV to LUSID Package", {260.f, 0.f})) {
-                    const std::string cultBin = findCultTranscoder();
-                    if (cultBin.empty()) {
-                        appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
                     } else {
-                        clearStandaloneTranscodeTempState();
-                        mTcDone = false; mTcSuccess = false; mTcRunning = true;
+                        try { fs::create_directories(fs::path(mTcOutput)); } catch (...) {}
+                        const fs::path reportPath = fs::path(mTcOutput) / "scene_report.json";
 
-                        try { fs::create_directories(fs::path(mTcPkgOutput)); } catch (...) {}
-
-                        const fs::path reportPath = fs::path(mTcPkgOutput) / "scene_report.json";
                         std::vector<std::string> args = {
                             cultBin, "package-adm-wav",
-                            "--in", mTcPkgInput,
-                            "--out-package", mTcPkgOutput,
+                            "--in", mTcInput,
+                            "--out-package", mTcOutput,
                             "--report", reportPath.string(),
                             "--stdout-report",
-                            "--lfe-mode", kTcLfeModeValues[mTcPkgLfeMode],
+                            "--lfe-mode", kTcLfeModeValues[mTcLfeMode],
                         };
                         appendTcLog("[GUI] Running: cult-transcoder package-adm-wav ...");
                         mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); });
                     }
                 }
-                if (!canRun1) ImGui::EndDisabled();
-                if (tcBusy) ImGui::EndDisabled();
-
-                const char* st = tcBusy ? "Running..." : mTcDone ? (mTcSuccess ? "Complete" : "Failed") : "Idle";
-                const ImVec4 sc = tcBusy ? kAmber : mTcDone ? (mTcSuccess ? kGreen : kRed)
-                                                             : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-                const float sw = ImGui::CalcTextSize(st).x + 20.f;
-                ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - sw);
-                ImGui::TextColored(sc, "●  %s", st);
             }
-            ImGui::EndChild();
+            if (!canRun0) ImGui::EndDisabled();
 
-            ImGui::EndTabItem();
+            const char* st = tcBusy ? "Running..." : mTcDone ? (mTcSuccess ? "Complete" : "Failed") : "Idle";
+            const ImVec4 sc = tcBusy ? kAmber : mTcDone ? (mTcSuccess ? kGreen : kRed)
+                                                         : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+            const float sw = ImGui::CalcTextSize(st).x + 20.f;
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - sw);
+            ImGui::TextColored(sc, "Status: %s", st);
+        }
+        ImGui::EndChild();
+    } else {
+        if (ImGui::BeginChild("##tc1config", {0.f, 0.f}, true)) {
+            ImGui::TextDisabled("Source");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+            ImGui::Combo("##tc1mode", &mTcAdmInputMode, kTcAdmInputModeNames, 2);
+
+            if (mTcAdmInputMode == 0) {
+                ImGui::TextDisabled("Scene JSON");
+                ImGui::SameLine(140.f);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+                ImGui::InputText("##tc1lusid", &mTcAdmLusid);
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##tc1lusid")) {
+                    const std::string p = pickFile("Select scene.lusid.json", {"*.json"}, "JSON files");
+                    if (!p.empty()) mTcAdmLusid = p;
+                }
+                ImGui::SameLine();
+                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: scene.lusid.json");
+
+                ImGui::TextDisabled("Audio directory");
+                ImGui::SameLine(140.f);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+                ImGui::InputText("##tc1wavdir", &mTcAdmWavDir);
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##tc1wavdir")) {
+                    const std::string p = pickDirectory("Select Stem WAV Directory");
+                    if (!p.empty()) mTcAdmWavDir = p;
+                }
+                ImGui::SameLine();
+                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: directory containing mono stem WAVs");
+            } else {
+                ImGui::TextDisabled("LUSID package");
+                ImGui::SameLine(140.f);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+                ImGui::InputText("##tc1pkg", &mTcAdmLusidPkg);
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##tc1pkg")) {
+                    const std::string p = pickDirectory("Select LUSID Package Directory");
+                    if (!p.empty()) mTcAdmLusidPkg = p;
+                }
+                ImGui::SameLine();
+                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: LUSID package directory");
+            }
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("Output");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+            ImGui::InputText("##tc1outxml", &mTcAdmOutXml);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##tc1outxml")) {
+                const std::string p = pickDirectory("Select Output Directory for ADM XML");
+                if (!p.empty()) mTcAdmOutXml = (fs::path(p) / "export.adm.xml").string();
+            }
+            ImGui::SameLine();
+            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM XML output");
+
+            ImGui::TextDisabled("BW64/WAV output");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+            ImGui::InputText("##tc1outwav", &mTcAdmOutWav);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##tc1outwav")) {
+                const std::string p = pickDirectory("Select Output Directory for ADM WAV");
+                if (!p.empty()) mTcAdmOutWav = (fs::path(p) / "export.wav").string();
+            }
+            ImGui::SameLine();
+            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM BWF/WAV output");
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("Options");
+            ImGui::SameLine(140.f);
+            ImGui::Checkbox("Keep temp files for debugging##tc1", &mKeepTempSessions);
+
+            ImGui::Spacing();
+            ImGui::SameLine(140.f);
+            if (ImGui::TreeNode("Advanced / Experimental Options")) {
+                ImGui::TextDisabled("DBMD source");
+                ImGui::SameLine(140.f);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 86.f);
+                ImGui::InputText("##tc1dbmd", &mTcAdmDbmdSrc);
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##tc1dbmd")) {
+                    const std::string p = pickFile("Select DBMD Source", {"*.wav", "*.bin"}, "WAV/BIN files");
+                    if (!p.empty()) mTcAdmDbmdSrc = p;
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("Extracts/injects Dolby dbmd chunk (experimental)");
+
+                ImGui::TextDisabled("Metadata post-data");
+                ImGui::SameLine(140.f);
+                ImGui::Checkbox("Reorder WAV chunks for Dolby tool compatibility##tc1mpd", &mTcAdmMetadataPostData);
+                ImGui::SameLine();
+                ImGui::TextDisabled("writes JUNK/fmt/data/axml/chna order (experimental)");
+
+                ImGui::TreePop();
+            }
+        }
+        ImGui::EndChild();
+
+        {
+            cmdPreview = "cult-transcoder adm-author";
+            if (mTcAdmInputMode == 0) {
+                cmdPreview += " --lusid " + (mTcAdmLusid.empty() ? "<scene.lusid.json>" : mTcAdmLusid);
+                cmdPreview += " --wav-dir " + (mTcAdmWavDir.empty() ? "<wav-dir>" : mTcAdmWavDir);
+            } else {
+                cmdPreview += " --lusid-package " + (mTcAdmLusidPkg.empty() ? "<package-dir>" : mTcAdmLusidPkg);
+            }
+            cmdPreview += " --out-xml " + (mTcAdmOutXml.empty() ? "<export.adm.xml>" : mTcAdmOutXml);
+            cmdPreview += " --out-wav " + (mTcAdmOutWav.empty() ? "<export.wav>" : mTcAdmOutWav);
+            cmdPreview += " --stdout-report";
+            if (!mTcAdmDbmdSrc.empty()) cmdPreview += " --dbmd-source " + mTcAdmDbmdSrc;
+            if (mTcAdmMetadataPostData) cmdPreview += " --metadata-post-data";
         }
 
-        // ── Tab 2: LUSID to ADM Export (cult-transcoder adm-author) ──────────
-        if (ImGui::BeginTabItem(kTcWorkflowNames[2])) {
-            mTcWorkflow = 2;
-            if (ImGui::BeginChild("##tc2config", {0.f, 260.f}, true)) {
-                ImGui::TextDisabled("LUSID TO ADM EXPORT");
-                ImGui::SameLine(); ImGui::TextDisabled("— author LUSID package material into Logic-compatible ADM BWF/WAV");
-                ImGui::Spacing();
-                if (tcBusy) ImGui::BeginDisabled(true);
-
-                ImGui::TextDisabled("INPUT MODE");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(240.f);
-                ImGui::Combo("##tc2mode", &mTcAdmInputMode, kTcAdmInputModeNames, 2);
-
-                if (mTcAdmInputMode == 0) {
-                    // Mode 0: explicit scene.lusid.json + wav-dir
-                    ImGui::TextDisabled("SCENE JSON");
-                    ImGui::SameLine(160.f);
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                    ImGui::InputText("##tc2lusid", &mTcAdmLusid);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Browse##tc2lusid")) {
-                        const std::string p = pickFile("Select scene.lusid.json", {"*.json"}, "JSON files");
-                        if (!p.empty()) mTcAdmLusid = p;
-                    }
-                    if (mTcAdmLusid.empty()) {
-                        ImGui::SetCursorPosX(160.f); ImGui::TextColored(kAmber, "Required: scene.lusid.json");
-                    }
-
-                    ImGui::TextDisabled("WAV DIRECTORY");
-                    ImGui::SameLine(160.f);
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                    ImGui::InputText("##tc2wavdir", &mTcAdmWavDir);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Browse##tc2wavdir")) {
-                        const std::string p = pickDirectory("Select Stem WAV Directory");
-                        if (!p.empty()) mTcAdmWavDir = p;
-                    }
-                    if (mTcAdmWavDir.empty()) {
-                        ImGui::SetCursorPosX(160.f); ImGui::TextColored(kAmber, "Required: directory containing mono stem WAVs");
-                    }
+        if (ImGui::BeginChild("##tc1ctrl", {0.f, 58.f}, true)) {
+            const bool canRun1 = !mTcAdmOutXml.empty() && !mTcAdmOutWav.empty() &&
+                (mTcAdmInputMode == 0 ? (!mTcAdmLusid.empty() && !mTcAdmWavDir.empty())
+                                      : !mTcAdmLusidPkg.empty());
+            if (!canRun1) ImGui::BeginDisabled(true);
+            if (ImGui::Button("Export ADM/BW64", {140.f, 0.f})) {
+                const std::string cultBin = findCultTranscoder();
+                if (cultBin.empty()) {
+                    appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
                 } else {
-                    // Mode 1: LUSID package directory
-                    ImGui::TextDisabled("LUSID PACKAGE");
-                    ImGui::SameLine(160.f);
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                    ImGui::InputText("##tc2pkg", &mTcAdmLusidPkg);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Browse##tc2pkg")) {
-                        const std::string p = pickDirectory("Select LUSID Package Directory");
-                        if (!p.empty()) mTcAdmLusidPkg = p;
-                    }
-                    if (mTcAdmLusidPkg.empty()) {
-                        ImGui::SetCursorPosX(160.f); ImGui::TextColored(kAmber, "Required: LUSID package directory");
-                    }
-                }
+                    clearStandaloneTranscodeTempState();
+                    mTcDone = false; mTcSuccess = false; mTcRunning = true;
 
-                ImGui::TextDisabled("OUTPUT XML");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                ImGui::InputText("##tc2outxml", &mTcAdmOutXml);
-                ImGui::SameLine();
-                if (ImGui::Button("Browse##tc2outxml")) {
-                    const std::string p = pickDirectory("Select Output Directory for ADM XML");
-                    if (!p.empty()) mTcAdmOutXml = (fs::path(p) / "export.adm.xml").string();
-                }
-                if (mTcAdmOutXml.empty()) {
-                    ImGui::SetCursorPosX(160.f); ImGui::TextColored(kAmber, "Required: output .adm.xml path");
-                }
+                    try { fs::create_directories(fs::path(mTcAdmOutXml).parent_path()); } catch (...) {}
+                    try { fs::create_directories(fs::path(mTcAdmOutWav).parent_path()); } catch (...) {}
 
-                ImGui::TextDisabled("OUTPUT WAV");
-                ImGui::SameLine(160.f);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                ImGui::InputText("##tc2outwav", &mTcAdmOutWav);
-                ImGui::SameLine();
-                if (ImGui::Button("Browse##tc2outwav")) {
-                    const std::string p = pickDirectory("Select Output Directory for ADM WAV");
-                    if (!p.empty()) mTcAdmOutWav = (fs::path(p) / "export.wav").string();
-                }
-                if (mTcAdmOutWav.empty()) {
-                    ImGui::SetCursorPosX(160.f); ImGui::TextColored(kAmber, "Required: output ADM BWF/WAV path");
-                }
-
-                // ── Advanced / experimental options ──────────────────────────
-                ImGui::Spacing();
-                if (ImGui::TreeNode("Advanced / Experimental Options")) {
-                    ImGui::TextColored(kAmber, "These options are for compatibility testing only — not normal use.");
-                    ImGui::Spacing();
-
-                    ImGui::TextDisabled("DBMD SOURCE");
-                    ImGui::SameLine(160.f);
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
-                    ImGui::InputText("##tc2dbmd", &mTcAdmDbmdSrc);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Browse##tc2dbmd")) {
-                        const std::string p = pickFile("Select DBMD Source", {"*.wav", "*.bin"}, "WAV/BIN files");
-                        if (!p.empty()) mTcAdmDbmdSrc = p;
-                    }
-                    ImGui::SetCursorPosX(160.f);
-                    ImGui::TextDisabled("Extracts/injects Dolby dbmd chunk (experimental)");
-
-                    ImGui::TextDisabled("METADATA POST-DATA");
-                    ImGui::SameLine(160.f);
-                    ImGui::Checkbox("Reorder WAV chunks for Dolby tool compatibility##tc2mpd", &mTcAdmMetadataPostData);
-                    ImGui::SetCursorPosX(160.f);
-                    ImGui::TextDisabled("Writes JUNK/fmt/data/axml/chna order (experimental)");
-
-                    ImGui::TreePop();
-                }
-
-                if (tcBusy) ImGui::EndDisabled();
-            }
-            ImGui::EndChild();
-
-            // Build command preview for workflow 2
-            {
-                cmdPreview = "cult-transcoder adm-author";
-                if (mTcAdmInputMode == 0) {
-                    cmdPreview += " --lusid " + (mTcAdmLusid.empty() ? "<scene.lusid.json>" : mTcAdmLusid);
-                    cmdPreview += " --wav-dir " + (mTcAdmWavDir.empty() ? "<wav-dir>" : mTcAdmWavDir);
-                } else {
-                    cmdPreview += " --lusid-package " + (mTcAdmLusidPkg.empty() ? "<package-dir>" : mTcAdmLusidPkg);
-                }
-                cmdPreview += " --out-xml " + (mTcAdmOutXml.empty() ? "<export.adm.xml>" : mTcAdmOutXml);
-                cmdPreview += " --out-wav " + (mTcAdmOutWav.empty() ? "<export.wav>" : mTcAdmOutWav);
-                cmdPreview += " --stdout-report";
-                if (!mTcAdmDbmdSrc.empty()) cmdPreview += " --dbmd-source " + mTcAdmDbmdSrc;
-                if (mTcAdmMetadataPostData) cmdPreview += " --metadata-post-data";
-            }
-
-            // ── Run controls for workflow 2 ──────────────────────────────────
-            if (ImGui::BeginChild("##tc2ctrl", {0.f, 58.f}, true)) {
-                if (tcBusy) ImGui::BeginDisabled(true);
-                const bool canRun2 = !mTcAdmOutXml.empty() && !mTcAdmOutWav.empty() &&
-                    (mTcAdmInputMode == 0 ? (!mTcAdmLusid.empty() && !mTcAdmWavDir.empty())
-                                          : !mTcAdmLusidPkg.empty());
-                if (!canRun2) ImGui::BeginDisabled(true);
-                if (ImGui::Button("Run — LUSID to ADM Export", {220.f, 0.f})) {
-                    const std::string cultBin = findCultTranscoder();
-                    if (cultBin.empty()) {
-                        appendTcLog("[error] cult-transcoder not found. Build with ./build.sh --cult-only");
+                    const fs::path reportPath = fs::path(mTcAdmOutWav).parent_path() /
+                        (fs::path(mTcAdmOutWav).stem().string() + "_report.json");
+                    std::vector<std::string> args;
+                    args.push_back(cultBin);
+                    args.push_back("adm-author");
+                    if (mTcAdmInputMode == 0) {
+                        args.insert(args.end(), {"--lusid", mTcAdmLusid, "--wav-dir", mTcAdmWavDir});
                     } else {
-                        clearStandaloneTranscodeTempState();
-                        mTcDone = false; mTcSuccess = false; mTcRunning = true;
-
-                        try { fs::create_directories(fs::path(mTcAdmOutXml).parent_path()); } catch (...) {}
-                        try { fs::create_directories(fs::path(mTcAdmOutWav).parent_path()); } catch (...) {}
-
-                        const fs::path reportPath = fs::path(mTcAdmOutWav).parent_path() /
-                            (fs::path(mTcAdmOutWav).stem().string() + "_report.json");
-                        std::vector<std::string> args;
-                        args.push_back(cultBin);
-                        args.push_back("adm-author");
-                        if (mTcAdmInputMode == 0) {
-                            args.insert(args.end(), {"--lusid", mTcAdmLusid, "--wav-dir", mTcAdmWavDir});
-                        } else {
-                            args.insert(args.end(), {"--lusid-package", mTcAdmLusidPkg});
-                        }
-                        args.insert(args.end(), {
-                            "--out-xml", mTcAdmOutXml,
-                            "--out-wav", mTcAdmOutWav,
-                            "--report", reportPath.string(),
-                            "--stdout-report",
-                        });
-                        if (!mTcAdmDbmdSrc.empty()) { args.push_back("--dbmd-source"); args.push_back(mTcAdmDbmdSrc); }
-                        if (mTcAdmMetadataPostData) args.push_back("--metadata-post-data");
-
-                        appendTcLog("[GUI] Running: cult-transcoder adm-author ...");
-                        mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); });
+                        args.insert(args.end(), {"--lusid-package", mTcAdmLusidPkg});
                     }
+                    args.insert(args.end(), {
+                        "--out-xml", mTcAdmOutXml,
+                        "--out-wav", mTcAdmOutWav,
+                        "--report", reportPath.string(),
+                        "--stdout-report",
+                    });
+                    if (!mTcAdmDbmdSrc.empty()) { args.push_back("--dbmd-source"); args.push_back(mTcAdmDbmdSrc); }
+                    if (mTcAdmMetadataPostData) args.push_back("--metadata-post-data");
+
+                    appendTcLog("[GUI] Running: cult-transcoder adm-author ...");
+                    mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); });
                 }
-                if (!canRun2) ImGui::EndDisabled();
-                if (tcBusy) ImGui::EndDisabled();
-
-                const char* st = tcBusy ? "Running..." : mTcDone ? (mTcSuccess ? "Complete" : "Failed") : "Idle";
-                const ImVec4 sc = tcBusy ? kAmber : mTcDone ? (mTcSuccess ? kGreen : kRed)
-                                                             : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-                const float sw = ImGui::CalcTextSize(st).x + 20.f;
-                ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - sw);
-                ImGui::TextColored(sc, "●  %s", st);
             }
-            ImGui::EndChild();
+            if (!canRun1) ImGui::EndDisabled();
 
-            ImGui::EndTabItem();
+            const char* st = tcBusy ? "Running..." : mTcDone ? (mTcSuccess ? "Complete" : "Failed") : "Idle";
+            const ImVec4 sc = tcBusy ? kAmber : mTcDone ? (mTcSuccess ? kGreen : kRed)
+                                                         : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+            const float sw = ImGui::CalcTextSize(st).x + 20.f;
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - sw);
+            ImGui::TextColored(sc, "Status: %s", st);
         }
-
-        ImGui::EndTabBar();
+        ImGui::EndChild();
     }
 
-    // ── Command preview (shared, updated by whichever tab is active) ─────────
     ImGui::Spacing();
     ImGui::TextDisabled("CMD");
     ImGui::SameLine(60.f);
@@ -997,7 +900,6 @@ void App::renderTranscodeTab() {
     ImGui::PopStyleColor();
     ImGui::Spacing();
 
-    // ── Shared transcode log ──────────────────────────────────────────────────
     const float logH = ImGui::GetContentRegionAvail().y;
     if (ImGui::BeginChild("##tclogcard", {0.f, logH}, true)) {
         ImGui::TextDisabled("TRANSCODE LOG");
