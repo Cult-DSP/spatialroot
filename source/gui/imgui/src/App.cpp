@@ -594,8 +594,7 @@ void App::renderTranscodeTab() {
                 const std::string p = pickFile("Select ADM/BW64 Input", {"*.wav", "*.xml"}, "ADM/BW64 files");
                 if (!p.empty()) mTcInput = p;
             }
-            ImGui::SameLine();
-            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM WAV/BWF or ADM XML");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: ADM WAV/BWF or ADM XML");
 
             ImGui::TextDisabled("Format");
             ImGui::SameLine(140.f);
@@ -626,8 +625,7 @@ void App::renderTranscodeTab() {
                     : pickDirectory("Select Package Output Directory");
                 if (!p.empty()) mTcOutput = p;
             }
-            ImGui::SameLine();
-            ImGui::TextDisabled(mTcOutputType == 0 ? "Expected: scene.lusid.json" : "Expected: package directory");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(mTcOutputType == 0 ? "Expected: scene.lusid.json" : "Expected: package directory");
 
             ImGui::Spacing();
             ImGui::TextDisabled("Options");
@@ -741,8 +739,7 @@ void App::renderTranscodeTab() {
                     const std::string p = pickFile("Select scene.lusid.json", {"*.json"}, "JSON files");
                     if (!p.empty()) mTcAdmLusid = p;
                 }
-                ImGui::SameLine();
-                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: scene.lusid.json");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: scene.lusid.json");
 
                 ImGui::TextDisabled("Audio directory");
                 ImGui::SameLine(140.f);
@@ -753,8 +750,7 @@ void App::renderTranscodeTab() {
                     const std::string p = pickDirectory("Select Stem WAV Directory");
                     if (!p.empty()) mTcAdmWavDir = p;
                 }
-                ImGui::SameLine();
-                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: directory containing mono stem WAVs");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: directory containing mono stem WAVs");
             } else {
                 ImGui::TextDisabled("LUSID package");
                 ImGui::SameLine(140.f);
@@ -765,8 +761,7 @@ void App::renderTranscodeTab() {
                     const std::string p = pickDirectory("Select LUSID Package Directory");
                     if (!p.empty()) mTcAdmLusidPkg = p;
                 }
-                ImGui::SameLine();
-                ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: LUSID package directory");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: LUSID package directory");
             }
 
             ImGui::Spacing();
@@ -779,8 +774,7 @@ void App::renderTranscodeTab() {
                 const std::string p = pickDirectory("Select Output Directory for ADM XML");
                 if (!p.empty()) mTcAdmOutXml = (fs::path(p) / "export.adm.xml").string();
             }
-            ImGui::SameLine();
-            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM XML output");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: ADM XML output");
 
             ImGui::TextDisabled("BW64/WAV output");
             ImGui::SameLine(140.f);
@@ -791,8 +785,7 @@ void App::renderTranscodeTab() {
                 const std::string p = pickDirectory("Select Output Directory for ADM WAV");
                 if (!p.empty()) mTcAdmOutWav = (fs::path(p) / "export.wav").string();
             }
-            ImGui::SameLine();
-            ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.f}, "Expected: ADM BWF/WAV output");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Expected: ADM BWF/WAV output");
 
             ImGui::Spacing();
             ImGui::TextDisabled("Options");
@@ -811,14 +804,12 @@ void App::renderTranscodeTab() {
                     const std::string p = pickFile("Select DBMD Source", {"*.wav", "*.bin"}, "WAV/BIN files");
                     if (!p.empty()) mTcAdmDbmdSrc = p;
                 }
-                ImGui::SameLine();
-                ImGui::TextDisabled("Extracts/injects Dolby dbmd chunk (experimental)");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Extracts/injects Dolby dbmd chunk (experimental)");
 
                 ImGui::TextDisabled("Metadata post-data");
                 ImGui::SameLine(140.f);
                 ImGui::Checkbox("Reorder WAV chunks for Dolby tool compatibility##tc1mpd", &mTcAdmMetadataPostData);
-                ImGui::SameLine();
-                ImGui::TextDisabled("writes JUNK/fmt/data/axml/chna order (experimental)");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("writes JUNK/fmt/data/axml/chna order (experimental)");
 
                 ImGui::TreePop();
             }
