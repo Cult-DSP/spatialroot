@@ -84,6 +84,22 @@ bool hasDiagnosticsFiles(const std::optional<fs::path>& sessionRoot) {
     return fs::exists(*sessionRoot / "manifest.json", ec) ||
            fs::exists(*sessionRoot / "reports", ec);
 }
+
+std::string truncateStatusText(const std::string& text, size_t maxLen) {
+    if (text.size() <= maxLen) return text;
+    if (maxLen <= 3) return text.substr(0, maxLen);
+    return text.substr(0, maxLen - 3) + "...";
+}
+
+const char* audioBackendLabel() {
+#ifdef __APPLE__
+    return "CoreAudio";
+#elif defined(_WIN32)
+    return "WASAPI";
+#else
+    return "Unknown";
+#endif
+}
 }
 
 constexpr int         App::kBufferSizes[];
@@ -367,8 +383,35 @@ void App::renderEngineTab() {
     const ImVec4 kGreen = {0.20f, 0.62f, 0.25f, 1.f};
     const ImVec4 kAmber = {0.70f, 0.45f, 0.08f, 1.f};
     const ImVec4 kRed = {0.72f, 0.18f, 0.15f, 1.f};
+    const bool audioReady = isRunning;
+    const bool audioNotReady = (mState == AppState::Error);
+    const ImVec4 audioStatusColor = audioReady ? kGreen : (audioNotReady ? kRed : kAmber);
+    const char* backendLabel = audioBackendLabel();
+    const int bufferSize = kBufferSizes[mBufferSizeIdx];
+    const int sampleRate = 48000;
+    const int selectedOutputChannels =
+        (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceOutputChannels.size()))
+            ? mDeviceOutputChannels[mDeviceIdx]
+            : 0;
+    std::string audioStatusText;
+    if (audioReady) {
+        std::ostringstream os;
+        os << "Ready"
+           << " \xC2\xB7 " << backendLabel
+           << " \xC2\xB7 " << (sampleRate / 1000) << " kHz"
+           << " \xC2\xB7 " << bufferSize;
+        if (selectedOutputChannels > 0) os << " \xC2\xB7 " << selectedOutputChannels << " out";
+        audioStatusText = os.str();
+    } else if (audioNotReady) {
+        audioStatusText = "Not Ready";
+        if (!mLastError.empty()) audioStatusText += " \xC2\xB7 " + truncateStatusText(mLastError, 72);
+    } else {
+        audioStatusText = "Unknown \xC2\xB7 Configure device and buffer, then start audio";
+    }
+    const char* audioToggleLabel = mShowAudioSetupPanel ? "Audio Setup \xE2\x96\xB2"
+                                                        : "Audio Setup \xE2\x96\xBC";
 
-    if (ImGui::BeginChild("##inputcard", {0.f, 260.f}, true)) {
+    if (ImGui::BeginChild("##inputcard", {0.f, 240.f}, true)) {
         ImGui::TextDisabled("INPUT CONFIGURATION");
         ImGui::Spacing();
         if (isRunning) ImGui::BeginDisabled(true);
@@ -430,40 +473,91 @@ void App::renderEngineTab() {
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Build or modify a custom layout here");
 
-        ImGui::TextDisabled("DEVICE");
-        ImGui::SameLine(120.f);
-        if (ImGui::Button("Scan##device")) scanDevices();
-        ImGui::SameLine();
-        if (mDeviceList.empty()) {
-            ImGui::TextDisabled("(click Scan to list output devices)");
-        } else {
-            std::vector<const char*> items;
-            for (const auto& d : mDeviceList) items.push_back(d.c_str());
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
-            if (ImGui::Combo("##device", &mDeviceIdx, items.data(), (int)items.size())) {
-                mDeviceName = (mDeviceIdx == 0) ? "" : mDeviceList[mDeviceIdx];
-            }
-        }
-
-        ImGui::TextDisabled("BUFFER");
-        ImGui::SameLine(120.f);
-        ImGui::SetNextItemWidth(100.f);
-        ImGui::Combo("##bufsize", &mBufferSizeIdx, kBufferSizeNames, 5);
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(
-                "Buffer size affects realtime stability.\n"
-                "\n"
-                "Smaller buffers reduce latency but increase CPU load and the risk of xruns, clicks, or dropouts.\n"
-                "Larger buffers improve stability but increase latency.\n"
-                "Changing buffer size may require restarting the engine or playback session.\n"
-                "Safest workflow: stop playback before changing this setting."
-            );
-        }
-
         if (isRunning) ImGui::EndDisabled();
+
+        ImGui::TextDisabled("AUDIO");
+        ImGui::SameLine(120.f);
+        ImGui::TextColored(audioStatusColor, "%s", audioStatusText.c_str());
+        ImGui::SameLine();
+        const float toggleW = ImGui::CalcTextSize(audioToggleLabel).x + ImGui::GetStyle().FramePadding.x * 2.f;
+        ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(),
+                                      ImGui::GetWindowWidth() - toggleW - ImGui::GetStyle().WindowPadding.x));
+        if (ImGui::Button(audioToggleLabel)) mShowAudioSetupPanel = !mShowAudioSetupPanel;
     }
     ImGui::EndChild();
     ImGui::Spacing();
+
+    if (mShowAudioSetupPanel) {
+        if (ImGui::BeginChild("##audiosetupcard", {0.f, 220.f}, true)) {
+            ImGui::TextDisabled("AUDIO SETUP");
+            ImGui::Spacing();
+
+            ImGui::TextDisabled("STATUS");
+            ImGui::Text("Realtime Audio: %s", audioReady ? "Ready" : (audioNotReady ? "Not Ready" : "Unknown"));
+            ImGui::Text("Backend: %s", backendLabel);
+            ImGui::TextWrapped("Last Error: %s", mLastError.empty() ? "none" : mLastError.c_str());
+            ImGui::Spacing();
+
+            if (isRunning) ImGui::BeginDisabled(true);
+
+            ImGui::TextDisabled("DEVICE");
+            if (ImGui::Button("Rescan Devices##device")) scanDevices();
+            ImGui::SameLine();
+            if (mDeviceList.empty()) {
+                ImGui::TextDisabled("(click Rescan Devices to list output devices)");
+            } else {
+                std::vector<const char*> items;
+                items.reserve(mDeviceList.size());
+                for (const auto& d : mDeviceList) items.push_back(d.c_str());
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::Combo("##device", &mDeviceIdx, items.data(), (int)items.size())) {
+                    mDeviceName = (mDeviceIdx == 0) ? "" : mDeviceList[mDeviceIdx];
+                }
+            }
+            if (selectedOutputChannels > 0) {
+                ImGui::Text("Output Channels: %d", selectedOutputChannels);
+            } else {
+                ImGui::TextDisabled("Output Channels: unknown");
+            }
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("FORMAT");
+            ImGui::SetNextItemWidth(100.f);
+            ImGui::Combo("##bufsize", &mBufferSizeIdx, kBufferSizeNames, 5);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(
+                    "Buffer size affects realtime stability.\n"
+                    "\n"
+                    "Smaller buffers reduce latency but increase CPU load and the risk of xruns, clicks, or dropouts.\n"
+                    "Larger buffers improve stability but increase latency.\n"
+                    "Changing buffer size may require restarting the engine or playback session.\n"
+                    "Safest workflow: stop playback before changing this setting."
+                );
+            }
+            ImGui::Text("Sample Rate: %d Hz", sampleRate);
+            ImGui::TextDisabled("Buffer changes apply after restarting audio.");
+
+            if (isRunning) ImGui::EndDisabled();
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("ACTIONS");
+            if (ImGui::Button("Copy Diagnostics##audio")) {
+                std::ostringstream os;
+                os << "Realtime Audio: "
+                   << (audioReady ? "Ready" : (audioNotReady ? "Not Ready" : "Unknown")) << "\n"
+                   << "Backend: " << backendLabel << "\n"
+                   << "Device: " << (mDeviceName.empty() ? "(system default)" : mDeviceName) << "\n"
+                   << "Output Channels: "
+                   << (selectedOutputChannels > 0 ? std::to_string(selectedOutputChannels) : "unknown") << "\n"
+                   << "Sample Rate: " << sampleRate << " Hz\n"
+                   << "Buffer: " << bufferSize << "\n"
+                   << "Last Error: " << (mLastError.empty() ? "none" : mLastError);
+                ImGui::SetClipboardText(os.str().c_str());
+            }
+        }
+        ImGui::EndChild();
+        ImGui::Spacing();
+    }
 
     if (ImGui::BeginChild("##transportcard", {0.f, 110.f}, true)) {
         ImGui::TextDisabled("TRANSPORT");
@@ -1402,11 +1496,16 @@ void App::resetRuntimeToDefaults() {
 
 void App::scanDevices() {
     mDeviceList.clear();
+    mDeviceOutputChannels.clear();
     mDeviceList.push_back("(system default)");
+    mDeviceOutputChannels.push_back(0);
     const int n = al::AudioDevice::numDevices();
     for (int i = 0; i < n; ++i) {
         al::AudioDevice dev(i);
-        if (dev.valid() && dev.hasOutput()) mDeviceList.push_back(std::string(dev.name()));
+        if (dev.valid() && dev.hasOutput()) {
+            mDeviceList.push_back(std::string(dev.name()));
+            mDeviceOutputChannels.push_back(dev.channelsOutMax());
+        }
     }
     mDeviceIdx = 0;
     mDeviceName = "";

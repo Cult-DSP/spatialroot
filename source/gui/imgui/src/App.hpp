@@ -92,9 +92,11 @@ private:
     std::string mLayoutPath;   // speaker layout JSON
     std::string              mDeviceName;   // "" = system default
     std::vector<std::string> mDeviceList;  // populated by scanDevices(); [0] = system default
+    std::vector<int>         mDeviceOutputChannels; // mirrors mDeviceList; 0 = unknown/system default
     int                      mDeviceIdx = 0;
     int         mBufferSizeIdx = 3;   // index into kBufferSizes[]
     int         mLayoutPreset  = 0;   // index into kLayoutNames[]
+    bool        mShowAudioSetupPanel = false;
 
     // Source type (re-evaluated whenever mSourcePath changes)
     bool        mSourceIsAdm   = false;
