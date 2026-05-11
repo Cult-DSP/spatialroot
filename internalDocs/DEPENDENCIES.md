@@ -108,9 +108,9 @@ Old `src_N` naming convention is deprecated.
 | `azimuth` | number | **radians** | 0 = front, positive = right |
 | `elevation` | number | **radians** | 0 = horizon, positive = up |
 | `radius` | number | meters | Typically 5.0 for AlloSphere |
-| `deviceChannel` | integer | — | Informational; renderer uses consecutive 0-based indices |
+| `deviceChannel` | integer | — | Offline and realtime output routing use this as the final device-indexed output channel |
 
-Renderer uses consecutive channel indices (0, 1, 2, …) regardless of `deviceChannel`. Channel remapping to hardware channels is done via the Output Remap table (`--remap` CSV). Output buffer sized to `max(maxSpeakerChannel, maxSubwooferChannel) + 1`.
+Renderers use a compact internal channel bus for spatialization, then route to the final output bus using layout `deviceChannel` assignments. Final output width is `max(deviceChannel) + 1` across speakers and subwoofers. Non-contiguous device channels are valid; unmapped output channels remain silent.
 
 ---
 

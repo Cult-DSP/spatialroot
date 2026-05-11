@@ -1,6 +1,6 @@
 # Spatialization & Rendering — Internal Reference
 
-**Last Updated:** May 8, 2026  
+**Last Updated:** May 10, 2026  
 **Source:** `source/spatial_engine/spatialRender/SpatialRenderer.cpp`, `source/spatial_engine/src/JSONLoader.cpp`
 
 See [DEPENDENCIES.md](DEPENDENCIES.md) for LUSID scene and speaker layout JSON format specs.
@@ -24,7 +24,9 @@ Three spatializers supported:
 | **Best For** | Unknown/irregular layouts | AlloSphere, TransLAB |
 | **Params** | `--dbap_focus` (0.1–5.0) | `--lbap_dispersion` (0–1.0) |
 
-Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
+Pipeline: Source WAVs + LUSID scene + Layout JSON -> compact internal bus -> device-indexed N-channel WAV
+
+Offline output routing now preserves layout `deviceChannel` indices. The renderer spatializes into a compact internal bus (`main speakers + subwoofers`), then scatters those internal channels into the final WAV using `OfflineOutputRouteMap`. Final WAV width is `max(deviceChannel) + 1`; unmapped channels are included and silent.
 
 ### CLI Usage
 
@@ -83,10 +85,10 @@ Pipeline: Source WAVs + LUSID scene + Layout JSON → N-channel WAV
 ### LFE Handling
 
 - Sources named `"LFE"` or node type `LFE` bypass spatialization.
-- Routed directly to all subwoofer channels defined in `subwoofers` array of layout JSON.
+- Routed directly to compact internal subwoofer channels, then scattered to the layout-defined subwoofer `deviceChannel` outputs.
 - Energy divided by number of subs.
 - Gain compensation: `dbap_sub_compensation = 0.95` (global — TODO: make configurable).
-- Output buffer auto-sized to `max(maxSpeakerChannel, maxSubwooferChannel) + 1`.
+- Output buffer auto-sized to `max(deviceChannel) + 1` across both speakers and subwoofers.
 
 ```json
 {

@@ -238,6 +238,22 @@ int main(int argc, char *argv[]) {
     // these get converted to degrees when creating al::Speaker objects in SpatialRenderer
     std::cout << "Loading layout...\n";
     SpeakerLayoutData layout = LayoutLoader::loadLayout(layoutFile.string());
+    OfflineOutputRouteMap routeMap = buildOfflineOutputRouteMap(layout);
+    if (!routeMap.valid()) {
+        std::cerr << "Error: invalid offline output route map for layout '" << layoutFile.string() << "'\n";
+        for (const auto &error : routeMap.errors) {
+            std::cerr << "  " << error << "\n";
+        }
+        return 2;
+    }
+    if (!routeMap.warnings.empty()) {
+        std::cout << "Offline output routing: " << routeMap.internalChannelCount
+                  << " internal -> " << routeMap.outputChannelCount << " output channels";
+        if (!routeMap.silentOutputChannels.empty()) {
+            std::cout << " (" << routeMap.silentOutputChannels.size() << " silent gap channels)";
+        }
+        std::cout << "\n";
+    }
 
     // spatial trajectories from LUSID scene (frames/nodes format)
     std::cout << "Loading LUSID scene...\n";
@@ -256,10 +272,10 @@ int main(int argc, char *argv[]) {
     // main rendering happens here
     // this is where the degrees conversion and channel mapping fixes are critical
     std::cout << "Rendering...\n";
-    SpatialRenderer renderer(layout, spatial, sources);
+    SpatialRenderer renderer(layout, spatial, sources, routeMap);
     MultiWavData output = renderer.render(config);
 
-    // output has consecutive channels 0 to numSpeakers
+    // output now uses layout deviceChannel indices with silent gaps preserved
     // if you need AlloSphere hardware channel numbers with gaps you can remap later
     std::cout << "Writing output WAV: " << outFile << "\n";
     WavUtils::writeMultichannelWav(outFile.string(), output);

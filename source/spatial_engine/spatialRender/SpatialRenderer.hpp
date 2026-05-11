@@ -10,10 +10,10 @@
 //    the layout JSON has radians so we convert in the constructor
 //    without this the spatializers silently produce zeros
 //
-// 2. AlloSphere hardware uses non-consecutive channel numbers 1-60 with gaps
-//    but we use consecutive 0-53 indices for rendering and the output WAV
-//    this avoids out-of-bounds crashes when accessing AudioIOData buffers
-//    can remap to hardware channels later if needed
+// 2. Layouts may use sparse deviceChannel values, but the offline renderer still
+//    uses a compact consecutive internal bus for spatialization. The final WAV is
+//    produced by scattering that compact bus into the sparse device-indexed output
+//    channels via OfflineOutputRouteMap.
 //
 // 3. AudioIOData initialization order matters
 //    must call framesPerBuffer before channelsOut or you get assertion failures
@@ -54,6 +54,7 @@
 #include "../src/JSONLoader.hpp"
 #include "../src/LayoutLoader.hpp"
 #include "../src/WavUtils.hpp"
+#include "OfflineOutputRouteMap.hpp"
 
 // Panner/Spatializer type selection
 enum class PannerType {
@@ -136,7 +137,8 @@ class SpatialRenderer {
 public:
     SpatialRenderer(const SpeakerLayoutData &layout,
                     const SpatialData &spatial,
-                    const std::map<std::string, MonoWavData> &sources);
+                    const std::map<std::string, MonoWavData> &sources,
+                    const OfflineOutputRouteMap &routeMap);
 
     // Main render with default config
     MultiWavData render();
@@ -168,8 +170,11 @@ private:
     // Computed as median speaker distance in constructor
     float mLayoutRadius = 1.0f;
 
-    // Subwoofer output channels (from layout.subwoofers)
-    std::vector<int> mSubwooferChannels;
+    // Compact internal subwoofer channel indices (start after main speakers).
+    std::vector<int> mSubwooferInternalChannels;
+
+    // Offline compact-internal -> sparse-output routing plan.
+    OfflineOutputRouteMap mOutputRouteMap;
     
     // not currently used but left here in case you need to remap channels later
     // would map consecutive indices to AlloSphere hardware channels
@@ -291,6 +296,9 @@ private:
     // Spherical linear interpolation between two directions
     // t=0 returns 'a', t=1 returns 'b', intermediate values smoothly interpolate on sphere
     static al::Vec3f slerpDir(const al::Vec3f& a, const al::Vec3f& b, float t);
+
+    // Scatter the compact internal render bus into the layout-defined sparse output bus.
+    MultiWavData scatterToDeviceIndexedOutput(const MultiWavData &internalOut) const;
     
     // Get string name for panner type (for logging)
     static std::string pannerTypeName(PannerType type);

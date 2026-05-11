@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <numeric>
 #include <filesystem>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -37,10 +38,16 @@ float dbap_sub_compensation = 0.95f; // LFE/subwoofer compensation factor for DB
 
 SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
                                  const SpatialData &spatial,
-                                 const std::map<std::string, MonoWavData> &sources)
+                                 const std::map<std::string, MonoWavData> &sources,
+                                 const OfflineOutputRouteMap &routeMap)
     : mLayout(layout), mSpatial(spatial), mSources(sources),
-      mSpeakers(), mDBAP(nullptr), mLBAP(nullptr)
+      mSpeakers(), mDBAP(nullptr), mLBAP(nullptr),
+      mOutputRouteMap(routeMap)
 {
+    if (!mOutputRouteMap.valid()) {
+        throw std::runtime_error("OfflineOutputRouteMap is invalid.");
+    }
+
     // CRITICAL FIX 1: AlloLib's al::Speaker expects angles in DEGREES not radians
     // The AlloSphere layout JSON stores angles in radians but al::Speaker internally
     // converts to radians using toRad() which assumes degree input
@@ -48,18 +55,15 @@ SpatialRenderer::SpatialRenderer(const SpeakerLayoutData &layout,
     // like -77.7 radians instead of -77.7 degrees which is way outside valid range
     // This caused spatialization to fail silently and produce zero output
     //
-    // CRITICAL FIX 2: AlloSphere hardware uses non-consecutive channel numbers 1-60 with gaps
-    // but spatializers need consecutive 0-based indices for AudioIOData buffer access
-    // We use array index i as the channel and ignore the original deviceChannel numbers
-    // The output WAV will have consecutive channels 0-N which can be remapped later
-    // if you need the original hardware channel routing
-    // Old approach tried to preserve deviceChannel which caused out-of-bounds crashes
-    // because AudioIOData only allocates channels 0 to numSpeakers-1
+    // CRITICAL FIX 2: Spatializers still need consecutive 0-based indices for the
+    // compact internal render bus. Offline parity now keeps that compact bus for
+    // rendering, then scatters it to sparse layout deviceChannel indices only at
+    // the final WAV output stage via OfflineOutputRouteMap.
     
     // Collect subwoofer channels from layout
-    mSubwooferChannels.clear();
-    for (const auto& sub : layout.subwoofers) {
-        mSubwooferChannels.push_back(sub.deviceChannel);
+    mSubwooferInternalChannels.clear();
+    for (int subIndex = 0; subIndex < mOutputRouteMap.subwooferCount; ++subIndex) {
+        mSubwooferInternalChannels.push_back(mOutputRouteMap.mainSpeakerCount + subIndex);
     }
 
     // Collect speaker distances for layout radius computation
@@ -661,6 +665,32 @@ void SpatialRenderer::computeRenderStats(const MultiWavData &output) {
     }
 }
 
+MultiWavData SpatialRenderer::scatterToDeviceIndexedOutput(const MultiWavData &internalOut) const {
+    MultiWavData output;
+    output.sampleRate = internalOut.sampleRate;
+    output.channels = mOutputRouteMap.outputChannelCount;
+    output.samples.resize(output.channels);
+
+    const size_t totalSamples = internalOut.samples.empty() ? 0 : internalOut.samples.front().size();
+    for (auto &channel : output.samples) {
+        channel.resize(totalSamples, 0.0f);
+    }
+
+    for (const auto &route : mOutputRouteMap.routes) {
+        if (route.internalChannel < 0 || route.internalChannel >= internalOut.channels) {
+            throw std::runtime_error("Offline output route map references invalid internal channel " +
+                                     std::to_string(route.internalChannel) + ".");
+        }
+        if (route.outputChannel < 0 || route.outputChannel >= output.channels) {
+            throw std::runtime_error("Offline output route map references invalid output channel " +
+                                     std::to_string(route.outputChannel) + ".");
+        }
+        output.samples[route.outputChannel] = internalOut.samples[route.internalChannel];
+    }
+
+    return output;
+}
+
 // Default render (uses default config)
 MultiWavData SpatialRenderer::render() {
     RenderConfig defaultConfig;
@@ -671,6 +701,7 @@ MultiWavData SpatialRenderer::render() {
 MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     int sr = mSpatial.sampleRate;
     int numSpeakers = mLayout.speakers.size();
+    int numInternalChannels = mOutputRouteMap.internalChannelCount;
     
     // Initialize the selected spatializer
     initializeSpatializer(config);
@@ -724,7 +755,9 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
 
     std::cout << "Rendering " << renderSamples << " samples (" 
               << (double)renderSamples / sr << " sec) to " 
-              << numSpeakers << " speakers from " << mSources.size() << " sources\n";
+              << numInternalChannels << " internal channels / "
+              << mOutputRouteMap.outputChannelCount << " output channels from "
+              << mSources.size() << " sources\n";
     
     // Print spatializer info
     printSpatializerInfo(config);
@@ -798,22 +831,15 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     }
     std::cout << "\n";
     
-    // output uses consecutive channels 0 to numSpeakers-1
-    //return here if there are indexing issues with channel output 
-    MultiWavData out;
-    out.sampleRate = sr;
-    int maxChannel = numSpeakers - 1;
-    for (int subCh : mSubwooferChannels) {
-        if (subCh > maxChannel) maxChannel = subCh;
-    }
-    //logic to accommodate subwoofer channels that may be beyond speaker count / placed out of order 
-    out.channels = maxChannel + 1;
-    out.samples.resize(out.channels);
-    for (auto &c : out.samples) c.resize(renderSamples, 0.0f);
+    MultiWavData internalOut;
+    internalOut.sampleRate = sr;
+    internalOut.channels = numInternalChannels;
+    internalOut.samples.resize(internalOut.channels);
+    for (auto &c : internalOut.samples) c.resize(renderSamples, 0.0f);
 
     // Dispatch to appropriate render resolution
     if (config.renderResolution == "block") {
-        renderPerBlock(out, config, startSample, endSample);
+        renderPerBlock(internalOut, config, startSample, endSample);
     } else if (config.renderResolution == "sample") {
         std::cerr << "  ERROR: 'sample' mode is DISABLED. Use 'block' mode instead.\n";
         std::cerr << "         For per-sample accuracy, use 'block' mode with --block_size 1.\n";
@@ -824,8 +850,10 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
         return {};  // Return empty result
     } else {
         std::cerr << "  ERROR: Unknown render resolution '" << config.renderResolution << "', using 'block'\n";
-        renderPerBlock(out, config, startSample, endSample);
+        renderPerBlock(internalOut, config, startSample, endSample);
     }
+
+    MultiWavData out = scatterToDeviceIndexedOutput(internalOut);
     
     // Calculate total blocks for fallback summary
     int totalBlocks = (renderSamples + config.blockSize - 1) / config.blockSize;
@@ -840,7 +868,7 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     int nanChannels = 0;
     float overallPeak = 0.0f;
     
-    for (int ch = 0; ch < numSpeakers; ch++) {
+    for (int ch = 0; ch < out.channels; ch++) {
         if (mLastStats.channelRMS[ch] < -85.0f) silentChannels++;
         if (mLastStats.channelPeak[ch] > 1.0f) clippingChannels++;
         if (mLastStats.channelNaNCount[ch] > 0) nanChannels++;
@@ -849,7 +877,7 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     
     std::cout << "  Overall peak: " << overallPeak << " (" 
               << 20.0f * std::log10(std::max(overallPeak, 1e-10f)) << " dBFS)\n";
-    std::cout << "  Near-silent channels (< -85 dBFS): " << silentChannels << "/" << numSpeakers << "\n";
+    std::cout << "  Near-silent channels (< -85 dBFS): " << silentChannels << "/" << out.channels << "\n";
     std::cout << "  Clipping channels (peak > 1.0): " << clippingChannels << "\n";
     std::cout << "  Channels with NaN: " << nanChannels << "\n";
     
@@ -986,11 +1014,14 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
             }
             // Special handling for LFE channel / SUB (no spatialization) 
             if (name == "LFE") {
-                // Example: assume mSubwooferChannels is a std::vector<int> of sub channel indices
-                float subGain = (config.masterGainLinear() * dbap_sub_compensation) / mSubwooferChannels.size(); // Could customize LFE gain if desired
+                if (mSubwooferInternalChannels.empty()) {
+                    continue;
+                }
+                float subGain = (config.masterGainLinear() * dbap_sub_compensation) /
+                                mSubwooferInternalChannels.size();
                 for (size_t i = 0; i < blockLen; ++i) {
                     float sample = sourceBuffer[i];
-                    for (int subCh : mSubwooferChannels) {
+                    for (int subCh : mSubwooferInternalChannels) {
                         out.samples[subCh][outBlockStart + i] += sample * subGain;
                     }
                 }

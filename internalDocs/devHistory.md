@@ -25,6 +25,27 @@
 
 ---
 
+## OfflineOutputRouteMap Phase 2 (May 10, 2026)
+
+**Status:** Complete. Offline render output now uses the offline-owned route map for device-indexed WAV channel assignment.
+
+**Motivation:** Phase 1 established the offline route-map helper, but the actual offline renderer still wrote main speakers to consecutive WAV channels while only partially honoring sparse subwoofer `deviceChannel` assignments. That diverged from the repo’s compact-internal-bus to sparse-output-bus model.
+
+**What changed:**
+
+- `source/spatial_engine/spatialRender/main.cpp` now builds and validates `OfflineOutputRouteMap` before offline audio rendering begins.
+- `source/spatial_engine/spatialRender/SpatialRenderer.hpp`
+- `source/spatial_engine/spatialRender/SpatialRenderer.cpp`
+  - render to a compact internal bus sized to `numSpeakers + numSubwoofers`
+  - place LFE/subwoofer output on compact internal subwoofer channels instead of sparse final output indices
+  - scatter the compact internal bus to the final device-indexed WAV bus using `OfflineOutputRouteMap.routes`
+
+**Behavior:** Offline WAV output now preserves layout `deviceChannel` assignments for both main speakers and subwoofers. Final output width is `max(deviceChannel) + 1`, non-contiguous device channels are supported, and unmapped output channels are present and silent.
+
+**Explicit non-change:** This phase does not alter realtime engine behavior, DBAP/LBAP math, LUSID parsing, direct-speaker semantics, GUI behavior, or the public engine API.
+
+---
+
 ## Engine Failure Diagnostics in GUI Log (May 10, 2026)
 
 **Status:** Complete. No behavior change on success; richer log output on failure.
