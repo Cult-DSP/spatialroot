@@ -5,7 +5,6 @@
 ## Crucial CLI / GUI Features:
 
 - allow for setting runtime params prior to starting engine, add reset button
-- limit buffer size selectiom - potentially dangerous / produce warnings
 
 ## next tasks
 

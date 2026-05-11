@@ -235,7 +235,7 @@ al::Vec3f SpatialRenderer::directionToDBAPPosition(const al::Vec3f& dir) {
 // This prevents sources from becoming inaudible due to out-of-range directions
 
  //updating to compensate for low speakers 
-al::Vec3f SpatialRenderer::sanitizeDirForLayout(const al::Vec3f& v, ElevationMode mode) {
+al::Vec3f SpatialRenderer::sanitizeDirForLayout(const al::Vec3f& v, OfflineElevationMode mode) {
     al::Vec3f d = safeNormalize(v);
     float mag = d.mag();
     
@@ -266,7 +266,7 @@ al::Vec3f SpatialRenderer::sanitizeDirForLayout(const al::Vec3f& v, ElevationMod
     // in radians. We intentionally keep the mapping logic localized here so
     // changes remain minimal and easy to audit.
     switch (mode) {
-        case ElevationMode::Clamp: {
+        case OfflineElevationMode::Clamp: {
             // Hard clip elevation to layout bounds
             float clamped = std::clamp(el, mLayoutMinElRad, mLayoutMaxElRad);
             if (clamped != el) {
@@ -275,7 +275,7 @@ al::Vec3f SpatialRenderer::sanitizeDirForLayout(const al::Vec3f& v, ElevationMod
             el2 = clamped;
             break;
         }
-        case ElevationMode::RescaleAtmosUp: {
+        case OfflineElevationMode::RescaleAtmosUp: {
             // Source assumed in [0, +pi/2] (ear -> top). Map that range into
             // the layout's [mLayoutMinElRad, mLayoutMaxElRad]. Inputs below 0
             // or above +pi/2 are clamped by remapClamped.
@@ -286,7 +286,7 @@ al::Vec3f SpatialRenderer::sanitizeDirForLayout(const al::Vec3f& v, ElevationMod
             el2 = mapped;
             break;
         }
-        case ElevationMode::RescaleFullSphere: {
+        case OfflineElevationMode::RescaleFullSphere: {
             // Source assumed in [-pi/2, +pi/2]. Map full sphere into layout range.
             float mapped = remapClamped(el, -float(M_PI)/2.0f, float(M_PI)/2.0f, mLayoutMinElRad, mLayoutMaxElRad);
             if (std::abs(mapped - el) > 1e-5f) {
@@ -669,8 +669,15 @@ MultiWavData SpatialRenderer::render() {
 
 // Main render function with configuration options
 MultiWavData SpatialRenderer::render(const RenderConfig &config) {
+    return render(config, ProgressCallback{}, nullptr);
+}
+
+MultiWavData SpatialRenderer::render(const RenderConfig &config,
+                                     const ProgressCallback& progressCallback,
+                                     const std::atomic<bool>* cancelFlag) {
     int sr = mSpatial.sampleRate;
     int numSpeakers = mLayout.speakers.size();
+    mCancelled = false;
     
     // Initialize the selected spatializer
     initializeSpatializer(config);
@@ -730,13 +737,15 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     printSpatializerInfo(config);
     
     std::cout << "  Master gain: " << config.masterGainDb << " dB\n";
+    std::cout << "  Speaker mix: " << config.speakerMixDb << " dB\n";
+    std::cout << "  Sub mix: " << config.subMixDb << " dB\n";
     std::cout << "  Render resolution: " << config.renderResolution << " (block size: " << config.blockSize << ")\n";
     // Print a human-readable elevation mode string
     std::string emodeStr;
     switch (config.elevationMode) {
-        case ElevationMode::Clamp: emodeStr = "clamp"; break;
-        case ElevationMode::RescaleAtmosUp: emodeStr = "rescale_atmos_up"; break;
-        case ElevationMode::RescaleFullSphere: emodeStr = "rescale_full_sphere"; break;
+        case OfflineElevationMode::Clamp: emodeStr = "clamp"; break;
+        case OfflineElevationMode::RescaleAtmosUp: emodeStr = "rescale_atmos_up"; break;
+        case OfflineElevationMode::RescaleFullSphere: emodeStr = "rescale_full_sphere"; break;
         default: emodeStr = "unknown"; break;
     }
     std::cout << "  Elevation mode: " << emodeStr << "\n";
@@ -798,22 +807,17 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     }
     std::cout << "\n";
     
-    // output uses consecutive channels 0 to numSpeakers-1
-    //return here if there are indexing issues with channel output 
+    // Offline render produces the same compact internal bus semantics as the
+    // realtime renderer: speakers first, then subwoofers.
     MultiWavData out;
     out.sampleRate = sr;
-    int maxChannel = numSpeakers - 1;
-    for (int subCh : mSubwooferChannels) {
-        if (subCh > maxChannel) maxChannel = subCh;
-    }
-    //logic to accommodate subwoofer channels that may be beyond speaker count / placed out of order 
-    out.channels = maxChannel + 1;
+    out.channels = numSpeakers + static_cast<int>(mSubwooferChannels.size());
     out.samples.resize(out.channels);
     for (auto &c : out.samples) c.resize(renderSamples, 0.0f);
 
     // Dispatch to appropriate render resolution
     if (config.renderResolution == "block") {
-        renderPerBlock(out, config, startSample, endSample);
+        renderPerBlock(out, config, startSample, endSample, progressCallback, cancelFlag);
     } else if (config.renderResolution == "sample") {
         std::cerr << "  ERROR: 'sample' mode is DISABLED. Use 'block' mode instead.\n";
         std::cerr << "         For per-sample accuracy, use 'block' mode with --block_size 1.\n";
@@ -825,6 +829,11 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     } else {
         std::cerr << "  ERROR: Unknown render resolution '" << config.renderResolution << "', using 'block'\n";
         renderPerBlock(out, config, startSample, endSample);
+    }
+    if (mCancelled) {
+        std::cout << "Render cancelled before completion.\n";
+        mLayoutIs2D = originalIs2D;
+        return out;
     }
     
     // Calculate total blocks for fallback summary
@@ -921,9 +930,12 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
 // Consider optimizing for DBAP/LBAP in future - they shouldn't produce zero blocks.
 //
 void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &config,
-                                      size_t startSample, size_t endSample) {
+                                      size_t startSample, size_t endSample,
+                                      const ProgressCallback& progressCallback,
+                                      const std::atomic<bool>* cancelFlag) {
     int sr = mSpatial.sampleRate;
     int numSpeakers = mLayout.speakers.size();
+    int numSubwoofers = static_cast<int>(mSubwooferChannels.size());
     int bufferSize = config.blockSize;
     size_t renderSamples = endSample - startSample;
     
@@ -945,7 +957,12 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
     std::vector<float> sourceBuffer(bufferSize, 0.0f);
     
     int blocksProcessed = 0;
+    const int totalBlocks = static_cast<int>((renderSamples + bufferSize - 1) / bufferSize);
     for (size_t blockStart = startSample; blockStart < endSample; blockStart += bufferSize) {
+        if (cancelFlag != nullptr && cancelFlag->load(std::memory_order_relaxed)) {
+            mCancelled = true;
+            return;
+        }
         size_t blockEnd = std::min(endSample, blockStart + bufferSize);
         size_t blockLen = blockEnd - blockStart;
         size_t outBlockStart = blockStart - startSample;
@@ -953,6 +970,13 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
         if (blocksProcessed % 1000 == 0) {
             std::cout << "  Block " << blocksProcessed << " (" 
                       << (int)(100.0 * (blockStart - startSample) / renderSamples) << "%)\n" << std::flush;
+        }
+        if (progressCallback && (blocksProcessed % 64 == 0 || blocksProcessed + 1 == totalBlocks)) {
+            const float fraction = totalBlocks > 0
+                ? static_cast<float>(blocksProcessed + 1) / static_cast<float>(totalBlocks)
+                : 1.0f;
+            progressCallback(fraction, "Rendering block " + std::to_string(blocksProcessed + 1) +
+                                        " of " + std::to_string(totalBlocks));
         }
         blocksProcessed++;
         
@@ -986,11 +1010,18 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
             }
             // Special handling for LFE channel / SUB (no spatialization) 
             if (name == "LFE") {
-                // Example: assume mSubwooferChannels is a std::vector<int> of sub channel indices
-                float subGain = (config.masterGainLinear() * dbap_sub_compensation) / mSubwooferChannels.size(); // Could customize LFE gain if desired
+                if (numSubwoofers == 0) {
+                    continue;
+                }
+                const float subGain =
+                    config.masterGainLinear() *
+                    config.subMixLinear() *
+                    dbap_sub_compensation /
+                    static_cast<float>(numSubwoofers);
                 for (size_t i = 0; i < blockLen; ++i) {
                     float sample = sourceBuffer[i];
-                    for (int subCh : mSubwooferChannels) {
+                    for (int subIndex = 0; subIndex < numSubwoofers; ++subIndex) {
+                        const int subCh = numSpeakers + subIndex;
                         out.samples[subCh][outBlockStart + i] += sample * subGain;
                     }
                 }
@@ -1139,7 +1170,9 @@ void SpatialRenderer::renderPerBlock(MultiWavData &out, const RenderConfig &conf
             for (int ch = 0; ch < numSpeakers; ch++) {
                 float sample = audioIO.out(ch, i);
                 if (!std::isfinite(sample)) sample = 0.0f;
-                out.samples[ch][outBlockStart + i] = sample * config.masterGainLinear();
+                out.samples[ch][outBlockStart + i] = sample *
+                                                     config.masterGainLinear() *
+                                                     config.speakerMixLinear();
             }
         }
 

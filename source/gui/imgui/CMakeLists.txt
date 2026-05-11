@@ -57,6 +57,7 @@ set(APP_SOURCES
     src/main.cpp
     src/App.cpp
     src/DefaultLayoutManager.cpp
+    src/OfflineRenderJob.cpp
     src/SpatialRootPaths.cpp
     src/SubprocessRunner.cpp
     src/FileDialog.cpp
@@ -86,6 +87,7 @@ target_include_directories(spatialroot_gui PRIVATE
     ${IMGUI_DIR}/backends
     ${IMGUI_DIR}/misc/cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/source/spatial_engine/spatialRender
     ${CMAKE_SOURCE_DIR}/internal/cult-allolib/external/stb/stb  # stb_image.h for logo texture
     ${CMAKE_CURRENT_BINARY_DIR}                               # miniLogo_data.h (generated)
 )
@@ -95,6 +97,7 @@ find_package(Threads REQUIRED)
 
 target_link_libraries(spatialroot_gui PRIVATE
     EngineSessionCore       # spatial audio engine (static lib + AlloLib headers)
+    OfflineRenderCore
     glfw
     OpenGL::GL
     Threads::Threads

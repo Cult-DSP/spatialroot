@@ -2,6 +2,7 @@
 
 #include "App.hpp"
 #include "FileDialog.hpp"
+#include "OfflineRenderJob.hpp"
 #include "imgui_stdlib.h"
 
 #include <al/io/al_AudioIO.hpp>
@@ -56,14 +57,18 @@ constexpr const char* App::kTcFormatValues[];
 constexpr const char* App::kTcLfeModeNames[];
 constexpr const char* App::kTcLfeModeValues[];
 constexpr const char* App::kTcAdmInputModeNames[];
+constexpr int         App::kOfflineBlockSizes[];
+constexpr const char* App::kOfflineBlockSizeNames[];
 
 App::App(std::string projectRoot, bool keepTempSessions, std::string tempRootOverride)
     : mProjectRoot(std::move(projectRoot))
     , mKeepTempSessions(keepTempSessions)
     , mTempRootOverride(std::move(tempRootOverride))
     , mDefaultLayoutMgr()
-    , mSession(std::make_unique<EngineSession>()) {
+    , mSession(std::make_unique<EngineSession>())
+    , mOfflineRenderJob(std::make_unique<OfflineRenderJob>()) {
     mLayoutPath = resolveProjectPath(kLayoutPaths[0]);
+    mOfflineLayoutPath = mLayoutPath;
 
     appendEngineLog("[GUI] Spatial Root — ImGui + GLFW GUI started.");
     appendEngineLog("[GUI] Project root: " + mProjectRoot);
@@ -183,6 +188,54 @@ void App::tickEngine() {
             if (!mTcSuccess) mLastFailureHasDiagnostics = true;
         }
     }
+
+    for (const auto& line : mOfflineRenderJob->consumeLogLines()) {
+        appendOfflineLog(line);
+    }
+    if (!mOfflineRenderJob->isRunning()) {
+        if (auto finished = mOfflineRenderJob->takeFinishedResult()) {
+            mOfflineProgress = 1.0f;
+            if (finished->cancelled) {
+                mOfflineStatusText = "Cancelled";
+                appendOfflineLog("[offline] Render cancelled.", {1.f, 0.8f, 0.2f, 1.f});
+            } else if (finished->success) {
+                mOfflineStatusText = "Complete";
+                mOfflineLastOutputPath = finished->outputPath;
+                mOfflineIntermediatePath = finished->intermediatePath;
+                if (mOfflineTempSessionRoot) {
+                    updateManifest(*mOfflineTempSessionRoot, mOfflineTempManifest,
+                                   "complete", false, false);
+                }
+                appendOfflineLog("[offline] Render complete: " + finished->outputPath,
+                                 {0.3f, 0.9f, 0.3f, 1.f});
+                for (const auto& warning : finished->warnings) {
+                    appendOfflineLog("[offline] Warning: " + warning,
+                                     {1.f, 0.8f, 0.2f, 1.f});
+                }
+            } else {
+                mOfflineStatusText = "Failed";
+                mOfflineLastError = finished->errorMessage;
+                mOfflineIntermediatePath = finished->intermediatePath;
+                if (mOfflineTempSessionRoot) {
+                    updateManifest(*mOfflineTempSessionRoot, mOfflineTempManifest,
+                                   "failed", false, mKeepTempSessions);
+                }
+                appendOfflineLog("[offline] FAILED: " + finished->errorMessage,
+                                 {1.f, 0.35f, 0.35f, 1.f});
+                if (!finished->diagnosticText.empty()) {
+                    std::istringstream iss(finished->diagnosticText);
+                    std::string line;
+                    while (std::getline(iss, line)) {
+                        appendOfflineLog(line, {0.9f, 0.75f, 0.55f, 1.f});
+                    }
+                }
+            }
+        }
+    } else {
+        const OfflineRenderProgress progress = mOfflineRenderJob->latestProgress();
+        mOfflineProgress = progress.fraction;
+        if (!progress.message.empty()) mOfflineStatusText = progress.message;
+    }
 }
 
 void App::requestShutdown() {
@@ -202,6 +255,12 @@ void App::requestShutdown() {
         appendEngineLog("[GUI] Waiting for manual transcode to finish before cleanup...",
                         {1.f, 0.8f, 0.2f, 1.f});
         mTcRunner.wait();
+    }
+    if (mOfflineRenderJob->isRunning()) {
+        appendEngineLog("[GUI] Cancelling offline render before cleanup...",
+                        {1.f, 0.8f, 0.2f, 1.f});
+        mOfflineRenderJob->requestCancel();
+        mOfflineRenderJob->wait();
     }
     cleanupOwnedTempSessions(true);
 }
@@ -244,6 +303,10 @@ void App::renderUI() {
     if (ImGui::BeginTabBar("##tabs")) {
         if (ImGui::BeginTabItem("ENGINE")) {
             renderEngineTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("OFFLINE RENDER")) {
+            renderOfflineRenderTab();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("TRANSCODE")) {
@@ -500,6 +563,195 @@ void App::renderEngineTab() {
                               ImGuiWindowFlags_HorizontalScrollbar)) {
             for (const auto& entry : mEngineLog) ImGui::TextColored(entry.color, "%s", entry.text.c_str());
             if (mEngineLogAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 20.f) ImGui::SetScrollHereY(1.f);
+        }
+        ImGui::EndChild();
+    }
+    ImGui::EndChild();
+}
+
+void App::renderOfflineRenderTab() {
+    const ImVec4 kGreen = {0.20f, 0.62f, 0.25f, 1.f};
+    const ImVec4 kAmber = {0.70f, 0.45f, 0.08f, 1.f};
+    const ImVec4 kRed   = {0.72f, 0.18f, 0.15f, 1.f};
+    const bool renderRunning = mOfflineRenderJob->isRunning();
+
+    if (ImGui::BeginChild("##offline_input", {0.f, 255.f}, true)) {
+        ImGui::TextDisabled("OFFLINE INPUT");
+        ImGui::Spacing();
+
+        if (renderRunning) ImGui::BeginDisabled(true);
+        ImGui::TextDisabled("MODE");
+        ImGui::SameLine(140.f);
+        if (ImGui::RadioButton("Scene / Package", !mOfflineUseAdmInput)) {
+            mOfflineUseAdmInput = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("ADM via CULT", mOfflineUseAdmInput)) {
+            mOfflineUseAdmInput = true;
+        }
+
+        if (!mOfflineUseAdmInput) {
+            ImGui::TextDisabled("SCENE / PACKAGE");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+            ImGui::InputText("##offlineinput", &mOfflineInputPath);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##offlineinput")) {
+                const std::string p = pickFileOrDirectory("Select Scene JSON or LUSID Package");
+                if (!p.empty()) mOfflineInputPath = p;
+            }
+
+            ImGui::TextDisabled("SOURCES FOLDER");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+            ImGui::InputText("##offlinesources", &mOfflineSceneSourcesPath);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##offlinesources")) {
+                const std::string p = pickDirectory("Select Sources Folder");
+                if (!p.empty()) mOfflineSceneSourcesPath = p;
+            }
+            ImGui::SetCursorPosX(140.f);
+            ImGui::TextDisabled("Optional for LUSID packages; defaults to the scene file's parent folder.");
+        } else {
+            ImGui::TextDisabled("ADM INPUT");
+            ImGui::SameLine(140.f);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+            ImGui::InputText("##offlineadm", &mOfflineAdmPath);
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##offlineadm")) {
+                const std::string p = pickFile("Select ADM WAV/BWF", {"*.wav"}, "WAV files");
+                if (!p.empty()) mOfflineAdmPath = p;
+            }
+            ImGui::SetCursorPosX(140.f);
+            ImGui::TextDisabled("ADM input is transcoded to a temporary LUSID package with CULT Transcoder.");
+        }
+
+        ImGui::TextDisabled("LAYOUT");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+        ImGui::InputText("##offlinelayout", &mOfflineLayoutPath);
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##offlinelayout")) {
+            const std::string p = pickFile("Select Speaker Layout", {"*.json"}, "JSON files");
+            if (!p.empty()) mOfflineLayoutPath = p;
+        }
+        if (mDefaultLayoutStatus == DefaultLayoutStatus::Loaded && !mOfflineLayoutPath.empty()) {
+            ImGui::SetCursorPosX(140.f);
+            ImGui::TextColored(kGreen, "Default layout preloaded and will be passed explicitly.");
+        }
+
+        ImGui::TextDisabled("OUTPUT WAV");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+        ImGui::InputText("##offlineoutput", &mOfflineOutputPath);
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##offlineoutput")) {
+            const std::string p = pickDirectory("Select Output Directory");
+            if (!p.empty()) mOfflineOutputPath = (fs::path(p) / "render.wav").string();
+        }
+        if (renderRunning) ImGui::EndDisabled();
+    }
+    ImGui::EndChild();
+    ImGui::Spacing();
+
+    if (ImGui::BeginChild("##offline_params", {0.f, 170.f}, true)) {
+        ImGui::TextDisabled("RENDER PARAMETERS");
+        ImGui::Spacing();
+        if (renderRunning) ImGui::BeginDisabled(true);
+
+        ImGui::TextDisabled("MASTER GAIN");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        ImGui::SliderFloat("##offlinegain", &mOfflineGainDb, -60.f, 12.f, "%.1f dB");
+
+        ImGui::TextDisabled("FOCUS");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        ImGui::SliderFloat("##offlinefocus", &mOfflineFocus, 0.2f, 5.0f, "%.2f");
+
+        ImGui::TextDisabled("LOUDSPEAKER MIX");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        ImGui::SliderFloat("##offlinespkmix", &mOfflineSpkMixDb, -60.f, 12.f, "%.1f dB");
+
+        ImGui::TextDisabled("SUB MIX");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        ImGui::SliderFloat("##offlinesubmix", &mOfflineSubMixDb, -60.f, 12.f, "%.1f dB");
+
+        ImGui::TextDisabled("ELEVATION MODE");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        ImGui::Combo("##offlineelevmode", &mOfflineElevationMode, kElevModeNames, 3);
+
+        ImGui::TextDisabled("INTERNAL BLOCK");
+        ImGui::SameLine(140.f);
+        ImGui::SetNextItemWidth(120.f);
+        ImGui::Combo("##offlineblock", &mOfflineBlockSizeIdx, kOfflineBlockSizeNames, 4);
+
+        if (renderRunning) ImGui::EndDisabled();
+    }
+    ImGui::EndChild();
+    ImGui::Spacing();
+
+    if (ImGui::BeginChild("##offline_actions", {0.f, 120.f}, true)) {
+        ImGui::TextDisabled("ACTIONS");
+        ImGui::Spacing();
+
+        if (renderRunning) ImGui::BeginDisabled(true);
+        if (ImGui::Button("Validate")) {
+            validateOfflineRenderInputs();
+            if (mOfflineLastError.empty()) {
+                mOfflineStatusText = "Validation passed";
+                appendOfflineLog("[offline] Validation passed.", kGreen);
+            } else {
+                mOfflineStatusText = "Validation failed";
+                appendOfflineLog("[offline] Validation failed: " + mOfflineLastError, kRed);
+            }
+        }
+        if (renderRunning) ImGui::EndDisabled();
+        ImGui::SameLine();
+
+        if (renderRunning) ImGui::BeginDisabled(true);
+        if (ImGui::Button("Render")) startOfflineRender();
+        if (renderRunning) ImGui::EndDisabled();
+        ImGui::SameLine();
+
+        if (!renderRunning) ImGui::BeginDisabled(true);
+        if (ImGui::Button("Cancel")) mOfflineRenderJob->requestCancel();
+        if (!renderRunning) ImGui::EndDisabled();
+
+        ImGui::Spacing();
+        ImGui::Text("Status:");
+        ImGui::SameLine();
+        if (mOfflineStatusText == "Failed") ImGui::TextColored(kRed, "%s", mOfflineStatusText.c_str());
+        else if (!mOfflineLastOutputPath.empty() && !renderRunning) ImGui::TextColored(kGreen, "%s", mOfflineStatusText.c_str());
+        else ImGui::TextColored(kAmber, "%s", mOfflineStatusText.c_str());
+
+        ImGui::ProgressBar(mOfflineProgress, {-1.f, 0.f});
+        if (!mOfflineLastOutputPath.empty()) {
+            ImGui::TextDisabled("Output: %s", mOfflineLastOutputPath.c_str());
+        }
+        if (!mOfflineIntermediatePath.empty()) {
+            ImGui::TextDisabled("Temp session: %s", mOfflineIntermediatePath.c_str());
+        }
+    }
+    ImGui::EndChild();
+    ImGui::Spacing();
+
+    const float logH = ImGui::GetContentRegionAvail().y;
+    if (ImGui::BeginChild("##offline_log_card", {0.f, logH}, true)) {
+        ImGui::TextDisabled("OFFLINE RENDER LOG");
+        ImGui::Spacing();
+        if (ImGui::BeginChild("##offlinelog", {0.f, ImGui::GetContentRegionAvail().y}, false,
+                              ImGuiWindowFlags_HorizontalScrollbar)) {
+            for (const auto& entry : mOfflineLog) {
+                ImGui::TextColored(entry.color, "%s", entry.text.c_str());
+            }
+            if (mOfflineLogAutoScroll &&
+                ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 20.f) {
+                ImGui::SetScrollHereY(1.f);
+            }
         }
         ImGui::EndChild();
     }
@@ -1146,6 +1398,7 @@ void App::tryLoadDefaultLayoutOnStartup() {
     // Write the validated JSON to a temp file so we can point mLayoutPath at it.
     // We write it to the same settings dir — it IS the settings dir copy.
     mLayoutPath   = pathString(mDefaultLayoutMgr.layoutPath());
+    syncOfflineLayoutWithDefault();
     mLayoutPreset = IM_ARRAYSIZE(kLayoutNames) - 1;  // "Custom"
 
     const std::string displayName = r.layoutName.empty() ? "default layout" : r.layoutName;
@@ -1237,12 +1490,81 @@ void App::renderDefaultLayoutControls() {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Remove the saved default layout");
 }
 
+void App::syncOfflineLayoutWithDefault() {
+    if (!mLayoutPath.empty()) {
+        mOfflineLayoutPath = mLayoutPath;
+    }
+}
+
 void App::resetRuntimeToDefaults() {
     mGainDb = 0.0f;
     mFocus = 1.5f;
     mSpkMixDb = 0.0f;
     mSubMixDb = 0.0f;
     mElevationMode = 0;
+}
+
+void App::validateOfflineRenderInputs() {
+    mOfflineLastError.clear();
+    if (mOfflineUseAdmInput) {
+        if (mOfflineAdmPath.empty()) mOfflineLastError = "ADM input path is required.";
+    } else {
+        if (mOfflineInputPath.empty()) mOfflineLastError = "Scene or package input path is required.";
+    }
+    if (mOfflineLayoutPath.empty()) {
+        mOfflineLastError = "Speaker layout JSON is required.";
+    }
+    if (mOfflineOutputPath.empty()) {
+        mOfflineLastError = "Output WAV path is required.";
+    }
+}
+
+void App::startOfflineRender() {
+    validateOfflineRenderInputs();
+    if (!mOfflineLastError.empty()) {
+        mOfflineStatusText = "Validation failed";
+        appendOfflineLog("[offline] Validation failed: " + mOfflineLastError,
+                         {1.f, 0.35f, 0.35f, 1.f});
+        return;
+    }
+
+    clearStandaloneTranscodeTempState();
+    mOfflineTempSessionRoot = createOwnedTempSession(
+        "offline-render",
+        mOfflineUseAdmInput ? mOfflineAdmPath : mOfflineInputPath,
+        mOfflineTempManifest);
+    updateManifest(*mOfflineTempSessionRoot, mOfflineTempManifest, "rendering", false, false);
+
+    OfflineRenderOptions options;
+    options.inputPath = mOfflineUseAdmInput ? "" : mOfflineInputPath;
+    options.scenePath = mOfflineUseAdmInput ? "" : mOfflineInputPath;
+    options.sourcesFolder = mOfflineSceneSourcesPath;
+    options.admPath = mOfflineUseAdmInput ? mOfflineAdmPath : "";
+    options.layoutPath = mOfflineLayoutPath;
+    options.outputPath = mOfflineOutputPath;
+    options.cultTranscoderPath = findCultTranscoder();
+    options.tempRoot = pathString(*mOfflineTempSessionRoot);
+    options.debugDiagnostics = true;
+    options.debugOutputDir = pathString(*mOfflineTempSessionRoot / "reports");
+    options.masterGainDb = mOfflineGainDb;
+    options.dbapFocus = mOfflineFocus;
+    options.loudspeakerMixDb = mOfflineSpkMixDb;
+    options.subMixDb = mOfflineSubMixDb;
+    options.elevationMode = static_cast<OfflineElevationMode>(mOfflineElevationMode);
+    options.blockSize = kOfflineBlockSizes[mOfflineBlockSizeIdx];
+
+    mOfflineProgress = 0.0f;
+    mOfflineStatusText = "Starting offline render";
+    mOfflineLastError.clear();
+    mOfflineLastOutputPath.clear();
+    mOfflineIntermediatePath = pathString(*mOfflineTempSessionRoot);
+    appendOfflineLog("[offline] Starting render job...", {0.65f, 0.65f, 0.9f, 1.f});
+
+    if (!mOfflineRenderJob->start(std::move(options))) {
+        mOfflineStatusText = "Render already running";
+        appendOfflineLog("[offline] Render already running.",
+                         {1.f, 0.8f, 0.2f, 1.f});
+    }
 }
 
 void App::scanDevices() {
@@ -1412,6 +1734,7 @@ void App::cleanupOwnedTempSessions(bool forceNow) {
 
     cleanupOne(mActiveTempSessionRoot, mActiveTempManifest, true, true);
     cleanupOne(mTcTempSessionRoot, mTcTempManifest, false, true);
+    cleanupOne(mOfflineTempSessionRoot, mOfflineTempManifest, false, true);
 }
 
 void App::clearTempSessionState() {
@@ -1459,6 +1782,11 @@ void App::appendTcLog(const std::string& line) {
     std::lock_guard<std::mutex> lock(mTcLogMutex);
     mTcLog.push_back({color, line});
     if (mTcLog.size() > 2000) mTcLog.pop_front();
+}
+
+void App::appendOfflineLog(const std::string& text, ImVec4 color) {
+    mOfflineLog.push_back({color, text});
+    if (mOfflineLog.size() > 2000) mOfflineLog.pop_front();
 }
 
 const char* App::stateName(AppState s) {

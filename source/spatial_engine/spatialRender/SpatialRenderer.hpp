@@ -38,7 +38,9 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -62,7 +64,7 @@ enum class PannerType {
 };
 
 // Elevation handling mode for directions outside speaker layout coverage
-enum class ElevationMode {
+enum class OfflineElevationMode {
     Clamp,    // Hard clip elevation to layout bounds (may cause "sticking" at extremes)
     RescaleAtmosUp,  // (default / “vertical compensation ON”) Assumes content elevation lives in [0, +π/2] (ear → top)
     RescaleFullSphere,  // Assumes content elevation lives in [-π/2, +π/2] (bottom → top). Useful what starting with non-atmos formats
@@ -72,6 +74,10 @@ enum class ElevationMode {
 struct RenderConfig {
     float masterGainDb = 0.0f;     // Master gain in dB. Range: -60–+12 dB. 0 dB = unity.
     float masterGainLinear() const { return std::pow(10.0f, masterGainDb / 20.0f); }
+    float speakerMixDb = 0.0f;
+    float speakerMixLinear() const { return std::pow(10.0f, speakerMixDb / 20.0f); }
+    float subMixDb = 0.0f;
+    float subMixLinear() const { return std::pow(10.0f, subMixDb / 20.0f); }
     std::string soloSource = "";    // If non-empty, only render this source
     double t0 = -1.0;               // Start time in seconds (-1 = from beginning)
     double t1 = -1.0;               // End time in seconds (-1 = to end)
@@ -94,7 +100,7 @@ struct RenderConfig {
     // Default: RescaleAtmosUp (vertical compensation ON) - maps [0, +pi/2]
     // into the layout's elevation range. Use --no-vertical-compensation to
     // set to Clamp which preserves input elevation and only clips to layout bounds.
-    ElevationMode elevationMode = ElevationMode::RescaleAtmosUp;
+    OfflineElevationMode elevationMode = OfflineElevationMode::RescaleAtmosUp;
     
     // Force 2D mode (flatten all elevations to z=0) - useful for testing
     bool force2D = false;
@@ -107,7 +113,7 @@ struct RenderConfig {
     // DBAP-specific: focus parameter (exponent for distance attenuation)
     // Higher values = sharper focus to nearest speakers
     // Range: typically 0.2 to 5.0, default 1.0
-    float dbapFocus = 1.0f;
+    float dbapFocus = 1.5f;
     
     // LBAP-specific: dispersion threshold
     // Controls how signal disperses at elevation extremes (zenith/nadir)
@@ -134,6 +140,8 @@ struct RenderStats {
 
 class SpatialRenderer {
 public:
+    using ProgressCallback = std::function<void(float, const std::string&)>;
+
     SpatialRenderer(const SpeakerLayoutData &layout,
                     const SpatialData &spatial,
                     const std::map<std::string, MonoWavData> &sources);
@@ -143,9 +151,13 @@ public:
     
     // Render with custom configuration
     MultiWavData render(const RenderConfig &config);
+    MultiWavData render(const RenderConfig &config,
+                        const ProgressCallback& progressCallback,
+                        const std::atomic<bool>* cancelFlag);
     
     // Get statistics from last render (call after render())
     RenderStats getLastRenderStats() const { return mLastStats; }
+    bool wasCancelled() const { return mCancelled; }
 
 private:
     SpeakerLayoutData mLayout;
@@ -177,6 +189,7 @@ private:
     
     // Statistics from last render
     RenderStats mLastStats;
+    bool mCancelled = false;
     
     // Layout-derived elevation constraints (computed from speaker positions)
     float mLayoutMinElRad = -1.5707963f;   // min elevation in radians (default: -pi/2)
@@ -235,7 +248,7 @@ private:
     // - 2D layouts: flatten elevation to z=0
     // - 3D layouts: clamp or rescale (RescaleAtmosUp / RescaleFullSphere) elevation to [mLayoutMinElRad, mLayoutMaxElRad]
     // This prevents sources from becoming inaudible due to out-of-range directions
-    al::Vec3f sanitizeDirForLayout(const al::Vec3f& unitDir, ElevationMode mode);
+    al::Vec3f sanitizeDirForLayout(const al::Vec3f& unitDir, OfflineElevationMode mode);
     
     // Convert direction to position for DBAP
     // DBAP uses distance-based attenuation, so we need a position not just direction
@@ -280,7 +293,9 @@ private:
 
     // Render implementations
     void renderPerBlock(MultiWavData &out, const RenderConfig &config,
-                        size_t startSample, size_t endSample);
+                        size_t startSample, size_t endSample,
+                        const ProgressCallback& progressCallback,
+                        const std::atomic<bool>* cancelFlag);
     
     void renderSmooth(MultiWavData &out, const RenderConfig &config,
                       size_t startSample, size_t endSample);

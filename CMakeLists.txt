@@ -169,7 +169,7 @@ if(SPATIALROOT_BUILD_ENGINE)
     add_subdirectory(source/spatial_engine/realtimeEngine)
 endif()
 
-if(SPATIALROOT_BUILD_OFFLINE)
+if(SPATIALROOT_BUILD_OFFLINE OR SPATIALROOT_BUILD_GUI)
     add_subdirectory(source/spatial_engine/spatialRender)
 endif()
 

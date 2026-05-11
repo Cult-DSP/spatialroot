@@ -45,6 +45,8 @@ struct LogEntry {
     std::string text;
 };
 
+class OfflineRenderJob;
+
 class App {
 public:
     // projectRoot: path to the spatialroot project root directory.
@@ -159,6 +161,30 @@ private:
     std::optional<std::filesystem::path> mTcTempSessionRoot;
     TempSessionManifest     mTcTempManifest;
 
+    // ── Offline render tab state ─────────────────────────────────────────
+    std::string mOfflineInputPath;
+    std::string mOfflineSceneSourcesPath;
+    std::string mOfflineAdmPath;
+    std::string mOfflineLayoutPath;
+    std::string mOfflineOutputPath;
+    bool        mOfflineUseAdmInput = false;
+    float       mOfflineGainDb = 0.0f;
+    float       mOfflineFocus = 1.5f;
+    float       mOfflineSpkMixDb = 0.0f;
+    float       mOfflineSubMixDb = 0.0f;
+    int         mOfflineElevationMode = 0;
+    int         mOfflineBlockSizeIdx = 1;
+    std::unique_ptr<OfflineRenderJob> mOfflineRenderJob;
+    float       mOfflineProgress = 0.0f;
+    std::string mOfflineStatusText = "Ready";
+    std::string mOfflineIntermediatePath;
+    std::string mOfflineLastOutputPath;
+    std::string mOfflineLastError;
+    std::optional<std::filesystem::path> mOfflineTempSessionRoot;
+    TempSessionManifest     mOfflineTempManifest;
+    std::deque<LogEntry>    mOfflineLog;
+    bool                    mOfflineLogAutoScroll = true;
+
     // ── Logo texture (loaded once at startup; 0 = not loaded, ⊙ fallback used) ──
     unsigned int mLogoTexId = 0;  // GLuint — avoids pulling GL headers into App.hpp
 
@@ -209,6 +235,8 @@ private:
         "Scene JSON + WAV Directory",
         "LUSID Package Directory"
     };
+    static constexpr int kOfflineBlockSizes[] = {32, 64, 128, 256};
+    static constexpr const char* kOfflineBlockSizeNames[] = {"32", "64", "128", "256"};
 
     // ── Private methods ───────────────────────────────────────────────────
 
@@ -218,6 +246,7 @@ private:
     // UI rendering
     void renderUI();
     void renderEngineTab();
+    void renderOfflineRenderTab();
     void renderTranscodeTab();
 
     // Engine lifecycle helpers
@@ -264,6 +293,9 @@ private:
     void onSetAsDefaultLayout();
     void onClearDefaultLayout();
     void renderDefaultLayoutControls();
+    void syncOfflineLayoutWithDefault();
+    void startOfflineRender();
+    void validateOfflineRenderInputs();
 
     // Log helpers (main thread only for mEngineLog)
     void appendEngineLog(const std::string& text,
@@ -273,6 +305,8 @@ private:
     void appendFailureDiagnostics(const std::string& diagnostics);
     // Thread-safe (called from mTcRunner background thread)
     void appendTcLog(const std::string& line);
+    void appendOfflineLog(const std::string& text,
+                          ImVec4 color = {0.85f, 0.85f, 0.85f, 1.f});
 
     // State display helpers
     static const char*  stateName(AppState s);

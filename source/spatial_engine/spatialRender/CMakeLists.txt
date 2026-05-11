@@ -34,22 +34,44 @@ if(NOT TARGET al)
     )
 endif()
 
-add_executable(spatialroot_spatial_render
-    main.cpp
+add_library(OfflineRenderCore
+    OfflineRender.cpp
+    OfflineRenderCliCommand.cpp
     SpatialRenderer.cpp
+    ../src/OfflineRenderRemapPlan.cpp
     ../src/JSONLoader.cpp
     ../src/LayoutLoader.cpp
     ../src/WavUtils.cpp
 )
 
-target_include_directories(spatialroot_spatial_render PRIVATE
+target_include_directories(OfflineRenderCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../internal/cult-allolib/include
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(spatialroot_spatial_render
+target_link_libraries(OfflineRenderCore
     al
     Gamma
     SndFile::sndfile
 )
+
+add_executable(spatialroot_spatial_render
+    main.cpp
+)
+
+target_link_libraries(spatialroot_spatial_render
+    OfflineRenderCore
+)
+
+if(SPATIALROOT_BUILD_DEVTOOLS)
+    add_executable(offline_render_plan_test
+        offline_render_plan_test.cpp
+        ../src/OfflineRenderRemapPlan.cpp
+    )
+
+    target_include_directories(offline_render_plan_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src
+    )
+endif()
