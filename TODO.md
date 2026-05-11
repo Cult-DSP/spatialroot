@@ -4,8 +4,17 @@
 
 ## next tasks
 
-- fix bugs in transcoder tab
-  -packaging bugs
+- fix bugs in transcoder tab:
+
+* old failed runs must be cleared
+* diagnostic must be more robust, text in log is hard to read. "exit code 1" is unspecific
+* did recent api fixes change transcoder wiring? something isn't functional anymore
+  - ADM -> lusid package has serious issues - failed while writing package stems.
+  -
+
+\*need a progress bar + list stages, I know this is available in the transcoder
+
+- -packaging bugs
 
 ## audit
 
