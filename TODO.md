@@ -4,15 +4,9 @@
 
 ## next tasks
 
-- fix bugs in transcoder tab:
+- fix bugs in transcoder tab: 360ra -> lusid path
 
-* old failed runs must be cleared
-* diagnostic must be more robust, text in log is hard to read. "exit code 1" is unspecific
-* did recent api fixes change transcoder wiring? something isn't functional anymore
-  - ADM -> lusid package has serious issues - failed while writing package stems.
-  -
-
-\*need a progress bar + list stages, I know this is available in the transcoder
+- asses audio setup tab
 
 - -packaging bugs
 
