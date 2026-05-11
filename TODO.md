@@ -6,14 +6,7 @@
 
 - clean up transcode tab
 
-- duplicate api docs in internal and public, which is most up to date? ---
-- clean up documentation
-  - public facing
-  - consolidate dev history and testing docs
-
-  - test speaker layout config on windows, validate code
-
-## Audits
+## audit
 
 api audit
 gui audit
@@ -28,6 +21,15 @@ OS AND COMPATIBILITY
 - linux
 - audio backend
 - glfw
+
+## docs
+
+- duplicate api docs in internal and public, which is most up to date? ---
+- clean up documentation
+  - public facing
+  - consolidate dev history and testing docs
+
+  - test speaker layout config on windows, validate code
 
 ## Other Tasks for final packaging:
 
