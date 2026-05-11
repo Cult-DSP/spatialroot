@@ -11,14 +11,14 @@
 
 ### Public Structs
 
-| Struct              | Purpose                                                                        |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `EngineConfig`      | Core system settings (sample rate, buffer size, base paths)                    |
-| `SceneConfig`       | Audio scene definition (ADM/LUSID payload paths)                               |
-| `LayoutConfig`      | Speaker layout and routing parameters                                          |
-| `RuntimeConfig`     | OSC ports, UI bindings, telemetry settings                                     |
-| `EngineStatus`      | Side-effect-free snapshot of current state (playhead, CPU load, active voices) |
-| `DiagnosticMessage` | Structured warning/error payload for async events                              |
+| Struct             | Purpose                                                                        |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `EngineOptions`    | Core system settings (sample rate, buffer size, output device, OSC, elevation) |
+| `SceneInput`       | Audio scene definition (ADM/LUSID payload paths)                               |
+| `LayoutInput`      | Speaker layout and routing parameters                                          |
+| `RuntimeParams`    | Runtime DSP parameters (gain, focus, mix trims)                                |
+| `EngineStatus`     | Side-effect-free snapshot of current state (playhead, CPU load, active voices) |
+| `DiagnosticEvents` | Structured per-tick relocation/cluster events                                  |
 
 > **Note:** Core structs are deliberately outside the `spatial::` namespace to avoid polluting public interfaces with internal legacy types — they are global structs.
 
@@ -26,31 +26,33 @@
 
 The engine enforces a strict, linear initialization sequence:
 
-1. `configureEngine(const EngineConfig&)` — allocates base resources
-2. `loadScene(const SceneConfig&)` — parses scene data, prepares object tracks
-3. `applyLayout(const LayoutConfig&)` — configures rendering and spatial mapping
-4. `configureRuntime(const RuntimeConfig&)` — binds OSC (Pimpl `OscParams`) and telemetry
+1. `configureEngine(const EngineOptions&)` — allocates base resources
+2. `loadScene(const SceneInput&)` — parses scene data, prepares object tracks
+3. `applyLayout(const LayoutInput&)` — configures rendering and spatial mapping
+4. `configureRuntime(const RuntimeParams&)` — applies runtime DSP params (safe before/after start)
 5. `start()` — ignites audio backend, begins processing
 
 **Runtime Control (after `start()`):**
 
-| Method                                              | Description                                                                                                            |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `setPaused(bool)`                                   | The only supported transport control. Stop/seek are deferred/unsupported.                                              |
-| `update()`                                          | Main-thread tick. **Should be called regularly** from the host loop. It currently performs no deferred work and is retained for API stability. |
-| `queryStatus() -> EngineStatus`                     | Polls current metrics without mutating state.                                                                          |
-| `consumeDiagnostics() -> vector<DiagnosticMessage>` | Empties internal diagnostic queue.                                                                                     |
-| `shutdown()`                                        | Triggers rigid teardown sequence. Terminal — construct new `EngineSession` to restart.                                 |
+| Method                                        | Description                                                                                                                                    |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setPaused(bool)`                             | The only supported transport control. Stop/seek are deferred/unsupported.                                                                      |
+| `update()`                                    | Main-thread tick. **Should be called regularly** from the host loop. It currently performs no deferred work and is retained for API stability. |
+| `queryStatus() -> EngineStatus`               | Polls current metrics without mutating state.                                                                                                  |
+| `consumeDiagnostics() -> DiagnosticEvents`    | Empties internal diagnostic queue.                                                                                                             |
+| `shutdown()`                                  | Triggers rigid teardown sequence. Terminal — construct new `EngineSession` to restart.                                                         |
+| `getRuntimeParams()` / `resetRuntimeParams()` | Read and reset runtime params (dB-based).                                                                                                      |
+| `getFailureDiagnostics()`                     | Structured diagnostic block for the most recent startup-stage failure.                                                                         |
 
 **Phase 6 runtime setters (direct C++ control, no OSC required):**
 
-| Method                            | Writes                                                                |
-| --------------------------------- | --------------------------------------------------------------------- |
-| `setMasterGainDb(float)`          | `mConfig.masterGain` (dB → linear; range -60–+12 dB, 0 dB = unity)   |
-| `setDbapFocus(float)`             | `mConfig.dbapFocus` (clamped to minimum `0.1f`)                       |
-| `setSpeakerMixDb(float)`          | `mConfig.loudspeakerMix` (dB→linear)                                  |
-| `setSubMixDb(float)`              | `mConfig.subMix` (dB→linear)                                          |
-| `setElevationMode(ElevationMode)` | `mConfig.elevationMode`                                               |
+| Method                            | Writes                                                             |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `setMasterGainDb(float)`          | `mConfig.masterGain` (dB → linear; range -60–+12 dB, 0 dB = unity) |
+| `setDbapFocus(float)`             | `mConfig.dbapFocus` (clamped to minimum `0.1f`)                    |
+| `setSpeakerMixDb(float)`          | `mConfig.loudspeakerMix` (dB→linear)                               |
+| `setSubMixDb(float)`              | `mConfig.subMix` (dB→linear)                                       |
+| `setElevationMode(ElevationMode)` | `mConfig.elevationMode`                                            |
 
 All writes use `std::memory_order_relaxed`. Safe to call after `start()` and before `shutdown()`.
 
@@ -86,7 +88,7 @@ Violating this sequence **will** cause deadlocks on macOS CoreAudio and ASIO:
 
 ### Pimpl-style OSC and Parameter Lifetime
 
-AlloLib parameters bind to internal memory topologies — exposing them directly risks lifetime violations. `EngineSession` uses a Pimpl-style `OscParams` wrapper. `mParamServer` is entirely owned and destroyed by the session. `configureRuntime()` maps external `RuntimeConfig` values into AlloLib specifics securely.
+AlloLib parameters bind to internal memory topologies — exposing them directly risks lifetime violations. `EngineSession` uses a Pimpl-style `OscParams` wrapper. `mParamServer` is entirely owned and destroyed by the session. `configureRuntime()` maps external `RuntimeParams` values into AlloLib specifics securely.
 
 ### Separation of Status and Diagnostics
 
@@ -116,7 +118,7 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 
 **What was validated:** `EngineSessionCore` extracted into a distinct linkable CMake library (`EngineSessionCore` static target). Type definitions restructured to prevent `AlloLib`/threading leakage. `internal_validation_runner.cpp` smoke test proved robust execution and clean teardown.
 
-**Layout vs. device channel count mismatch:** Mismatches between layout channel counts and hardware channel counts trigger a fatal fast-fail (e.g., attempting a 7-channel layout on a 2-channel audio device). Public docs must describe `EngineConfig` device fallback behavior and layout configuration dependency.
+**Layout vs. device channel count mismatch:** Mismatches between layout channel counts and hardware channel counts trigger a fatal fast-fail (e.g., attempting a 7-channel layout on a 2-channel audio device). Public docs must describe `EngineOptions` device fallback behavior and layout configuration dependency.
 
 **`uint64_t` bitmask channel cap:** `EngineStatus` uses `uint64_t` bitmasks, implicitly capping the engine at 64 output channels.
 

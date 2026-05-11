@@ -7,7 +7,7 @@ We successfully reached a major milestone regarding the C++ `EngineSession` API.
 **Key Achievements:**
 
 - Extracted `EngineSessionCore` into a distinct, linkable CMake library element.
-- Restructured type definitions in `EngineSession.hpp` (`EngineConfig`, `SceneConfig`, `LayoutConfig`, `RuntimeConfig`) preventing internal leakage of `AlloLib` or core threading components.
+- Restructured type definitions in `EngineSession.hpp` (`EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams`) preventing internal leakage of `AlloLib` or core threading components.
 - Staged and successfully executed an `internal_validation_runner.cpp` smoke test showing robust execution and predictable state machine handling.
 - **Teardown Safety:** Proved the custom strict teardown sequence cleanly resolves blocking threads, properly cleans up the audio device, and terminates streaming loaders cleanly without relying on OS application termination.
 
@@ -20,7 +20,7 @@ With the structural contract verified in code, the next priority is transitionin
 1. **Drafting `PUBLIC_DOCS/API.md`**
    - Translate the internal `api_internal_contract.md` into external, public-ready tutorials/walkthroughs. Document in `PUBLIC_DOCS/API.md`.
    - Outline the primary `<spatial::EngineSession>` workflow:
-     - Component configurations (`EngineConfig`, `SceneConfig`, etc.)
+   - Component configurations (`EngineOptions`, `SceneInput`, etc.)
      - Configuration pipeline (`configureEngine` -> `loadScene` -> `applyLayout` -> `configureRuntime` -> `start`)
      - Threading/polling lifecycle (`update`, querying status/diagnostics)
      - Safe termination (`shutdown`)
@@ -31,7 +31,7 @@ With the structural contract verified in code, the next priority is transitionin
 
 ## Remaining Context Context Checklist
 
-- Layouts are crucial: We observed that mismatches between layout channel counts and hardware channel counts trigger a fatal fast-fail (e.g., trying to run 7 channels on a 2 channel audio device). Public docs must clearly describe the `EngineConfig` device fallback behavior and layout configuration dependency.
+- Layouts are crucial: We observed that mismatches between layout channel counts and hardware channel counts trigger a fatal fast-fail (e.g., trying to run 7 channels on a 2 channel audio device). Public docs must clearly describe the `EngineOptions` device fallback behavior and layout configuration dependency.
 
 ## Technical Artifacts for Token Savings & Quick Context
 
@@ -39,7 +39,7 @@ With the structural contract verified in code, the next priority is transitionin
 - **Core Library Target Location:** `source/spatial_engine/realtimeEngine/CMakeLists.txt` holds the `EngineSessionCore` CMake target containing the `EngineSession`, `JSONLoader`, `LayoutLoader`, and `WavUtils` components.
 - **Header Files:** Wait to read `RealtimeBackend.hpp`, `Spatializer.hpp`, `Streaming.hpp` unless diagnosing engine faults; the primary public interface is exclusively `source/spatial_engine/realtimeEngine/src/EngineSession.hpp`.
 - **Test Asset Paths:**
-  - Valid LUSID scene configuration: `/Users/lucian/projects/spatialroot/data/sourceData/lusid_package/scene.lusid.json`
-  - Valid audio source directory: `/Users/lucian/projects/spatialroot/data/sourceData/lusid_package/`
+  - Valid LUSID scene configuration: `data/sourceData/lusid_package/scene.lusid.json`
+  - Valid audio source directory: `data/sourceData/lusid_package/`
   - Stereo fallback layout (crucial for local testing on macOS built-in output): `source/speaker_layouts/stereo.json`
-- **Known Structural Gotcha:** In `EngineSession.hpp`, core structs like `EngineConfig` and `SceneConfig` were specifically decoupled from the `spatial::` namespace to avoid polluting public interfaces with internal legacy types; so they are global structs.
+- **Known Structural Gotcha:** In `EngineSession.hpp`, core structs like `EngineOptions` and `SceneInput` were specifically decoupled from the `spatial::` namespace to avoid polluting public interfaces with internal legacy types; so they are global structs.

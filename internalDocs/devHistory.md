@@ -5,6 +5,16 @@
 
 ---
 
+## Release-Hardening Audit — API Doc Sync (May 10, 2026)
+
+**Status:** Complete. Documentation-only update.
+
+**What changed:**
+
+- `PUBLIC_DOCS/API.md`: Updated to reflect the current dB-based runtime parameters, setter names (`setMasterGainDb` etc.), lifecycle notes (configureRuntime safe before/after `start()`), and `getRuntimeParams()` / `resetRuntimeParams()`.
+- `internalDocs/API.md`: Aligned struct names (`EngineOptions`, `SceneInput`, `LayoutInput`, `RuntimeParams`) and diagnostic types (`DiagnosticEvents`).
+- `internalDocs/API/new_context.md`: Removed machine-specific test paths and updated struct naming references.
+
 ## TRANSCODE Tab UI Cleanup — Workflow Consolidation (May 10, 2026)
 
 **Status:** Complete. No backend changes.

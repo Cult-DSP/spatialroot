@@ -2,11 +2,14 @@
 
 `EngineSession` is the embeddable C++ runtime for the Spatial Root realtime spatial audio engine. It handles audio device setup, scene and layout loading, DSP parameter control, and clean shutdown — exposing a single typed surface usable from a CLI, a GUI host, or any embedding context.
 
-## Document in progress:
+## Notes
 
-- To prepare the API documentation for the next iteration, the document needs significant clarification around runtime control and error conditions. Most importantly, it must explicitly state how a host C++ application can dynamically update parameters (like gain or focus) while the engine is running, rather than implying this is an OSC-only feature. Additionally, the lifecycle state machine needs to address edge cases, such as whether initialization methods can be re-called to correct errors, how setPaused() behaves before start(), and if background threads terminate automatically when isExitRequested fires. The failure states for configureEngine(), applyLayout(), and configureRuntime() must also be explicitly defined.
-
-- Furthermore, the data types and main loop contract require stricter constraints. The document needs to define acceptable ranges and limits for fields like sampleRate, bufferSize, and dB trims, convert elevationMode into a clearly defined enum, and explicitly confirm or deny the 64-channel limit implied by the uint64_t bitmasks. Finally, the main loop documentation must provide guidance on the required polling frequency for update() and consumeDiagnostics(), clarifying the relationship between these calls to prevent buffer overruns or event queue bloat.
+- Direct C++ setters are the primary runtime control surface; OSC is optional.
+- `configureRuntime()` is safe to call before or after `start()` and clamps inputs to valid ranges.
+- `setPaused()` can be called before `start()` to stage the paused state (no effect until audio starts).
+- `update()` currently performs no deferred work, but should still be called regularly from the main thread.
+- `EngineStatus` uses `uint64_t` masks, so output channels are capped at 64.
+- `getFailureDiagnostics()` returns the last startup-stage diagnostic block when a stage fails.
 
 ## Quick Start
 
@@ -45,8 +48,8 @@ int main() {
     }
 
     RuntimeParams runtime;
-    runtime.masterGain = 0.5f;
-    runtime.dbapFocus  = 1.5f;
+    runtime.masterGainDb = 0.0f;
+    runtime.dbapFocus    = 1.5f;
 
     if (!session.configureRuntime(runtime)) {
         std::cerr << session.getLastError() << "\n";
@@ -106,6 +109,9 @@ Methods must be called in the following order. Each stage requires the previous 
 
 `shutdown()` is terminal. To run again, construct a new `EngineSession`.
 
+`configureRuntime()` is the canonical setup stage for initial runtime parameters, but it can also be
+called after `start()` to update live parameters.
+
 ---
 
 ## Methods
@@ -136,7 +142,7 @@ Device compatibility against the physical channel count is not validated here �
 
 ### `bool configureRuntime(const RuntimeParams& params)`
 
-Sets DSP parameters. Must be called before `start()`. Can be called after `applyLayout()` succeeds.
+Sets DSP parameters. Safe before and after `start()`; clamps inputs to valid ranges.
 
 ---
 
@@ -152,31 +158,35 @@ If `oscPort > 0` in `EngineOptions`, the OSC server is started here.
 
 ### `void setPaused(bool isPaused)`
 
-Pauses or resumes audio output without stopping the session. Safe to call while running.
+Pauses or resumes audio output without stopping the session. Safe to call while running; calling
+before `start()` stages the value and takes effect once audio begins.
 
 ---
 
-### `void setMasterGain(float gain)`
+### `void setMasterGainDb(float dB)`
 
-Sets the master output gain (linear, 0.0–1.0 recommended; OSC range 0.1–3.0). Safe to call after `start()`. Uses `std::memory_order_relaxed` — a one-buffer lag is inaudible and not a data race.
+Sets the master output gain in dB (range -60–+12). Safe before and after `start()`. Uses
+`std::memory_order_relaxed` — a one-buffer lag is inaudible and not a data race.
 
 ---
 
 ### `void setDbapFocus(float focus)`
 
-Sets the DBAP rolloff exponent (range 0.2–5.0). If auto-compensation is enabled, schedules a recomputation on the next `update()` call. Safe to call after `start()`.
+Sets the DBAP rolloff exponent (range 0.1–5.0). Safe before and after `start()`.
 
 ---
 
 ### `void setSpeakerMixDb(float dB)`
 
-Sets the loudspeaker mix trim in dB (range ±10). The value is converted to linear scale before storage. Safe to call after `start()`.
+Sets the loudspeaker mix trim in dB (range -60–+12). The value is converted to linear scale before
+storage. Safe before and after `start()`.
 
 ---
 
 ### `void setSubMixDb(float dB)`
 
-Sets the subwoofer mix trim in dB (range ±10). The value is converted to linear scale before storage. Safe to call after `start()`.
+Sets the subwoofer mix trim in dB (range -60–+12). The value is converted to linear scale before
+storage. Safe before and after `start()`.
 
 ---
 
@@ -186,9 +196,24 @@ Sets the elevation rescaling mode at runtime. Takes effect on the next audio blo
 
 ---
 
+### `RuntimeParams getRuntimeParams() const`
+
+Returns the current runtime parameters in user-facing units (dB for gains). Reflects the latest
+values from setters, OSC callbacks, or `configureRuntime()`.
+
+---
+
+### `bool resetRuntimeParams()`
+
+Equivalent to `configureRuntime(RuntimeParams::defaults())`. Safe before and after `start()`.
+
+---
+
 ### `void update()`
 
-Main-thread tick. Must be called regularly from the main thread while the session is running (e.g., once per render loop or on a ~50 ms timer). Reserved for future deferred work.
+Main-thread tick. Must be called regularly from the main thread while the session is running (e.g.,
+once per render loop or on a ~50 ms timer). Currently performs no deferred work and is retained for
+API stability.
 
 ---
 
@@ -223,6 +248,7 @@ Returns the error message from the most recent failed method call. Returns an em
 Returns a structured diagnostic block captured during the most recent failed stage (`loadScene`, `applyLayout`, or `start`). Returns an empty string if the last operation succeeded or no failure has occurred yet.
 
 The block includes:
+
 - The failing stage name
 - Input paths (scene, layout, ADM, sources folder — whichever were set)
 - The `getLastError()` message
@@ -248,13 +274,13 @@ For `start()`, capture is intentionally restored immediately before `mStreaming-
 
 Passed to `configureEngine()`.
 
-| Field              | Type          | Default | Description                                                                         |
-| ------------------ | ------------- | ------- | ----------------------------------------------------------------------------------- |
-| `sampleRate`       | `int`         | `48000` | Audio sample rate in Hz                                                             |
-| `bufferSize`       | `int`         | `512`   | Frames per audio callback                                                           |
-| `outputDeviceName` | `std::string` | `""`    | Exact device name to open. Empty selects the system default.                        |
-| `oscPort`          | `int`              | `9009`                        | UDP port for OSC parameter control. Set to `0` to disable OSC.          |
-| `elevationMode`    | `ElevationMode`    | `RescaleAtmosUp`              | Vertical rescaling mode (see `ElevationMode` enum in `RealtimeTypes.hpp`) |
+| Field              | Type            | Default          | Description                                                               |
+| ------------------ | --------------- | ---------------- | ------------------------------------------------------------------------- |
+| `sampleRate`       | `int`           | `48000`          | Audio sample rate in Hz                                                   |
+| `bufferSize`       | `int`           | `512`            | Frames per audio callback                                                 |
+| `outputDeviceName` | `std::string`   | `""`             | Exact device name to open. Empty selects the system default.              |
+| `oscPort`          | `int`           | `9009`           | UDP port for OSC parameter control. Set to `0` to disable OSC.            |
+| `elevationMode`    | `ElevationMode` | `RescaleAtmosUp` | Vertical rescaling mode (see `ElevationMode` enum in `RealtimeTypes.hpp`) |
 
 ---
 
@@ -285,12 +311,12 @@ Passed to `applyLayout()`.
 
 Passed to `configureRuntime()`.
 
-| Field              | Type    | Default | Description                                               |
-| ------------------ | ------- | ------- | --------------------------------------------------------- |
-| `masterGain`       | `float` | `0.5`   | Output gain, linear scale 0.0–1.0                         |
-| `dbapFocus`        | `float` | `1.5`   | DBAP rolloff exponent, typical range 0.2–5.0              |
-| `speakerMixDb`     | `float` | `0.0`   | Loudspeaker mix trim in dB (±10)                          |
-| `subMixDb`         | `float` | `0.0`   | Subwoofer mix trim in dB (±10)                            |
+| Field          | Type    | Default | Description                                |
+| -------------- | ------- | ------- | ------------------------------------------ |
+| `masterGainDb` | `float` | `0.0`   | Master gain in dB (range -60–+12)          |
+| `dbapFocus`    | `float` | `1.5`   | DBAP rolloff exponent (range 0.1–5.0)      |
+| `speakerMixDb` | `float` | `0.0`   | Loudspeaker mix trim in dB (range -60–+12) |
+| `subMixDb`     | `float` | `0.0`   | Subwoofer mix trim in dB (range -60–+12)   |
 
 ---
 
@@ -343,13 +369,13 @@ The following setter methods allow a host to update parameters while the engine 
 
 **Contract:** Call these only after `start()` returns `true` and before `shutdown()`. Calling before `start()` writes the underlying atomics but has no effect on the engine since the audio thread is not yet running.
 
-| Method | Parameter | Range |
-|--------|-----------|-------|
-| `setMasterGain(float gain)` | Linear output gain | 0.1–3.0 (OSC range) |
-| `setDbapFocus(float focus)` | DBAP rolloff exponent; clamped to minimum 0.1 | 0.1–5.0 |
-| `setSpeakerMixDb(float dB)` | Loudspeaker mix trim | ±10 dB |
-| `setSubMixDb(float dB)` | Subwoofer mix trim | ±10 dB |
-| `setElevationMode(ElevationMode mode)` | Elevation rescaling | `ElevationMode` enum |
+| Method                                 | Parameter                                     | Range                |
+| -------------------------------------- | --------------------------------------------- | -------------------- |
+| `setMasterGainDb(float dB)`            | Master gain in dB                             | -60–+12 dB           |
+| `setDbapFocus(float focus)`            | DBAP rolloff exponent; clamped to minimum 0.1 | 0.1–5.0              |
+| `setSpeakerMixDb(float dB)`            | Loudspeaker mix trim                          | -60–+12 dB           |
+| `setSubMixDb(float dB)`                | Subwoofer mix trim                            | -60–+12 dB           |
+| `setElevationMode(ElevationMode mode)` | Elevation rescaling                           | `ElevationMode` enum |
 
 **`update()` / polling loop contract for GUI hosts:**
 
@@ -397,7 +423,10 @@ The `uint64_t` bitmasks in `EngineStatus` (`renderActiveMask`, `deviceActiveMask
 
 ### 6. `update()` must be called from the main thread
 
-`update()` handles deferred main-thread work including auto-compensation recomputation. It must be called regularly from the main thread while the session is running — not from an audio thread or a background thread. A Qt host should drive it via a `QTimer` callback (e.g. 50 ms interval). `queryStatus()` and `consumeDiagnostics()` should be called in the same timer callback.
+`update()` currently performs no deferred work but must still be called regularly from the main
+thread while the session is running — not from an audio thread or a background thread. A Qt host
+should drive it via a `QTimer` callback (e.g. 50 ms interval). `queryStatus()` and
+`consumeDiagnostics()` should be called in the same timer callback.
 
 ---
 
@@ -406,6 +435,7 @@ The `uint64_t` bitmasks in `EngineStatus` (`renderActiveMask`, `deviceActiveMask
 To embed `EngineSessionCore` in a host application:
 
 **CMake:**
+
 ```cmake
 # After cmake --install (or building from source with add_subdirectory):
 find_package(spatialroot REQUIRED)
@@ -414,6 +444,7 @@ target_link_libraries(myapp spatialroot::EngineSessionCore)
 ```
 
 **Include:**
+
 ```cpp
 #include "EngineSession.hpp"   // Public API header
 #include "RealtimeTypes.hpp"   // ElevationMode enum, RealtimeConfig, EngineState
