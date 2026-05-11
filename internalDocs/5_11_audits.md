@@ -1,4 +1,5 @@
-Packaging / Runtime Path Audit
+# Packaging / Runtime Path Audit
+
 Files / Areas Reviewed
 source/gui/imgui/src/App.cpp — resolveProjectPath, findCultTranscoder, findSpatialRenderer, all call sites
 source/gui/imgui/src/App.hpp — mRemapPath declaration, mProjectRoot, all path-related members
@@ -105,3 +106,118 @@ Audio device enumeration works on the target OS
 File dialogs (NSOpenPanel / zenity / GetOpenFileName) work correctly on each platform
 No platform-specific build warnings or runtime errors
 This is the natural follow-on now that path resolution is packaging-aware and the codebase has passed all prior audits.
+
+# Gui transcoder audit
+
+Transcoder GUI Bug Pass
+Files / Areas Reviewed
+source/gui/imgui/src/App.cpp
+source/gui/imgui/src/App.hpp
+source/gui/imgui/src/SpatialRootPaths.cpp
+source/gui/imgui/src/SpatialRootPaths.hpp
+source/gui/imgui/src/main.cpp
+source/gui/imgui/src/SubprocessRunner.cpp
+internalDocs/AGENTS.md
+internalDocs/devHistory.md
+internal/cult_transcoder/README.md
+internal/cult_transcoder/internalDocs/AGENTS-CULT.md
+internal/cult_transcoder/src/main.cpp
+internal/cult_transcoder/src/packaging/adm_package.cpp
+Bugs Found
+Transcoder success state was exit-code-only, so the GUI could report success even if expected output files were missing.
+Workflow switching only reset mTcDone/mTcSuccess; stale log text and stale status context could linger.
+Workflow controls stayed editable while a transcode was running, which risked confusing post-run state.
+Command preview text did not match actual args in all cases because it omitted --report paths and did not show quoting for spaced paths.
+Workflow 1 used permissive file-or-directory pickers where type-specific pickers were needed.
+Button gating only checked for non-empty strings, not real file/dir validity or transcoder-binary availability.
+Invalid SPATIALROOT_CULT_TRANSCODER was only surfaced as generic “not found”.
+Workflow 0 package mode built its GUI report path inside the destination package directory, which was brittle.
+The CLI smoke test exposed a remaining non-GUI issue: package-adm-wav currently fails on data/sourceData/CANYON-ATMOS-LFE.wav with Failed while writing package stems.
+Fixes Made
+source/gui/imgui/src/App.cpp
+Added exact command-preview construction from the same arg vectors passed to SubprocessRunner.
+Added shell-style quoting in command preview/log display so spaced paths are shown accurately.
+Disabled workflow/mode editing while a transcode is active.
+Cleared stale transcode log/status on workflow or mode changes and before new runs.
+Tightened button gating to require valid existing inputs, valid output path shape, and a resolvable cult-transcoder.
+Added inline error text for missing/invalid SPATIALROOT_CULT_TRANSCODER.
+Switched Workflow 1 browse actions to type-correct pickers.
+Changed manual-transcode completion logic to verify expected output file existence before reporting success.
+Logged full executed command lines instead of abbreviated placeholders.
+Moved Workflow 0 package-mode GUI report path to a sibling \*\_report.json path instead of inside the package directory.
+source/gui/imgui/src/App.hpp
+Added GUI-only state for transcode status detail and expected-output verification.
+internalDocs/devHistory.md
+Added a release-hardening entry for this Transcoder GUI bug pass.
+internalDocs/AGENTS.md
+Updated the troubleshooting table with the new env-var guidance and the observed package-adm-wav backend limitation.
+Workflow 0: ADM/BW64 to LUSID
+Current behavior:
+Scene JSON mode now requires an existing input file, a valid output file path, and a found transcoder binary.
+Full package mode now requires an existing input file, a package-directory-style output path, and a found transcoder binary.
+Both modes now show command previews including --report, --stdout-report, and quoting.
+Bugs fixed:
+Stale state/log reset.
+Preview/actual-args mismatch.
+Weak button gating.
+Generic transcoder-not-found messaging.
+Success-with-missing-output false positive.
+Package report path generation moved out of the package directory.
+Remaining risks:
+package-adm-wav itself still failed in CLI smoke testing on CANYON-ATMOS-LFE.wav with Failed while writing package stems. That looks like a backend/CULT issue, not a GUI-state issue.
+Workflow 1: LUSID to ADM/BW64
+Current behavior:
+Mode 0 now expects a real scene.lusid.json file plus a real WAV directory.
+Mode 1 now expects a real LUSID package directory.
+Output XML/WAV paths must be file paths, not directories.
+Preview now includes --report and reflects the real arg list.
+Bugs fixed:
+Wrong browse control types.
+Weak input/output validation.
+Preview/actual-args mismatch.
+Success-with-missing-output false positive.
+Stale run/log state.
+Remaining risks:
+I did not expose or redesign experimental adm-author options; they remain backend-wired but not expanded here.
+No GUI launch/manual tab test was run in this pass because I did not have display access.
+Command Preview vs Actual Args
+After this pass, the preview strings are built from the same argument vectors used for mTcRunner.start(...).
+That includes --report, --stdout-report, --lfe-mode, and shell-style quoting for paths with spaces.
+I verified this path by running CLI smoke tests with outputs under /private/tmp/spatialroot tc smoke/....
+Success / Failure Detection
+Manual Transcoder-tab runs now require:
+subprocess exit code 0, and
+expected primary output(s) to exist.
+If exit code is nonzero, the GUI reports failure.
+If exit code is 0 but expected output is missing, the GUI now reports failure and logs the missing path.
+Missing report files are logged as warnings when the main outputs exist.
+stdout and stderr remain merged and surfaced through the shared transcode log via SubprocessRunner.
+Path Handling
+SPATIALROOT_CULT_TRANSCODER still works as the first lookup path.
+If SPATIALROOT_CULT_TRANSCODER is set to a missing path, the GUI now shows a clear inline message instead of only a generic not-found error.
+Developer build-tree fallback still works through findCultTranscoder().
+Paths with spaces were exercised in CLI smoke tests and are now shown correctly in preview/log text.
+Workflow 0 Scene mode uses an output file path.
+Workflow 0 Package mode uses a package directory path plus a sibling report file path.
+Workflow 1 uses separate output file paths for XML and WAV.
+Button Gating / State Reset
+Verified/fixed:
+Run buttons are disabled while a transcode is already running.
+Run buttons now require valid existing inputs and valid output-path shape.
+Workflow switching clears stale status/log context.
+Output-type switching clears incompatible stale mTcOutput values.
+Workflow 1 mode switching clears stale status without unnecessarily erasing user-entered paths.
+Remaining Known Limitations
+package-adm-wav failed in CLI smoke testing on data/sourceData/CANYON-ATMOS-LFE.wav with package-adm-wav: Failed while writing package stems. I did not attempt a backend fix in this GUI-only pass.
+I did not perform a live GUI/manual smoke test because display access was not available.
+I did not add packaging/install logic, app-relative lookup, or backend refactors.
+Documentation Updates
+internalDocs/devHistory.md
+Added Release-Hardening Audit — Transcoder GUI Bug Pass (May 11, 2026).
+internalDocs/AGENTS.md
+Updated ADM/transcoder troubleshooting notes for SPATIALROOT_CULT_TRANSCODER and the observed package-mode backend failure.
+Build / Test Result
+Ran ./build.sh --gui three times during the pass; final build passed.
+Ran CLI smoke test:
+build/internal/cult_transcoder/cult-transcoder transcode --in data/sourceData/CANYON-ATMOS-LFE.wav --in-format adm_wav --out '/private/tmp/spatialroot tc smoke/canyon scene.lusid.json' --out-format lusid_json --report '/private/tmp/spatialroot tc smoke/canyon scene_report.json' --stdout-report --lfe-mode hardcoded
+Passed.

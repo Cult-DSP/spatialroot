@@ -172,6 +172,10 @@ private:
     bool             mTcRunning  = false;
     bool             mTcSuccess  = false;
     bool             mTcDone     = false;
+    std::string      mTcStatusDetail;
+    std::string      mTcExpectedPrimaryOutput;
+    std::string      mTcExpectedSecondaryOutput;
+    std::string      mTcExpectedReportPath;
 
     // Transcode log is written from mTcRunner background thread → needs mutex.
     std::deque<LogEntry> mTcLog;

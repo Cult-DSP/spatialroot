@@ -5,6 +5,41 @@
 
 ---
 
+## Release-Hardening Audit — Transcoder GUI Bug Pass (May 11, 2026)
+
+**Status:** Complete. GUI-only fixes; no `EngineSession` or CULT bridge changes.
+
+**What changed:**
+
+- `source/gui/imgui/src/App.cpp` — Transcoder workflow selector and mode/output-type toggles now clear stale run status and stale log output, and the workflow selector is disabled while a transcode is running so users cannot mutate the active run mid-flight.
+- `source/gui/imgui/src/App.cpp` — Transcoder run buttons are now gated on real prerequisites: existing input file/directory, valid output file/directory shape, and a resolvable `cult-transcoder` binary. Missing or invalid `SPATIALROOT_CULT_TRANSCODER` now surfaces inline before the user clicks Run.
+- `source/gui/imgui/src/App.cpp` — Workflow 1 browse controls now use type-correct native pickers (`scene.lusid.json` file, WAV directory, package directory) instead of the permissive file-or-directory picker.
+- `source/gui/imgui/src/App.cpp` — command preview text is now built from the same argument vectors sent to `SubprocessRunner`, with shell-style quoting for spaces and explicit `--report` paths in all workflows.
+- `source/gui/imgui/src/App.cpp` — manual transcoder completion now requires both a zero exit code and the expected output files to exist before the UI reports success. Missing output after exit code 0 is now treated as failure and logged clearly; missing report files are downgraded to warnings when primary outputs exist.
+- `source/gui/imgui/src/App.cpp` — manual transcode log now resets per run and logs the full command line actually executed instead of a truncated placeholder.
+- `source/gui/imgui/src/App.cpp` — Workflow 0 package mode now writes the GUI-requested report to a sibling `*_report.json` path instead of inside the destination package directory, while still expecting `scene.lusid.json` inside the package itself.
+- `source/gui/imgui/src/App.hpp` — added small GUI-only state fields for transcode status detail and expected-output verification.
+
+**Validation:**
+
+- `./build.sh --gui` passed after the fix pass.
+- CLI smoke test passed:
+  - `cult-transcoder transcode --in data/sourceData/CANYON-ATMOS-LFE.wav ... --stdout-report --lfe-mode hardcoded`
+- CLI smoke test passed:
+  - `cult-transcoder adm-author --lusid-package data/sourceData/LUSID_package ... --stdout-report`
+- CLI smoke test failed on current CULT/backend behavior:
+  - `cult-transcoder package-adm-wav --in data/sourceData/CANYON-ATMOS-LFE.wav ...`
+  - failure reported: `package-adm-wav: Failed while writing package stems`
+  - treated as a remaining backend limitation, not fixed in this GUI-only pass
+
+**Manual test checklist for the GUI tab:**
+- Open TRANSCODE tab and switch between both workflows; confirm status/log reset and inputs remain.
+- In Workflow 0, verify Scene JSON and Full LUSID package previews include `--report` and match the selected paths.
+- In Workflow 1, verify the Scene JSON picker only returns files and the WAV/package pickers only return directories.
+- Run a known-good transcode and confirm the UI only reports success when the expected output file(s) exist.
+
+---
+
 ## Release-Hardening Audit — Packaging / Runtime Path Audit (May 11, 2026)
 
 **Status:** Complete. Minimal surgical changes only.
