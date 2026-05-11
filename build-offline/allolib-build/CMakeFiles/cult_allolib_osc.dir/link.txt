@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libcult_allolib_osc.a CMakeFiles/cult_allolib_osc.dir/src/protocol/al_OSC.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libcult_allolib_osc.a

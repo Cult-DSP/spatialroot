@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc librtaudio.a CMakeFiles/rtaudio.dir/RtAudio.cpp.o CMakeFiles/rtaudio.dir/rtaudio_c.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib librtaudio.a

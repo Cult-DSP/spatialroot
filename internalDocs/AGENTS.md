@@ -67,6 +67,8 @@ ADM BWF WAV File
 
 **The speaker layout JSON is the sole routing source.** The engine renders to a compact internal bus (numSpeakers + numSubwoofers channels) and routes to a layout-defined output bus via a one-to-one routing table built from the layout's `deviceChannel` fields. CSV-based routing is deprecated. See [REMAP.md](REMAP.md).
 
+**Offline parity guardrail:** offline render parity work under `source/spatial_engine/spatialRender/` must remain offline-owned unless a future task explicitly authorizes realtime-engine changes. Do not modify `Spatializer.hpp`, `RealtimeBackend.hpp`, `Streaming.hpp`, `Pose.hpp`, or `EngineSession.*` just to advance offline parity.
+
 ---
 
 ## Core Components

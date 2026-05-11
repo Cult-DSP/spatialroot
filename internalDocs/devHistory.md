@@ -5,6 +5,26 @@
 
 ---
 
+## OfflineOutputRouteMap Phase 1 (May 10, 2026)
+
+**Status:** Complete. Offline-only routing helper added; no realtime or offline render behavior change.
+
+**Motivation:** The repository already had an offline renderer, but its channel model diverged from the realtime engine's two-space routing semantics. Main speakers were still rendered to consecutive output indices even when the layout used sparse `deviceChannel` assignments.
+
+**What changed:**
+
+- Added `source/spatial_engine/spatialRender/OfflineOutputRouteMap.hpp`
+- Added `source/spatial_engine/spatialRender/OfflineOutputRouteMap.cpp`
+- Added an offline CLI diagnostic path in `source/spatial_engine/spatialRender/main.cpp`:
+  - `--print-output-route-map`
+  - `--validate-layout-only`
+
+**Behavior:** `OfflineOutputRouteMap` builds an offline-owned compact-internal-channel to sparse-device-output routing table from `SpeakerLayoutData`, includes subwoofers in the same map, derives `outputChannelCount` as `max(deviceChannel) + 1`, accepts non-contiguous device channels, reports silent gaps as warnings, and rejects negative or duplicate `deviceChannel` assignments.
+
+**Explicit non-change:** `SpatialRenderer` still renders with its pre-existing consecutive main-speaker output behavior in this phase. The new route map is diagnostic/scaffolding for Phase 2 wiring only.
+
+---
+
 ## Engine Failure Diagnostics in GUI Log (May 10, 2026)
 
 **Status:** Complete. No behavior change on success; richer log output on failure.

@@ -20,6 +20,7 @@
 #include <cstdlib>
 
 #include "SpatialRenderer.hpp"
+#include "OfflineOutputRouteMap.hpp"
 #include "../src/JSONLoader.hpp"
 #include "../src/LayoutLoader.hpp"
 #include "../src/WavUtils.hpp"
@@ -50,6 +51,8 @@ void printUsage() {
     std::cout << "General Options:\n"
               << "  --master_gain DB      Master gain in dB -60–+12 (default: 0, 0 dB = unity)\n"
               << "  --solo_source NAME    Render only the named source (for debugging)\n"
+              << "  --print-output-route-map  Load the layout, print offline routing, and exit\n"
+              << "  --validate-layout-only    Alias for --print-output-route-map\n"
               << "  --t0 SECONDS          Start time in seconds (default: 0)\n"
               << "  --t1 SECONDS          End time in seconds (default: full duration)\n"
               << "  --render_resolution MODE  Render resolution: block or sample (default: block)\n"
@@ -98,6 +101,7 @@ int main(int argc, char *argv[]) {
 
     fs::path layoutFile, positionsFile, sourcesFolder, admFile, outFile;
     RenderConfig config;  // Uses sensible defaults: masterGainDb=0.0f (0 dB = unity), pannerType=DBAP, etc.
+    bool printOutputRouteMap = false;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -146,6 +150,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "--solo_source") {
             config.soloSource = argv[++i];
+        } else if (arg == "--print-output-route-map" || arg == "--validate-layout-only") {
+            printOutputRouteMap = true;
         } else if (arg == "--t0") {
             config.t0 = std::stod(argv[++i]);
         } else if (arg == "--t1") {
@@ -201,6 +207,13 @@ int main(int argc, char *argv[]) {
     if (layoutFile.empty()) {
         std::cerr << "Error: --layout is required\n";
         return 1;
+    }
+    if (printOutputRouteMap) {
+        std::cout << "Loading layout...\n";
+        SpeakerLayoutData layout = LayoutLoader::loadLayout(layoutFile.string());
+        OfflineOutputRouteMap routeMap = buildOfflineOutputRouteMap(layout);
+        printOfflineOutputRouteMap(std::cout, routeMap);
+        return routeMap.valid() ? 0 : 2;
     }
     if (positionsFile.empty()) {
         std::cerr << "Error: --positions is required\n";

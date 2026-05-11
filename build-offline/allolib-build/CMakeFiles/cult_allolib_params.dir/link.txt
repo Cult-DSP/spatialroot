@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libcult_allolib_params.a CMakeFiles/cult_allolib_params.dir/src/io/al_Socket.cpp.o CMakeFiles/cult_allolib_params.dir/src/ui/al_Parameter.cpp.o CMakeFiles/cult_allolib_params.dir/src/ui/al_ParameterBundle.cpp.o CMakeFiles/cult_allolib_params.dir/src/ui/al_ParameterServer.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libcult_allolib_params.a

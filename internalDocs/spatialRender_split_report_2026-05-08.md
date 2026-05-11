@@ -13,6 +13,10 @@ This pass separated clearly offline renderer code from shared/runtime code witho
   - `main.cpp`
   - `SpatialRenderer.hpp`
   - `SpatialRenderer.cpp`
+  - `OfflineOutputRouteMap.hpp`
+  - `OfflineOutputRouteMap.cpp`
+
+Phase note (May 10, 2026): offline render parity Phase 1 added `OfflineOutputRouteMap` as an offline-owned device-indexed routing helper plus layout-only diagnostics. It does not yet change rendered audio output; Phase 2 is responsible for wiring `SpatialRenderer` through this map.
 
 No questionable code was deleted.
 

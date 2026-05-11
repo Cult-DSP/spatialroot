@@ -1,0 +1,2144 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      The system is: Darwin - 23.5.0 - arm64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      ld: library 'c++' not found
+      clang: error: linker command failed with exit code 1 (use -v to see invocation)
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/c++ 
+      Build flags: 
+      Id flags: -c 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is AppleClang, found in:
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/3.30.5/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_21522/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_21522.dir/build.make CMakeFiles/cmTC_21522.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX'
+        Building CXX object CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o
+        /Library/Developer/CommandLineTools/usr/bin/c++   -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -v -Wl,-v -MD -MT CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin23.5.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+        clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.5.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=15.0 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdeprecated-macro -fdebug-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fno-cxx-modules -fcxx-exceptions -fexceptions -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -x c++ /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin23.5.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1
+         /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include
+         /Library/Developer/CommandLineTools/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks (framework directory)
+        End of search list.
+        Linking CXX executable cmTC_21522
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_21522.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/c++  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_21522
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin23.5.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+         "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 14.5.0 15.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -o cmTC_21522 -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1053.12
+        BUILD 15:45:29 Feb  3 2024
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+        will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+        TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+        Library search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:113 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1]
+          add: [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+          add: [/Library/Developer/CommandLineTools/usr/include]
+        end of search list found
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1]
+        collapse include dir [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include] ==> [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+        collapse include dir [/Library/Developer/CommandLineTools/usr/include] ==> [/Library/Developer/CommandLineTools/usr/include]
+        implicit include dirs: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1;/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include;/Library/Developer/CommandLineTools/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_21522/fast]
+        ignore line: [/opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_21522.dir/build.make CMakeFiles/cmTC_21522.dir/build]
+        ignore line: [gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX']
+        ignore line: [Building CXX object CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/c++   -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -v -Wl -v -MD -MT CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin23.5.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.5.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=15.0 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdeprecated-macro -fdebug-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-B3L3wX -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fno-cxx-modules -fcxx-exceptions -fexceptions -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -x c++ /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin23.5.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include/c++/v1]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [Linking CXX executable cmTC_21522]
+        ignore line: [/opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_21522.dir/link.txt --verbose=1]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/c++  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl -search_paths_first -Wl -headerpad_max_install_names  -v -Wl -v CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_21522]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin23.5.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        link line: [ "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 14.5.0 15.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -o cmTC_21522 -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+          arg [/Library/Developer/CommandLineTools/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/Library/Developer/CommandLineTools/usr/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [14.5.0] ==> ignore
+          arg [15.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_21522] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_21522.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lSystem] ==> lib [System]
+          arg [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a] ==> lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'CXX': /Library/Developer/CommandLineTools/usr/bin/ld
+        Library search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+        implicit libs: [c++]
+        implicit objs: []
+        implicit dirs: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Running the CXX compiler's linker: "/Library/Developer/CommandLineTools/usr/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld-1053.12
+      BUILD 15:45:29 Feb  3 2024
+      configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+      will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+      LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+      TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      ld: library 'System' not found
+      clang: error: linker command failed with exit code 1 (use -v to see invocation)
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/cc 
+      Build flags: 
+      Id flags: -c 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is AppleClang, found in:
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/3.30.5/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_076f2/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_076f2.dir/build.make CMakeFiles/cmTC_076f2.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9'
+        Building C object CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -v -Wl,-v -MD -MT CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCCompilerABI.c
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin23.5.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+        clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.5.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=15.0 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9 -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9 -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin23.5.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include
+         /Library/Developer/CommandLineTools/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks (framework directory)
+        End of search list.
+        Linking C executable cmTC_076f2
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_076f2.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -o cmTC_076f2
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin23.5.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+         "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 14.5.0 15.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -o cmTC_076f2 -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1053.12
+        BUILD 15:45:29 Feb  3 2024
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+        will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+        TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+        Library search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:113 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+          add: [/Library/Developer/CommandLineTools/usr/include]
+        end of search list found
+        collapse include dir [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include] ==> [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+        collapse include dir [/Library/Developer/CommandLineTools/usr/include] ==> [/Library/Developer/CommandLineTools/usr/include]
+        implicit include dirs: [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include;/Library/Developer/CommandLineTools/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_076f2/fast]
+        ignore line: [/opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_076f2.dir/build.make CMakeFiles/cmTC_076f2.dir/build]
+        ignore line: [gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9']
+        ignore line: [Building C object CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/cc   -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -v -Wl -v -MD -MT CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin23.5.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.5.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=15.0 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9 -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-3bTWB9 -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin23.5.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [Linking C executable cmTC_076f2]
+        ignore line: [/opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_076f2.dir/link.txt --verbose=1]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl -search_paths_first -Wl -headerpad_max_install_names  -v -Wl -v CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -o cmTC_076f2]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin23.5.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        link line: [ "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 14.5.0 15.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -o cmTC_076f2 -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+          arg [/Library/Developer/CommandLineTools/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/Library/Developer/CommandLineTools/usr/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [14.5.0] ==> ignore
+          arg [15.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_076f2] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_076f2.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lSystem] ==> lib [System]
+          arg [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a] ==> lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'C': /Library/Developer/CommandLineTools/usr/bin/ld
+        Library search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "thirdparty/libsndfile/CMakeLists.txt:40 (project)"
+    message: |
+      Running the C compiler's linker: "/Library/Developer/CommandLineTools/usr/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld-1053.12
+      BUILD 15:45:29 Feb  3 2024
+      configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+      will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+      LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+      TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/TestLargeFiles.cmake:22 (check_include_file)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:12 (test_large_files)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for sys/types.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SYS_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_ac7f3/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_ac7f3.dir/build.make CMakeFiles/cmTC_ac7f3.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ'
+        Building C object CMakeFiles/cmTC_ac7f3.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_ac7f3.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_ac7f3.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_ac7f3.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ/CheckIncludeFile.c
+        Linking C executable cmTC_ac7f3
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ac7f3.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_ac7f3.dir/CheckIncludeFile.c.o -o cmTC_ac7f3
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-ynYjJZ'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/TestLargeFiles.cmake:23 (check_include_file)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:12 (test_large_files)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for stdint.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_STDINT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_b0348/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_b0348.dir/build.make CMakeFiles/cmTC_b0348.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy'
+        Building C object CMakeFiles/cmTC_b0348.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_b0348.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_b0348.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_b0348.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy/CheckIncludeFile.c
+        Linking C executable cmTC_b0348
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b0348.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_b0348.dir/CheckIncludeFile.c.o -o cmTC_b0348
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AUJlzy'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/TestLargeFiles.cmake:24 (check_include_file)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:12 (test_large_files)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for stddef.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_STDDEF_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_4258d/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_4258d.dir/build.make CMakeFiles/cmTC_4258d.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0'
+        Building C object CMakeFiles/cmTC_4258d.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_4258d.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_4258d.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_4258d.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0/CheckIncludeFile.c
+        Linking C executable cmTC_4258d
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4258d.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_4258d.dir/CheckIncludeFile.c.o -o cmTC_4258d
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-C33Re0'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/TestLargeFiles.cmake:28 (check_type_size)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:12 (test_large_files)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of off_t"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_OFF_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_d5031/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_d5031.dir/build.make CMakeFiles/cmTC_d5031.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1'
+        Building C object CMakeFiles/cmTC_d5031.dir/SIZEOF_OFF_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_d5031.dir/SIZEOF_OFF_T.c.o -MF CMakeFiles/cmTC_d5031.dir/SIZEOF_OFF_T.c.o.d -o CMakeFiles/cmTC_d5031.dir/SIZEOF_OFF_T.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1/SIZEOF_OFF_T.c
+        Linking C executable cmTC_d5031
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d5031.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_d5031.dir/SIZEOF_OFF_T.c.o -o cmTC_d5031
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-RugXQ1'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:61 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for byteswap.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_BYTESWAP_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_e2094/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_e2094.dir/build.make CMakeFiles/cmTC_e2094.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR'
+        Building C object CMakeFiles/cmTC_e2094.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_e2094.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_e2094.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_e2094.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR/CheckIncludeFile.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR/CheckIncludeFile.c:1:10: fatal error: 'byteswap.h' file not found
+        #include <byteswap.h>
+                 ^~~~~~~~~~~~
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_e2094.dir/build.make:79: CMakeFiles/cmTC_e2094.dir/CheckIncludeFile.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-5LWEDR'
+        gmake: *** [Makefile:127: cmTC_e2094/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:62 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for dlfcn.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_DLFCN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_a11f9/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_a11f9.dir/build.make CMakeFiles/cmTC_a11f9.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub'
+        Building C object CMakeFiles/cmTC_a11f9.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_a11f9.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_a11f9.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_a11f9.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub/CheckIncludeFile.c
+        Linking C executable cmTC_a11f9
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a11f9.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_a11f9.dir/CheckIncludeFile.c.o -o cmTC_a11f9
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-c3a8ub'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:63 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for direct.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_DIRECT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_d27f3/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_d27f3.dir/build.make CMakeFiles/cmTC_d27f3.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj'
+        Building C object CMakeFiles/cmTC_d27f3.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_d27f3.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_d27f3.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_d27f3.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj/CheckIncludeFile.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj/CheckIncludeFile.c:1:10: fatal error: 'direct.h' file not found
+        #include <direct.h>
+                 ^~~~~~~~~~
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_d27f3.dir/build.make:79: CMakeFiles/cmTC_d27f3.dir/CheckIncludeFile.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-iersAj'
+        gmake: *** [Makefile:127: cmTC_d27f3/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:64 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for endian.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_ENDIAN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_57078/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_57078.dir/build.make CMakeFiles/cmTC_57078.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K'
+        Building C object CMakeFiles/cmTC_57078.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_57078.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_57078.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_57078.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K/CheckIncludeFile.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K/CheckIncludeFile.c:1:10: fatal error: 'endian.h' file not found
+        #include <endian.h>
+                 ^~~~~~~~~~
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_57078.dir/build.make:79: CMakeFiles/cmTC_57078.dir/CheckIncludeFile.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-BzEa9K'
+        gmake: *** [Makefile:127: cmTC_57078/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:65 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for inttypes.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_INTTYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_fc429/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_fc429.dir/build.make CMakeFiles/cmTC_fc429.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x'
+        Building C object CMakeFiles/cmTC_fc429.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_fc429.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_fc429.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_fc429.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x/CheckIncludeFile.c
+        Linking C executable cmTC_fc429
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fc429.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_fc429.dir/CheckIncludeFile.c.o -o cmTC_fc429
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-fBwj3x'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:66 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for io.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_IO_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_58def/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_58def.dir/build.make CMakeFiles/cmTC_58def.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt'
+        Building C object CMakeFiles/cmTC_58def.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_58def.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_58def.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_58def.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt/CheckIncludeFile.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt/CheckIncludeFile.c:1:10: fatal error: 'io.h' file not found
+        #include <io.h>
+                 ^~~~~~
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_58def.dir/build.make:79: CMakeFiles/cmTC_58def.dir/CheckIncludeFile.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FhyRQt'
+        gmake: *** [Makefile:127: cmTC_58def/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:68 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for sys/time.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SYS_TIME_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_bc098/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_bc098.dir/build.make CMakeFiles/cmTC_bc098.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib'
+        Building C object CMakeFiles/cmTC_bc098.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_bc098.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_bc098.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_bc098.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib/CheckIncludeFile.c
+        Linking C executable cmTC_bc098
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bc098.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_bc098.dir/CheckIncludeFile.c.o -o cmTC_bc098
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-h4SLib'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:70 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for unistd.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_UNISTD_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_e9c73/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_e9c73.dir/build.make CMakeFiles/cmTC_e9c73.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq'
+        Building C object CMakeFiles/cmTC_e9c73.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_e9c73.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_e9c73.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_e9c73.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq/CheckIncludeFile.c
+        Linking C executable cmTC_e9c73
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e9c73.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_e9c73.dir/CheckIncludeFile.c.o -o cmTC_e9c73
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-sOcriq'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:71 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for immintrin.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_IMMINTRIN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_2bb85/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_2bb85.dir/build.make CMakeFiles/cmTC_2bb85.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3'
+        Building C object CMakeFiles/cmTC_2bb85.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_2bb85.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_2bb85.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_2bb85.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3/CheckIncludeFile.c
+        In file included from /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3/CheckIncludeFile.c:1:
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/immintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+        #error "This header is only meant to be used on x86 and x64 architecture"
+         ^
+        In file included from /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3/CheckIncludeFile.c:1:
+        In file included from /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/immintrin.h:17:
+        In file included from /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/x86gprintrin.h:15:
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/hresetintrin.h:42:27: error: invalid input constraint 'a' in asm
+          __asm__ ("hreset $0" :: "a"(__eax));
+                                  ^
+        In file included from /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3/CheckIncludeFile.c:1:
+        In file included from /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/immintrin.h:21:
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+        #error "This header is only meant to be used on x86 and x64 architecture"
+         ^
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:54:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_vec_init_v2si(__i, 0);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:133:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_packsswb((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:163:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_packssdw((__v2si)__m1, (__v2si)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:193:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_packuswb((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:220:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpckhbw((__v8qi)__m1, (__v8qi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:243:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpckhwd((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:264:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpckhdq((__v2si)__m1, (__v2si)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:291:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpcklbw((__v8qi)__m1, (__v8qi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:314:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpcklwd((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:335:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_punpckldq((__v2si)__m1, (__v2si)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:356:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddb((__v8qi)__m1, (__v8qi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:377:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddw((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:398:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddd((__v2si)__m1, (__v2si)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:420:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddsb((__v8qi)__m1, (__v8qi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:443:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddsw((__v4hi)__m1, (__v4hi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/mmintrin.h:465:12: error: invalid conversion between vector type '__m64' (vector of 1 'long long' value) and integer type 'int' of different size
+            return (__m64)__builtin_ia32_paddusb((__v8qi)__m1, (__v8qi)__m2);
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        fatal error: too many errors emitted, stopping now [-ferror-limit=]
+        20 errors generated.
+        gmake[1]: *** [CMakeFiles/cmTC_2bb85.dir/build.make:79: CMakeFiles/cmTC_2bb85.dir/CheckIncludeFile.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-lpokE3'
+        gmake: *** [Makefile:127: cmTC_2bb85/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:72 (check_include_file)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for stdbool.h"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_STDBOOL_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_a758f/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_a758f.dir/build.make CMakeFiles/cmTC_a758f.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6'
+        Building C object CMakeFiles/cmTC_a758f.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_a758f.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_a758f.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_a758f.dir/CheckIncludeFile.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6/CheckIncludeFile.c
+        Linking C executable cmTC_a758f
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a758f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_a758f.dir/CheckIncludeFile.c.o -o cmTC_a758f
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-aROoH6'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "thirdparty/libsndfile/cmake/CheckCPUArch.cmake:6 (try_compile)"
+      - "thirdparty/libsndfile/cmake/CheckCPUArch.cmake:22 (_CHECK_CPU_ARCH)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:74 (check_cpu_arch_x86)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_CPU_IS_X86"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_f5476/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_f5476.dir/build.make CMakeFiles/cmTC_f5476.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_f5476.dir/CheckCPUArch.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_f5476.dir/CheckCPUArch.c.o -MF CMakeFiles/cmTC_f5476.dir/CheckCPUArch.c.o.d -o CMakeFiles/cmTC_f5476.dir/CheckCPUArch.c.o -c /Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp/CheckCPUArch.c
+        /Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp/CheckCPUArch.c:5:5: error: use of undeclared identifier 'fail'
+            fail
+            ^
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_f5476.dir/build.make:79: CMakeFiles/cmTC_f5476.dir/CheckCPUArch.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        gmake: *** [Makefile:127: cmTC_f5476/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "thirdparty/libsndfile/cmake/CheckCPUArch.cmake:6 (try_compile)"
+      - "thirdparty/libsndfile/cmake/CheckCPUArch.cmake:18 (_CHECK_CPU_ARCH)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:75 (check_cpu_arch_x64)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_CPU_IS_X64"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_44972/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_44972.dir/build.make CMakeFiles/cmTC_44972.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_44972.dir/CheckCPUArch.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_44972.dir/CheckCPUArch.c.o -MF CMakeFiles/cmTC_44972.dir/CheckCPUArch.c.o.d -o CMakeFiles/cmTC_44972.dir/CheckCPUArch.c.o -c /Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp/CheckCPUArch.c
+        /Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp/CheckCPUArch.c:5:5: error: use of undeclared identifier 'fail'
+            fail
+            ^
+        1 error generated.
+        gmake[1]: *** [CMakeFiles/cmTC_44972.dir/build.make:79: CMakeFiles/cmTC_44972.dir/CheckCPUArch.c.o] Error 1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        gmake: *** [Makefile:127: cmTC_44972/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:92 (check_type_size)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of int64_t"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_INT64_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_3bd4a/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_3bd4a.dir/build.make CMakeFiles/cmTC_3bd4a.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU'
+        Building C object CMakeFiles/cmTC_3bd4a.dir/SIZEOF_INT64_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_3bd4a.dir/SIZEOF_INT64_T.c.o -MF CMakeFiles/cmTC_3bd4a.dir/SIZEOF_INT64_T.c.o.d -o CMakeFiles/cmTC_3bd4a.dir/SIZEOF_INT64_T.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU/SIZEOF_INT64_T.c
+        Linking C executable cmTC_3bd4a
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3bd4a.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_3bd4a.dir/SIZEOF_INT64_T.c.o -o cmTC_3bd4a
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-AZzdZU'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:93 (check_type_size)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of long"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_87294/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_87294.dir/build.make CMakeFiles/cmTC_87294.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo'
+        Building C object CMakeFiles/cmTC_87294.dir/SIZEOF_LONG.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_87294.dir/SIZEOF_LONG.c.o -MF CMakeFiles/cmTC_87294.dir/SIZEOF_LONG.c.o.d -o CMakeFiles/cmTC_87294.dir/SIZEOF_LONG.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo/SIZEOF_LONG.c
+        Linking C executable cmTC_87294
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_87294.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_87294.dir/SIZEOF_LONG.c.o -o cmTC_87294
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HwoxGo'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:94 (check_type_size)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of long long"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_LONG_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_593de/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_593de.dir/build.make CMakeFiles/cmTC_593de.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K'
+        Building C object CMakeFiles/cmTC_593de.dir/SIZEOF_LONG_LONG.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_593de.dir/SIZEOF_LONG_LONG.c.o -MF CMakeFiles/cmTC_593de.dir/SIZEOF_LONG_LONG.c.o.d -o CMakeFiles/cmTC_593de.dir/SIZEOF_LONG_LONG.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K/SIZEOF_LONG_LONG.c
+        Linking C executable cmTC_593de
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_593de.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_593de.dir/SIZEOF_LONG_LONG.c.o -o cmTC_593de
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-OTOn1K'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:95 (check_type_size)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of ssize_t"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_SSIZE_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_539f1/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_539f1.dir/build.make CMakeFiles/cmTC_539f1.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW'
+        Building C object CMakeFiles/cmTC_539f1.dir/SIZEOF_SSIZE_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_539f1.dir/SIZEOF_SSIZE_T.c.o -MF CMakeFiles/cmTC_539f1.dir/SIZEOF_SSIZE_T.c.o.d -o CMakeFiles/cmTC_539f1.dir/SIZEOF_SSIZE_T.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW/SIZEOF_SSIZE_T.c
+        Linking C executable cmTC_539f1
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_539f1.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_539f1.dir/SIZEOF_SSIZE_T.c.o -o cmTC_539f1
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dINSOW'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:96 (check_type_size)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Check size of wchar_t"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_WCHAR_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_8e0ea/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_8e0ea.dir/build.make CMakeFiles/cmTC_8e0ea.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3'
+        Building C object CMakeFiles/cmTC_8e0ea.dir/SIZEOF_WCHAR_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_8e0ea.dir/SIZEOF_WCHAR_T.c.o -MF CMakeFiles/cmTC_8e0ea.dir/SIZEOF_WCHAR_T.c.o.d -o CMakeFiles/cmTC_8e0ea.dir/SIZEOF_WCHAR_T.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3/SIZEOF_WCHAR_T.c
+        Linking C executable cmTC_8e0ea
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8e0ea.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_8e0ea.dir/SIZEOF_WCHAR_T.c.o -o cmTC_8e0ea
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JxXND3'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:116 (check_library_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for floor in m"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "LIBM_REQUIRED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_22a2a/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_22a2a.dir/build.make CMakeFiles/cmTC_22a2a.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn'
+        Building C object CMakeFiles/cmTC_22a2a.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=floor -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_22a2a.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_22a2a.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_22a2a.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn/CheckFunctionExists.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn/CheckFunctionExists.c:7:3: warning: incompatible redeclaration of library function 'floor' [-Wincompatible-library-redeclaration]
+          CHECK_FUNCTION_EXISTS(void);
+          ^
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS floor
+                                      ^
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn/CheckFunctionExists.c:7:3: note: 'floor' is a builtin with type 'double (double)'
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS floor
+                                      ^
+        1 warning generated.
+        Linking C executable cmTC_22a2a
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_22a2a.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=floor -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_22a2a.dir/CheckFunctionExists.c.o -o cmTC_22a2a  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-Tc64Nn'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:122 (check_library_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for sqlite3_close in sqlite3"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_SQLITE3"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_3c316/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_3c316.dir/build.make CMakeFiles/cmTC_3c316.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS'
+        Building C object CMakeFiles/cmTC_3c316.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=sqlite3_close -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_3c316.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_3c316.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_3c316.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS/CheckFunctionExists.c
+        Linking C executable cmTC_3c316
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3c316.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=sqlite3_close -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_3c316.dir/CheckFunctionExists.c.o -o cmTC_3c316  -lsqlite3 -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6YSlOS'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:124 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for fstat"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_FSTAT"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_c9baa/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_c9baa.dir/build.make CMakeFiles/cmTC_c9baa.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM'
+        Building C object CMakeFiles/cmTC_c9baa.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=fstat -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_c9baa.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_c9baa.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_c9baa.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM/CheckFunctionExists.c
+        Linking C executable cmTC_c9baa
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c9baa.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=fstat -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c9baa.dir/CheckFunctionExists.c.o -o cmTC_c9baa  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-HQ9uzM'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:125 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for fstat64"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_FSTAT64"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_13b0f/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_13b0f.dir/build.make CMakeFiles/cmTC_13b0f.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN'
+        Building C object CMakeFiles/cmTC_13b0f.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=fstat64 -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_13b0f.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_13b0f.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_13b0f.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN/CheckFunctionExists.c
+        Linking C executable cmTC_13b0f
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_13b0f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=fstat64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_13b0f.dir/CheckFunctionExists.c.o -o cmTC_13b0f  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-6LC4DN'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:126 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for gettimeofday"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_GETTIMEOFDAY"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_2bde6/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_2bde6.dir/build.make CMakeFiles/cmTC_2bde6.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9'
+        Building C object CMakeFiles/cmTC_2bde6.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=gettimeofday -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_2bde6.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_2bde6.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_2bde6.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9/CheckFunctionExists.c
+        Linking C executable cmTC_2bde6
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2bde6.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=gettimeofday -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_2bde6.dir/CheckFunctionExists.c.o -o cmTC_2bde6  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-8gtZI9'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:127 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for gmtime"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_GMTIME"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_858b5/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_858b5.dir/build.make CMakeFiles/cmTC_858b5.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy'
+        Building C object CMakeFiles/cmTC_858b5.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=gmtime -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_858b5.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_858b5.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_858b5.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy/CheckFunctionExists.c
+        Linking C executable cmTC_858b5
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_858b5.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=gmtime -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_858b5.dir/CheckFunctionExists.c.o -o cmTC_858b5  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-NlU7xy'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:128 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for gmtime_r"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_GMTIME_R"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_62cf8/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_62cf8.dir/build.make CMakeFiles/cmTC_62cf8.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp'
+        Building C object CMakeFiles/cmTC_62cf8.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=gmtime_r -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_62cf8.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_62cf8.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_62cf8.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp/CheckFunctionExists.c
+        Linking C executable cmTC_62cf8
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_62cf8.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=gmtime_r -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_62cf8.dir/CheckFunctionExists.c.o -o cmTC_62cf8  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-QRAKzp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:129 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for localtime"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_LOCALTIME"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_18ad6/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_18ad6.dir/build.make CMakeFiles/cmTC_18ad6.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB'
+        Building C object CMakeFiles/cmTC_18ad6.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=localtime -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_18ad6.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_18ad6.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_18ad6.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB/CheckFunctionExists.c
+        Linking C executable cmTC_18ad6
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_18ad6.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=localtime -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_18ad6.dir/CheckFunctionExists.c.o -o cmTC_18ad6  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-FJ09sB'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:130 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for localtime_r"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_LOCALTIME_R"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_de9df/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_de9df.dir/build.make CMakeFiles/cmTC_de9df.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC'
+        Building C object CMakeFiles/cmTC_de9df.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=localtime_r -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_de9df.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_de9df.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_de9df.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC/CheckFunctionExists.c
+        Linking C executable cmTC_de9df
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_de9df.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=localtime_r -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_de9df.dir/CheckFunctionExists.c.o -o cmTC_de9df  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-mFCQmC'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:131 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for lseek"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_LSEEK"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_fd380/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_fd380.dir/build.make CMakeFiles/cmTC_fd380.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd'
+        Building C object CMakeFiles/cmTC_fd380.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=lseek -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_fd380.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_fd380.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_fd380.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd/CheckFunctionExists.c
+        Linking C executable cmTC_fd380
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fd380.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=lseek -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_fd380.dir/CheckFunctionExists.c.o -o cmTC_fd380  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-zECsLd'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:132 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for open"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_OPEN"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_a2df9/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_a2df9.dir/build.make CMakeFiles/cmTC_a2df9.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ'
+        Building C object CMakeFiles/cmTC_a2df9.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=open -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_a2df9.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_a2df9.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_a2df9.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ/CheckFunctionExists.c
+        Linking C executable cmTC_a2df9
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a2df9.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=open -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_a2df9.dir/CheckFunctionExists.c.o -o cmTC_a2df9  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-EXSmwQ'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:133 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for read"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_READ"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_29797/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_29797.dir/build.make CMakeFiles/cmTC_29797.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55'
+        Building C object CMakeFiles/cmTC_29797.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=read -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_29797.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_29797.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_29797.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55/CheckFunctionExists.c
+        Linking C executable cmTC_29797
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_29797.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=read -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_29797.dir/CheckFunctionExists.c.o -o cmTC_29797  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-hRbq55'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:134 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for write"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_WRITE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_faad5/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_faad5.dir/build.make CMakeFiles/cmTC_faad5.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY'
+        Building C object CMakeFiles/cmTC_faad5.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=write -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_faad5.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_faad5.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_faad5.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY/CheckFunctionExists.c
+        Linking C executable cmTC_faad5
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_faad5.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=write -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_faad5.dir/CheckFunctionExists.c.o -o cmTC_faad5  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-o33NCY'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:135 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for lrint"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_LRINT"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_c06a7/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_c06a7.dir/build.make CMakeFiles/cmTC_c06a7.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG'
+        Building C object CMakeFiles/cmTC_c06a7.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=lrint -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_c06a7.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_c06a7.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_c06a7.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG/CheckFunctionExists.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG/CheckFunctionExists.c:7:3: warning: incompatible redeclaration of library function 'lrint' [-Wincompatible-library-redeclaration]
+          CHECK_FUNCTION_EXISTS(void);
+          ^
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS lrint
+                                      ^
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG/CheckFunctionExists.c:7:3: note: 'lrint' is a builtin with type 'long (double)'
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS lrint
+                                      ^
+        1 warning generated.
+        Linking C executable cmTC_c06a7
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c06a7.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=lrint -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c06a7.dir/CheckFunctionExists.c.o -o cmTC_c06a7  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-loz2PG'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:136 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for lrintf"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_LRINTF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_657c3/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_657c3.dir/build.make CMakeFiles/cmTC_657c3.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt'
+        Building C object CMakeFiles/cmTC_657c3.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=lrintf -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_657c3.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_657c3.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_657c3.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt/CheckFunctionExists.c
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt/CheckFunctionExists.c:7:3: warning: incompatible redeclaration of library function 'lrintf' [-Wincompatible-library-redeclaration]
+          CHECK_FUNCTION_EXISTS(void);
+          ^
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS lrintf
+                                      ^
+        /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt/CheckFunctionExists.c:7:3: note: 'lrintf' is a builtin with type 'long (float)'
+        <command line>:1:31: note: expanded from macro 'CHECK_FUNCTION_EXISTS'
+        #define CHECK_FUNCTION_EXISTS lrintf
+                                      ^
+        1 warning generated.
+        Linking C executable cmTC_657c3
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_657c3.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=lrintf -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_657c3.dir/CheckFunctionExists.c.o -o cmTC_657c3  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-cCRNrt'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:139 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for ftruncate"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_FTRUNCATE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_3ac44/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_3ac44.dir/build.make CMakeFiles/cmTC_3ac44.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH'
+        Building C object CMakeFiles/cmTC_3ac44.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=ftruncate -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_3ac44.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_3ac44.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_3ac44.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH/CheckFunctionExists.c
+        Linking C executable cmTC_3ac44
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3ac44.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=ftruncate -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_3ac44.dir/CheckFunctionExists.c.o -o cmTC_3ac44  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-tWPWhH'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:140 (check_function_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for fsync"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_FSYNC"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_30be2/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_30be2.dir/build.make CMakeFiles/cmTC_30be2.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy'
+        Building C object CMakeFiles/cmTC_30be2.dir/CheckFunctionExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=fsync -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_30be2.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_30be2.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_30be2.dir/CheckFunctionExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy/CheckFunctionExists.c
+        Linking C executable cmTC_30be2
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_30be2.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=fsync -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_30be2.dir/CheckFunctionExists.c.o -o cmTC_30be2  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-JO4qFy'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:167 (check_symbol_exists)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    checks:
+      - "Looking for S_IRGRP"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_DECL_S_IRGRP"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_35c44/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_35c44.dir/build.make CMakeFiles/cmTC_35c44.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc'
+        Building C object CMakeFiles/cmTC_35c44.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_35c44.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_35c44.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_35c44.dir/CheckSymbolExists.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc/CheckSymbolExists.c
+        Linking C executable cmTC_35c44
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_35c44.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_35c44.dir/CheckSymbolExists.c.o -o cmTC_35c44  -lm
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-rYhKJc'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "thirdparty/libsndfile/cmake/TestInline.cmake:6 (try_compile)"
+      - "thirdparty/libsndfile/cmake/SndFileChecks.cmake:196 (test_inline)"
+      - "thirdparty/libsndfile/CMakeLists.txt:97 (include)"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/lucian/Projects/spatialroot/thirdparty/libsndfile/cmake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "HAVE_INLINE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_1978e/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_1978e.dir/build.make CMakeFiles/cmTC_1978e.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_1978e.dir/TestInline.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -std=gnu99 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_1978e.dir/TestInline.c.o -MF CMakeFiles/cmTC_1978e.dir/TestInline.c.o.d -o CMakeFiles/cmTC_1978e.dir/TestInline.c.o -c /Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/TestInline.c
+        Linking C executable cmTC_1978e
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1978e.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_1978e.dir/TestInline.c.o -o cmTC_1978e
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/libsndfile-build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "internal/cult-allolib/CMakeLists.txt:103 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_11587/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_11587.dir/build.make CMakeFiles/cmTC_11587.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD'
+        Building C object CMakeFiles/cmTC_11587.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -MD -MT CMakeFiles/cmTC_11587.dir/src.c.o -MF CMakeFiles/cmTC_11587.dir/src.c.o.d -o CMakeFiles/cmTC_11587.dir/src.c.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD/src.c
+        Linking C executable cmTC_11587
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_11587.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_11587.dir/src.c.o -o cmTC_11587
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-MwH9rD'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "internal/cult-allolib/external/Gamma/CMakeLists.txt:8 (CHECK_CXX_COMPILER_FLAG)"
+    checks:
+      - "Performing Test COMPILER_SUPPORTS_CXX11"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "COMPILER_SUPPORTS_CXX11"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_fdd9c/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_fdd9c.dir/build.make CMakeFiles/cmTC_fdd9c.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd'
+        Building CXX object CMakeFiles/cmTC_fdd9c.dir/src.cxx.o
+        /Library/Developer/CommandLineTools/usr/bin/c++ -DCOMPILER_SUPPORTS_CXX11  -std=c++17 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -std=c++11 -MD -MT CMakeFiles/cmTC_fdd9c.dir/src.cxx.o -MF CMakeFiles/cmTC_fdd9c.dir/src.cxx.o.d -o CMakeFiles/cmTC_fdd9c.dir/src.cxx.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd/src.cxx
+        Linking CXX executable cmTC_fdd9c
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fdd9c.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/c++  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_fdd9c.dir/src.cxx.o -o cmTC_fdd9c
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-LkPrLd'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "internal/cult-allolib/external/Gamma/CMakeLists.txt:9 (CHECK_CXX_COMPILER_FLAG)"
+    checks:
+      - "Performing Test COMPILER_SUPPORTS_CXX0X"
+    directories:
+      source: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5"
+      binary: "/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "14.5"
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk"
+    buildResult:
+      variable: "COMPILER_SUPPORTS_CXX0X"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E env VERBOSE=1 /opt/homebrew/bin/gmake -f Makefile cmTC_62617/fast
+        /opt/homebrew/bin/gmake  -f CMakeFiles/cmTC_62617.dir/build.make CMakeFiles/cmTC_62617.dir/build
+        gmake[1]: Entering directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5'
+        Building CXX object CMakeFiles/cmTC_62617.dir/src.cxx.o
+        /Library/Developer/CommandLineTools/usr/bin/c++ -DCOMPILER_SUPPORTS_CXX0X  -std=c++17 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5   -std=c++0x -MD -MT CMakeFiles/cmTC_62617.dir/src.cxx.o -MF CMakeFiles/cmTC_62617.dir/src.cxx.o.d -o CMakeFiles/cmTC_62617.dir/src.cxx.o -c /Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5/src.cxx
+        Linking CXX executable cmTC_62617
+        /opt/homebrew/Cellar/cmake/3.30.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_62617.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/c++  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk -mmacosx-version-min=14.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_62617.dir/src.cxx.o -o cmTC_62617
+        gmake[1]: Leaving directory '/Users/lucian/Projects/spatialroot/build-offline/CMakeFiles/CMakeScratch/TryCompile-dkvEd5'
+        
+      exitCode: 0
+...

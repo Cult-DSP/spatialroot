@@ -36,6 +36,7 @@ endif()
 
 add_executable(spatialroot_spatial_render
     main.cpp
+    OfflineOutputRouteMap.cpp
     SpatialRenderer.cpp
     ../src/JSONLoader.cpp
     ../src/LayoutLoader.cpp
