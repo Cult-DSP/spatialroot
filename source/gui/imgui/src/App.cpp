@@ -619,13 +619,21 @@ void App::renderTranscodeTab() {
                 ImGui::InputText("##tc0pkgout", &mTcOutput);
             }
             ImGui::SameLine();
-            if (ImGui::Button(mTcOutputType == 0 ? "Browse##tc0out" : "Browse##tc0pkgout")) {
-                const std::string p = mTcOutputType == 0
-                    ? pickFile("Select Output JSON", {"*.json"}, "JSON files")
-                    : pickDirectory("Select Package Output Directory");
-                if (!p.empty()) mTcOutput = p;
+            if (ImGui::Button("Browse##tc0out")) {
+                const std::string selected = pickDirectory("Select Output Folder");
+                if (!selected.empty()) {
+                    if (mTcOutputType == 0) {
+                        fs::path inputPath(mTcInput);
+                        std::string baseName = inputPath.stem().string();
+                        mTcOutput = (fs::path(selected) / (baseName + ".lusid.json")).string();
+                    } else {
+                        fs::path inputPath(mTcInput);
+                        std::string baseName = inputPath.stem().string();
+                        mTcOutput = (fs::path(selected) / baseName).string();
+                    }
+                }
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip(mTcOutputType == 0 ? "Expected: scene.lusid.json" : "Expected: package directory");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(mTcOutputType == 0 ? "Select folder, output auto-named" : "Select folder, output auto-named");
 
             ImGui::Spacing();
             ImGui::Separator();
