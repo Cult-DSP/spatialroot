@@ -69,8 +69,11 @@ spatialroot/etc/jupyter/
 !spatial_Engine/speaker_layouts/
 
 
-#c ++ stuff 
-spatial_Engine/spatialRender/build
+# C++ build dirs
+source/spatial_engine/spatialRender/build/
+source/spatial_engine/spatialRender/build-offline/
+build-offline/
+
 # Ignore AlloLib build directory
 
 build/
