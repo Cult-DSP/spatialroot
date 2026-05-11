@@ -166,7 +166,7 @@ void printUsage() {
               << "  --validate-layout-only    Alias for --print-output-route-map\n\n";
     std::cout << "Spatializer Options:\n"
               << "  --spatializer TYPE    Spatializer: dbap or lbap (default: dbap)\n"
-              << "  --dbap_focus FLOAT    DBAP focus/rolloff exponent (default: 1.0, range: 0.2-5.0)\n"
+              << "  --dbap_focus FLOAT    DBAP focus/rolloff exponent (default: 1.0, range: 0.1-5.0)\n"
               << "  --lbap_dispersion F   LBAP dispersion threshold (default: 0.5, range: 0.0-1.0)\n\n";
     std::cout << "General Options:\n"
               << "  --master_gain DB      Master gain in dB -60–+12 (default: 0, 0 dB = unity)\n"
@@ -256,9 +256,9 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "--dbap_focus") {
             config.dbapFocus = std::stof(argv[++i]);
-            if (config.dbapFocus < 0.2f || config.dbapFocus > 5.0f) {
+            if (config.dbapFocus < 0.1f || config.dbapFocus > 5.0f) {
                 std::cerr << "Warning: --dbap_focus " << config.dbapFocus
-                          << " is outside recommended range [0.2, 5.0]\n";
+                          << " is outside recommended range [0.1, 5.0]\n";
             }
         } else if (arg == "--lbap_dispersion") {
             config.lbapDispersion = std::stof(argv[++i]);

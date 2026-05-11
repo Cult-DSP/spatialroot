@@ -27,7 +27,7 @@ The engine follows a sequential agent model. Each agent owns one stage of the pr
 | 7     | Output Remap          | ✅ Complete | `OutputRemap.hpp`                  |
 | 8     | Threading and Safety  | ✅ Complete | `RealtimeTypes.hpp` (audit + docs) |
 | 9     | Init / Config         | ✅ Complete | `init.sh`, build scripts           |
-| 10    | GUI                   | ✅ Complete | `source/gui/imgui/` (ImGui + GLFW)        |
+| 10    | GUI                   | ✅ Complete | `source/gui/imgui/` (ImGui + GLFW) |
 | 10.1  | OSC Timing Fix        | ✅ Complete | `EngineSession.cpp`                |
 | 11    | Bug-Fix Pass          | ✅ Complete | multiple                           |
 
@@ -89,13 +89,13 @@ Use `./build.sh --engine-only` for fast current-workflow engine rebuilds. Histor
 
 ### Test Content
 
-| Content | ADM WAV                             | LUSID Scene                                                                 |
-| ------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| Swale   | `data/sourceData/SWALE-ATMOS-LFE.wav`    | `data/processedData/stageForRender/SWALE-ATMOS-LFE.lusid.json`                   |
-| Ascent  | `data/sourceData/ASCENT-ATMOS-LFE.wav`   | `data/processedData/stageForRender/ASCENT-ATMOS-LFE.lusid.json`                  |
-| Eden    | `data/sourceData/EDEN-ATMOS-MIX-LFE.wav` | `data/processedData/stageForRender/EDEN-ATMOS-MIX-LFE.lusid.json`                |
+| Content | ADM WAV                                  | LUSID Scene                                                                 |
+| ------- | ---------------------------------------- | --------------------------------------------------------------------------- |
+| Swale   | `data/sourceData/SWALE-ATMOS-LFE.wav`    | `data/processedData/stageForRender/SWALE-ATMOS-LFE.lusid.json`              |
+| Ascent  | `data/sourceData/ASCENT-ATMOS-LFE.wav`   | `data/processedData/stageForRender/ASCENT-ATMOS-LFE.lusid.json`             |
+| Eden    | `data/sourceData/EDEN-ATMOS-MIX-LFE.wav` | `data/processedData/stageForRender/EDEN-ATMOS-MIX-LFE.lusid.json`           |
 | Canyon  | `data/sourceData/CANYON-ATMOS-LFE.wav`   | _(no pre-built scene — transcode via GUI TRANSCODE tab or cult-transcoder)_ |
-| 360RA   | `data/sourceData/360RA_test.wav`         | `data/processedData/stageForRender/360RA_test.lusid.json`                        |
+| 360RA   | `data/sourceData/360RA_test.wav`         | `data/processedData/stageForRender/360RA_test.lusid.json`                   |
 
 Speaker layouts: `source/speaker_layouts/translab-sono-layout.json` (primary test), `allosphere_layout.json` (56-ch).
 
@@ -103,8 +103,8 @@ Speaker layouts: `source/speaker_layouts/translab-sono-layout.json` (primary tes
 
 **C++ engine:**
 
-| File                                                       | Role                                                                                                                                                                                                                                                                                         |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| File                                                              | Role                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`        | Core DBAP render loop. Proximity guard (Pass 1 soft zone + Pass 2 hard floor), fast-mover sub-stepping, cross-block guard-transition blending (`mPrevSafePos`/`mPrevSafeValid`/`mPrevGuardFired`), Phase 6 mix trims, Phase 14 diagnostic measurement points. **Most bugs touch this file.** |
 | `source/spatial_engine/realtimeEngine/src/Pose.hpp`               | Keyframe interpolation pipeline: SLERP → `safeDirForSource` → `sanitizeDirForLayout` → `directionToDBAPPosition`. Computes `SourcePose::position` (block center), `positionStart`, `positionEnd`.                                                                                            |
 | `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`    | Audio callback controller. Owns `ControlSmooth` (50 ms exponential smoother for gain/focus), `processBlock()` Steps 1–6, per-block timing, CPU meter. All config values reach the audio thread exclusively via `mSmooth`.                                                                    |
@@ -115,33 +115,33 @@ Speaker layouts: `source/speaker_layouts/translab-sono-layout.json` (primary tes
 
 **C++ GUI:**
 
-| File                                      | Role                                                                                                                                                                                                    |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| File                                             | Role                                                                                                                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `source/gui/imgui/src/App.hpp` / `App.cpp`       | ImGui + GLFW desktop app. Owns `EngineSession`. Staged runtime params are preserved on Start (no forced reset). Controls engine via direct C++ setters — not OSC. Two tabs: ENGINE and TRANSCODE. |
-| `source/gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion.                                                                                                                                 |
-| `source/gui/imgui/src/main.cpp`                  | GLFW window setup, render loop, calls `App::tick()` each frame.                                                                                                                                         |
+| `source/gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion.                                                                                                                           |
+| `source/gui/imgui/src/main.cpp`                  | GLFW window setup, render loop, calls `App::tick()` each frame.                                                                                                                                   |
 
 Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O), main thread (lifecycle + update()). See [Threading and Safety](#threading-and-safety) below.
 
 ### Closed Bugs
 
-| #    | Bug                                                                                     | Fix                                                                                      |
-| ---- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 11.5 | Spatializer anchor caching during steady pause — clicks on subsequent pauses            | New fast-path early-return before Step 1 skips all rendering during fully-paused state   |
-| 11.4 | Stop-after-recent-pause click — conditional sleep missed in-progress fade               | Moved 50ms sleep outside the `if (!paused)` guard; sleep is always unconditional         |
-| 11.3 | Resume mid-fade-out forced `mPauseFade = 0.0f` — gain discontinuity on rapid toggle    | Step computed as `(1.0f - mPauseFade) / fadeFrames`; ramp continues from current value  |
-| 11.2 | `stop()` called `mAudioIO.stop()` with no fade — content-dependent click               | Arm pause fade + 50ms sleep before hard stop; reset `mConfig.paused = false` afterward  |
-| 11.1 | `std::memset` in late early-return wiped completed pause fade — audible click           | Removed memset; Step 4's multiply-by-zero already zeroes buffer correctly                |
-| 10.1 | Normalized DBAP breaks fast-mover continuity anchor (`mPrevSafePos`)                   | Fast-mover branch writes its own state using last sub-step position                      |
-| 9.1  | Cross-block guard-transition blending — clicking at guard-zone entry/exit               | Blended transition over several blocks                                                   |
-| 8.1  | Explicit device flag + GUI picker — device selection unreliable                         | `--device` flag + GUI device enumeration                                                 |
-| 7.x  | Guard-induced relocation and buzzing                                                    | Guard transition logic overhaul                                                          |
-| 6.x  | Channel relocation diagnostics                                                          | Added per-source channel relocation counter                                              |
-| 5.1  | Smoother cold-start transient — initial pop on first block                              | Ramped gain from zero on first `processBlock()`                                          |
-| 4.1  | Stale slider state — sliders not reflecting engine state after restart                  | State flush on `engine_ready`                                                            |
-| 3.2  | Channel validation — crash on layout/device channel count mismatch                     | Fast-fail with error message                                                             |
-| 2.1  | Fast-mover sub-stepping — blinking on rapid trajectory changes                          | Sub-step at 16-sample hops when angular delta > 0.25 rad                                |
-| 1.1  | Source onset pop — click at source start                                                | Fade-in over first ~5ms of source playback                                               |
+| #    | Bug                                                                                 | Fix                                                                                    |
+| ---- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 11.5 | Spatializer anchor caching during steady pause — clicks on subsequent pauses        | New fast-path early-return before Step 1 skips all rendering during fully-paused state |
+| 11.4 | Stop-after-recent-pause click — conditional sleep missed in-progress fade           | Moved 50ms sleep outside the `if (!paused)` guard; sleep is always unconditional       |
+| 11.3 | Resume mid-fade-out forced `mPauseFade = 0.0f` — gain discontinuity on rapid toggle | Step computed as `(1.0f - mPauseFade) / fadeFrames`; ramp continues from current value |
+| 11.2 | `stop()` called `mAudioIO.stop()` with no fade — content-dependent click            | Arm pause fade + 50ms sleep before hard stop; reset `mConfig.paused = false` afterward |
+| 11.1 | `std::memset` in late early-return wiped completed pause fade — audible click       | Removed memset; Step 4's multiply-by-zero already zeroes buffer correctly              |
+| 10.1 | Normalized DBAP breaks fast-mover continuity anchor (`mPrevSafePos`)                | Fast-mover branch writes its own state using last sub-step position                    |
+| 9.1  | Cross-block guard-transition blending — clicking at guard-zone entry/exit           | Blended transition over several blocks                                                 |
+| 8.1  | Explicit device flag + GUI picker — device selection unreliable                     | `--device` flag + GUI device enumeration                                               |
+| 7.x  | Guard-induced relocation and buzzing                                                | Guard transition logic overhaul                                                        |
+| 6.x  | Channel relocation diagnostics                                                      | Added per-source channel relocation counter                                            |
+| 5.1  | Smoother cold-start transient — initial pop on first block                          | Ramped gain from zero on first `processBlock()`                                        |
+| 4.1  | Stale slider state — sliders not reflecting engine state after restart              | State flush on `engine_ready`                                                          |
+| 3.2  | Channel validation — crash on layout/device channel count mismatch                  | Fast-fail with error message                                                           |
+| 2.1  | Fast-mover sub-stepping — blinking on rapid trajectory changes                      | Sub-step at 16-sample hops when angular delta > 0.25 rad                               |
+| 1.1  | Source onset pop — click at source start                                            | Fade-in over first ~5ms of source playback                                             |
 
 ### Bug 11.1 — memset wipes completed pause fade — PATCHED (May 7, 2026)
 
@@ -152,6 +152,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Removed the two `std::memset` lines from the late early-return. Step 4's multiply-by-zero already produces a correctly-zeroed buffer. Zeroing it again only destroys the graceful ramp on the completing block.
 
 **Files changed:**
+
 - `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: removed memset from late early-return block; added explanatory comment.
 
 **RT-safety:** No concerns. No allocation or locks removed; just deletion of redundant memset.
@@ -171,6 +172,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Arm the pause fade before the hard stop: set `mConfig.paused = true` (which triggers the 8ms ramp in the audio thread on the next callback), then unconditionally `sleep_for(50ms)` to guarantee the fade completes, then call `mAudioIO.stop()`. Reset `mConfig.paused = false` afterward so the next `start()` begins unpaused. Added `#include <thread>`.
 
 **Files changed:**
+
 - `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: modified `stop()` to arm pause fade + unconditional 50ms sleep.
 
 **RT-safety:** Sleep is on the main thread only; audio callback is unaffected.
@@ -190,6 +192,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Removed the `mPauseFade = 0.0f` reset. Compute the fade-in step as `(1.0f - mPauseFade) / fadeFrames` so the ramp continues from wherever the gain currently is, reaching 1.0 in `fadeFrames` regardless of starting value.
 
 **Files changed:**
+
 - `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: Step C resume branch — removed forced reset, updated step calculation.
 
 **RT-safety:** No concerns. Pure arithmetic in the audio thread.
@@ -209,6 +212,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Approach:** Moved the 50ms `sleep_for` outside the `if (!paused)` guard so it runs unconditionally. The sleep covers: `kPauseFadeMs` (8ms) + two max-buffer durations. This is conservative but sufficient.
 
 **Files changed:**
+
 - `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: `stop()` — sleep made unconditional.
 
 **RT-safety:** Sleep is main thread only.
@@ -230,6 +234,7 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 **Note:** The late early-return (after Step 4) still handles the fade-completing block — it plays the graceful ramp and then returns. The new early-return fires only on subsequent steady-paused blocks.
 
 **Files changed:**
+
 - `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`: new fast-path early-return block inserted before Step 1, with CPU load update and explanatory comment.
 
 **RT-safety:** memset in the early-return is RT-safe (known-size stack buffer, no allocation).
@@ -284,12 +289,12 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 `RuntimeParams::defaults()` is the single canonical source of default values for API, CLI, and GUI. `resetRuntimeParams()` is equivalent to `configureRuntime(RuntimeParams::defaults())`.
 
-| Control | Public API | Range | Default | OSC address |
-|---|---|---|---|---|
-| Master gain | `RuntimeParams::masterGainDb`, `setMasterGainDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/gain_db` |
-| DBAP focus | `RuntimeParams::dbapFocus`, `setDbapFocus(float)` | 0.1–5.0 | 1.5 | `/realtime/focus` |
-| Speaker mix | `RuntimeParams::speakerMixDb`, `setSpeakerMixDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/speaker_mix_db` |
-| Sub mix | `RuntimeParams::subMixDb`, `setSubMixDb(float)` | -60–+12 dB | 0.0 dB | `/realtime/sub_mix_db` |
+| Control     | Public API                                              | Range      | Default | OSC address                |
+| ----------- | ------------------------------------------------------- | ---------- | ------- | -------------------------- |
+| Master gain | `RuntimeParams::masterGainDb`, `setMasterGainDb(float)` | -60–+12 dB | 0.0 dB  | `/realtime/gain_db`        |
+| DBAP focus  | `RuntimeParams::dbapFocus`, `setDbapFocus(float)`       | 0.1–5.0    | 1.5     | `/realtime/focus`          |
+| Speaker mix | `RuntimeParams::speakerMixDb`, `setSpeakerMixDb(float)` | -60–+12 dB | 0.0 dB  | `/realtime/speaker_mix_db` |
+| Sub mix     | `RuntimeParams::subMixDb`, `setSubMixDb(float)`         | -60–+12 dB | 0.0 dB  | `/realtime/sub_mix_db`     |
 
 ---
 
@@ -384,11 +389,11 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 **Solution:** Two mix sliders + auto-compensation toggle.
 
-| Control                                         | Range  | Default | Effect                                        |
-| ----------------------------------------------- | ------ | ------- | --------------------------------------------- |
-| Loudspeaker Mix (`--speaker_mix`)               | -60–+12 dB | 0.0  | Post-DBAP main-channel trim                   |
-| Sub Mix (`--sub_mix`)                           | -60–+12 dB | 0.0  | Post-LFE-routing sub trim                     |
-| Focus Auto-Compensation (`--auto_compensation`) | on/off | off     | Auto-updates loudspeaker mix as focus changes |
+| Control                                         | Range      | Default | Effect                                        |
+| ----------------------------------------------- | ---------- | ------- | --------------------------------------------- |
+| Loudspeaker Mix (`--speaker_mix`)               | -60–+12 dB | 0.0     | Post-DBAP main-channel trim                   |
+| Sub Mix (`--sub_mix`)                           | -60–+12 dB | 0.0     | Post-LFE-routing sub trim                     |
+| Focus Auto-Compensation (`--auto_compensation`) | on/off     | off     | Auto-updates loudspeaker mix as focus changes |
 
 **Signal chain:** Source → masterGain → DBAP → spkMix trim → output; LFE → lfeMix trim → output.
 
@@ -430,10 +435,10 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 ### Thread Model
 
-| Thread            | Owner                      | Responsibilities                                |
-| ----------------- | -------------------------- | ----------------------------------------------- |
-| **Audio thread**  | AlloLib `AudioIO`          | `processBlock()` — RT, no locks, no allocations |
-| **Loader thread** | `Streaming`                | Disk I/O, buffer filling, chunk loading         |
+| Thread            | Owner                             | Responsibilities                                |
+| ----------------- | --------------------------------- | ----------------------------------------------- |
+| **Audio thread**  | AlloLib `AudioIO`                 | `processBlock()` — RT, no locks, no allocations |
+| **Loader thread** | `Streaming`                       | Disk I/O, buffer filling, chunk loading         |
 | **Main thread**   | Host (`source/gui/imgui/` or CLI) | Lifecycle, `update()`, OSC if enabled           |
 
 ### Memory Order Rules

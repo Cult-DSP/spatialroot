@@ -86,7 +86,7 @@ Speaker layouts: `source/speaker_layouts/translab-sono-layout.json` (primary tes
 
 | File | Role |
 |---|---|
-| `source/gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. `onStart()` always calls `resetRuntimeToDefaults()` before launching (fix for Bug 4 pattern). Controls engine via direct C++ setters (`mSession->setMasterGainDb()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
+| `source/gui/imgui/src/App.hpp` / `App.cpp` | ImGui + GLFW desktop app. Owns `EngineSession`. Staged runtime params are preserved on Start (no forced reset). Controls engine via direct C++ setters (`mSession->setMasterGainDb()` etc.) — not OSC. Two tabs: ENGINE and TRANSCODE. |
 | `source/gui/imgui/src/SubprocessRunner.hpp/.cpp` | Runs the `cult-transcoder` subprocess for ADM WAV → LUSID scene conversion. |
 | `source/gui/imgui/src/main.cpp` | GLFW window setup, render loop, calls `App::tick()` each frame. |
 
@@ -109,7 +109,7 @@ session.start();                  // launches audio thread + loader thread
 **Runtime control (safe to call after `start()`):**
 ```cpp
 session.setMasterGainDb(float);    // -60–+12 dB (0 dB = unity)
-session.setDbapFocus(float);       // 0.2–5.0
+session.setDbapFocus(float);       // 0.1–5.0
 session.setSpeakerMixDb(float);    // -60–+12 dB
 session.setSubMixDb(float);        // -60–+12 dB
 session.setAutoCompensation(bool);
@@ -446,13 +446,13 @@ DOM events too sensitive to single-channel threshold crossings. Added O(4 × cha
 
 **Root cause (original, Python GUI):** Restart button bypassed `reset_to_defaults()`. OSC flush on `engine_ready` sent whatever sliders were showing from the previous run.
 
-**Status in C++ imgui GUI:** `App::onStart()` always calls `resetRuntimeToDefaults()` before launching (`mGain=0.5, mFocus=1.5, mSpkMixDb=0, mSubMixDb=0, mAutoComp=false`). The GUI controls `EngineSession` via direct C++ setters — not OSC — so there is no OSC flush race. This bug pattern does not exist in the current codebase.
+**Status in C++ imgui GUI:** Staged runtime params are preserved on Start (no forced reset). The GUI controls `EngineSession` via direct C++ setters — not OSC — so there is no OSC flush race. This bug pattern does not exist in the current codebase.
 
 ---
 
 ### Bug 4.1 — Restart control reset (Python GUI) — PATCHED, superseded
 
-Added `_on_restart()` in Python GUI to call `reset_to_defaults()` before relaunch. The Python GUI no longer exists; the fix is structurally baked into `App::onStart()` in the C++ imgui GUI.
+Added `_on_restart()` in Python GUI to call `reset_to_defaults()` before relaunch. The Python GUI no longer exists; the C++ GUI preserves staged values on Start and offers explicit Reset Parameters when needed.
 
 **Status:** PATCHED (superseded by C++ GUI)
 

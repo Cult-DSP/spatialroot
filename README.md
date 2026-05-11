@@ -95,10 +95,10 @@ Source input (one required):
 Optional:
   --samplerate <int>   Audio sample rate in Hz (default: 48000)
   --buffersize <int>   Frames per audio callback (default: 512)
-  --gain <float>       Master gain 0.0–1.0 (default: 0.5)
-  --focus <float>      DBAP rolloff exponent 0.2–5.0 (default: 1.5)
-  --speaker_mix <dB>   Loudspeaker mix trim in dB (±10, default: 0)
-  --sub_mix <dB>       Subwoofer mix trim in dB (±10, default: 0)
+  --gain <dB>          Master gain in dB -60–+12 (default: 0, 0 dB = unity)
+  --focus <float>      DBAP rolloff exponent 0.1–5.0 (default: 1.5)
+  --speaker_mix <dB>   Loudspeaker mix trim in dB -60–+12 (default: 0)
+  --sub_mix <dB>       Subwoofer mix trim in dB -60–+12 (default: 0)
   --elevation_mode <n> Vertical rescaling: 0=RescaleAtmosUp, 1=RescaleFullSphere, 2=Clamp
   --remap <path>       CSV mapping internal layout channels to device channels
   --osc_port <int>     OSC control port (default: 9009; 0 = disable)

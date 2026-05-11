@@ -429,7 +429,7 @@ gui/realtimeGUI/
 | Parameter      | OSC Address                | Range                              | Default |
 | -------------- | -------------------------- | ---------------------------------- | ------- |
 | Master Gain    | `/realtime/gain`           | 0.0–1.0 (legacy PySide6 GUI range) | 0.5     |
-| DBAP Focus     | `/realtime/focus`          | 0.2–5.0                            | 1.5     |
+| DBAP Focus     | `/realtime/focus`          | 0.1–5.0                            | 1.5     |
 | Speaker Mix dB | `/realtime/speaker_mix_db` | -10–+10                            | 0.0     |
 | Sub Mix dB     | `/realtime/sub_mix_db`     | -10–+10                            | 0.0     |
 | Auto-Comp      | `/realtime/auto_comp`      | 0/1                                | 0       |
