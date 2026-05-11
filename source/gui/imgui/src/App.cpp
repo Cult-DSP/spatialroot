@@ -33,6 +33,11 @@ bool pathHasExtension(const std::string& path, const char* ext) {
     return toLowerCopy(fs::path(path).extension().string()) == ext;
 }
 
+bool isCultProgressLine(const std::string& line) {
+    return line.find("[cult-transcoder]") != std::string::npos &&
+           line.find('%') != std::string::npos;
+}
+
 std::string shellQuoteForDisplay(const std::string& token) {
     std::string quoted = "\"";
     for (char c : token) {
@@ -1086,7 +1091,9 @@ void App::renderTranscodeTab() {
     ImGui::SameLine(60.f);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.08f, 0.08f, 0.08f, 1.f});
+    ImGui::PushStyleColor(ImGuiCol_Text, {1.f, 1.f, 1.f, 1.f});
     ImGui::InputText("##cmdpreview", &cmdPreview, ImGuiInputTextFlags_ReadOnly);
+    ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::Spacing();
 
@@ -1594,6 +1601,11 @@ std::string App::pathString(const fs::path& path) {
 }
 
 void App::appendEngineLog(const std::string& text, ImVec4 color) {
+    if (isCultProgressLine(text) && !mEngineLog.empty() &&
+        isCultProgressLine(mEngineLog.back().text)) {
+        mEngineLog.back() = {color, text};
+        return;
+    }
     mEngineLog.push_back({color, text});
     if (mEngineLog.size() > 2000) mEngineLog.pop_front();
 }
@@ -1621,6 +1633,11 @@ void App::appendTcLog(const std::string& line) {
     else if (line.size() > 3 && line.substr(0, 4) == "[ok]") color = {0.3f, 0.9f, 0.3f, 1.f};
 
     std::lock_guard<std::mutex> lock(mTcLogMutex);
+    if (isCultProgressLine(line) && !mTcLog.empty() &&
+        isCultProgressLine(mTcLog.back().text)) {
+        mTcLog.back() = {color, line};
+        return;
+    }
     mTcLog.push_back({color, line});
     if (mTcLog.size() > 2000) mTcLog.pop_front();
 }
@@ -1635,6 +1652,11 @@ void App::appendOrLog(const std::string& line) {
     else if (lower.find("complete") != std::string::npos) color = {0.3f, 0.9f, 0.3f, 1.f};
 
     std::lock_guard<std::mutex> lock(mOrLogMutex);
+    if (isCultProgressLine(line) && !mOrLog.empty() &&
+        isCultProgressLine(mOrLog.back().text)) {
+        mOrLog.back() = {color, line};
+        return;
+    }
     mOrLog.push_back({color, line});
     if (mOrLog.size() > 2000) mOrLog.pop_front();
 }

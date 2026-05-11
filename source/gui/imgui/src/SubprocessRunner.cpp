@@ -1,6 +1,5 @@
 #include "SubprocessRunner.hpp"
 
-#include <array>
 #include <cstdio>
 #include <sstream>
 
@@ -71,13 +70,18 @@ void SubprocessRunner::threadFunc(std::string command, OutputCallback cb) {
         return;
     }
 
-    std::array<char, 1024> buf;
     std::string line;
-    while (std::fgets(buf.data(), static_cast<int>(buf.size()), pipe)) {
-        line = buf.data();
-        while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
-            line.pop_back();
-        if (!line.empty() && cb) cb(line);
+    int ch = 0;
+    while ((ch = std::fgetc(pipe)) != EOF) {
+        if (ch == '\r' || ch == '\n') {
+            if (!line.empty() && cb) cb(line);
+            line.clear();
+            continue;
+        }
+        line.push_back(static_cast<char>(ch));
+    }
+    if (!line.empty() && cb) {
+        cb(line);
     }
 
     int ret = PCLOSE(pipe);
