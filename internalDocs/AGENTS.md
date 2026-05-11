@@ -12,18 +12,18 @@
 
 ## Quick Navigation
 
-| Topic                                                            | File                                     | Key Sections                                                                                                                                                                                                                             |
-| ---------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EngineSession API contract, structs, lifecycle, hard constraints | [API_internal.md](API_internal.md)       | [Contract](API_internal.md#contract) · [Hard Constraints](API_internal.md#hard-constraints) · [Validation & Gotchas](API_internal.md#validation--known-gotchas)                                                                          |
-| CI config, vendored deps, Windows fixes, CMake wiring            | [BUILD_AND_CI.md](BUILD_AND_CI.md)       | [CI Overview](BUILD_AND_CI.md#ci-overview) · [Dep Audit](BUILD_AND_CI.md#dependency-audit) · [Build Notes](BUILD_AND_CI.md#build-system-notes)                                                                                           |
-| Current DBAP state, locked decisions, onboarding investigation prompt | [cult_dbap.md](cult_dbap.md)         | [Current State](cult_dbap.md#current-state) · [Locked Decisions](cult_dbap.md#locked-decisions) · [Onboarding Prompt Task](cult_dbap.md#onboarding-prompt-task)                                                                             |
-| **DBAP pops/artifacts/fast-mover bugs — start here** | [engine_testing/4_1_bug_audit.md](engine_testing/4_1_bug_audit.md) | [DBAP render path summary](engine_testing/4_1_bug_audit.md#dbap-render-path-summary-one-source-one-block) · [Proximity guard structure](engine_testing/4_1_bug_audit.md#proximity-guard-structure-as-of-2026-04-01) · [Bug 10 (normalized DBAP)](engine_testing/4_1_bug_audit.md#bug-10--normalized-dbap-breaks-fast-mover-continuity-anchor) · [Bug 9.1](engine_testing/4_1_bug_audit.md#bug-91--cross-block-guard-transition-blending--patched-2026-04-01) |
-| LUSID scene format, speaker layout JSON, LUSID package import    | [DEPENDENCIES.md](DEPENDENCIES.md)       | [LUSID Scene](DEPENDENCIES.md#lusid-scene-json-format) · [Speaker Layout](DEPENDENCIES.md#speaker-layout-json-format) · [Package Import](DEPENDENCIES.md#lusid-package-import-contract-spatialseed)                                      |
-| Output routing architecture, two-space model, CSV deprecation    | [REMAP.md](REMAP.md)                     | [Two-Space Model](REMAP.md#two-space-model) · [Phase 7](REMAP.md#phase-7-routing-stage) · [Validation Gate](REMAP.md#validation-gate) · [Files Changed](REMAP.md#files-changed) · [Verification](REMAP.md#verification-checklist)        |
-| Realtime engine agents, bug audit, OSC params, threading         | [REALTIME_ENGINE.md](REALTIME_ENGINE.md) | [Agent Table](REALTIME_ENGINE.md#agent-architecture-overview) · [Bug Audit](REALTIME_ENGINE.md#bug-audit-april-1-2026) · [OSC Params](REALTIME_ENGINE.md#osc-parameter-reference) · [Threading](REALTIME_ENGINE.md#threading-and-safety) |
-| Repo cleanup, AlloLib lightweighting                             | [REPO_AUDITING.md](REPO_AUDITING.md)     | [Cleanup Audit](REPO_AUDITING.md#repository-cleanup-audit) · [AlloLib Audit](REPO_AUDITING.md#allolib-dependency-audit)                                                                                                                  |
-| Spatializers, DBAP/VBAP/LBAP, elevation, rendering CLI           | [SPATIALIZATION.md](SPATIALIZATION.md)   | [Rendering System](SPATIALIZATION.md#rendering-system) · [DBAP Testing](SPATIALIZATION.md#dbap-field-testing-notes)                                                                                                                      |
-| C++ refactor history, Python pipeline, old GUI, old build system | [devHistory.md](devHistory.md)           | [Phase 6 Refactor](devHistory.md#phase-6--c-refactor-complete-march-29-31-2026) · [Python GUI](devHistory.md#python-gui-pyside6--phase-10-february-2026) · [Old Pipeline](devHistory.md#python-offline-pipeline-v39-march-9-2026)        |
+| Topic                                                                 | File                                                               | Key Sections                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EngineSession API contract, structs, lifecycle, hard constraints      | [API_internal.md](API_internal.md)                                 | [Contract](API_internal.md#contract) · [Hard Constraints](API_internal.md#hard-constraints) · [Validation & Gotchas](API_internal.md#validation--known-gotchas)                                                                                                                                                                                                                                                                                              |
+| CI config, vendored deps, Windows fixes, CMake wiring                 | [BUILD_AND_CI.md](BUILD_AND_CI.md)                                 | [CI Overview](BUILD_AND_CI.md#ci-overview) · [Dep Audit](BUILD_AND_CI.md#dependency-audit) · [Build Notes](BUILD_AND_CI.md#build-system-notes)                                                                                                                                                                                                                                                                                                               |
+| Current DBAP state, locked decisions, onboarding investigation prompt | [cult_dbap.md](cult_dbap.md)                                       | [Current State](cult_dbap.md#current-state) · [Locked Decisions](cult_dbap.md#locked-decisions) · [Onboarding Prompt Task](cult_dbap.md#onboarding-prompt-task)                                                                                                                                                                                                                                                                                              |
+| **DBAP pops/artifacts/fast-mover bugs — start here**                  | [engine_testing/4_1_bug_audit.md](engine_testing/4_1_bug_audit.md) | [DBAP render path summary](engine_testing/4_1_bug_audit.md#dbap-render-path-summary-one-source-one-block) · [Proximity guard structure](engine_testing/4_1_bug_audit.md#proximity-guard-structure-as-of-2026-04-01) · [Bug 10 (normalized DBAP)](engine_testing/4_1_bug_audit.md#bug-10--normalized-dbap-breaks-fast-mover-continuity-anchor) · [Bug 9.1](engine_testing/4_1_bug_audit.md#bug-91--cross-block-guard-transition-blending--patched-2026-04-01) |
+| LUSID scene format, speaker layout JSON, LUSID package import         | [DEPENDENCIES.md](DEPENDENCIES.md)                                 | [LUSID Scene](DEPENDENCIES.md#lusid-scene-json-format) · [Speaker Layout](DEPENDENCIES.md#speaker-layout-json-format) · [Package Import](DEPENDENCIES.md#lusid-package-import-contract-spatialseed)                                                                                                                                                                                                                                                          |
+| Output routing architecture, two-space model, CSV deprecation         | [REMAP.md](REMAP.md)                                               | [Two-Space Model](REMAP.md#two-space-model) · [Phase 7](REMAP.md#phase-7-routing-stage) · [Validation Gate](REMAP.md#validation-gate) · [Files Changed](REMAP.md#files-changed) · [Verification](REMAP.md#verification-checklist)                                                                                                                                                                                                                            |
+| Realtime engine agents, bug audit, OSC params, threading              | [REALTIME_ENGINE.md](REALTIME_ENGINE.md)                           | [Agent Table](REALTIME_ENGINE.md#agent-architecture-overview) · [Bug Audit](REALTIME_ENGINE.md#bug-audit-april-1-2026) · [OSC Params](REALTIME_ENGINE.md#osc-parameter-reference) · [Threading](REALTIME_ENGINE.md#threading-and-safety)                                                                                                                                                                                                                     |
+| Repo cleanup, AlloLib lightweighting                                  | [REPO_AUDITING.md](REPO_AUDITING.md)                               | [Cleanup Audit](REPO_AUDITING.md#repository-cleanup-audit) · [AlloLib Audit](REPO_AUDITING.md#allolib-dependency-audit)                                                                                                                                                                                                                                                                                                                                      |
+| Spatializers, DBAP/VBAP/LBAP, elevation, rendering CLI                | [SPATIALIZATION.md](SPATIALIZATION.md)                             | [Rendering System](SPATIALIZATION.md#rendering-system) · [DBAP Testing](SPATIALIZATION.md#dbap-field-testing-notes)                                                                                                                                                                                                                                                                                                                                          |
+| C++ refactor history, Python pipeline, old GUI, old build system      | [devHistory.md](devHistory.md)                                     | [Phase 6 Refactor](devHistory.md#phase-6--c-refactor-complete-march-29-31-2026) · [Python GUI](devHistory.md#python-gui-pyside6--phase-10-february-2026) · [Old Pipeline](devHistory.md#python-offline-pipeline-v39-march-9-2026)                                                                                                                                                                                                                            |
 
 ---
 
@@ -99,8 +99,8 @@ Run `./build/source/spatial_engine/realtimeEngine/spatialroot_realtime --help` f
 
 Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OSC dependency for local control.
 
-| File                                | Role                                                          |
-| ----------------------------------- | ------------------------------------------------------------- |
+| File                                       | Role                                                          |
+| ------------------------------------------ | ------------------------------------------------------------- |
 | `source/gui/imgui/src/App.hpp`             | App class declaration — all state members                     |
 | `source/gui/imgui/src/App.cpp`             | All UI rendering and engine lifecycle logic — read this first |
 | `source/gui/imgui/src/main.cpp`            | GLFW setup, ImGui init, render loop                           |
@@ -108,6 +108,18 @@ Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OS
 | `source/gui/imgui/CMakeLists.txt`          | GUI build — includes xxd embed step for miniLogo.png          |
 
 **Build:** `./init.sh` then `./build.sh --gui`. **Run:** `./run.sh`.
+
+**GUI path assumptions (packaging audit required):**
+
+| Path | How resolved | Risk |
+|------|--------------|------|
+| `source/speaker_layouts/**` (layout presets) | `mProjectRoot / kLayoutPaths[i]` | Fails in packaged build unless root is set or layouts are bundled |
+| `build/internal/cult_transcoder/cult-transcoder` | `findCultTranscoder()` checks two build-tree paths | Must be bundled or PATH-available in packaged build |
+| `build/source/spatial_engine/spatialRender/spatialroot_spatial_render` | `findSpatialRenderer()` checks one build-tree path | Must be bundled for offline render feature to work |
+| Temp sessions root | `SpatialRootPaths::defaultCacheRoot()` (platform XDG/AppData paths) | Safe; platform-correct |
+| Persistent settings root | `SpatialRootPaths::defaultAppSettingsRoot()` (platform paths) | Safe; platform-correct |
+
+Override: pass `--root <path>` at launch or set `SPATIALROOT_TEMP_ROOT` / `SPATIALROOT_SETTINGS_ROOT` env vars.
 
 ### `cult-transcoder` — ADM ↔ LUSID Tool
 
@@ -200,10 +212,10 @@ Two separate storage areas are used at runtime. **Never mix them.**
 
 ### Session temp/cache (auto-deleted on app close)
 
-| Platform | Path |
-|----------|------|
-| macOS    | `~/Library/Caches/CultDSP/SpatialRoot/temp-sessions/` |
-| Windows  | `%LOCALAPPDATA%/CultDSP/SpatialRoot/Cache/temp-sessions/` |
+| Platform | Path                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------- |
+| macOS    | `~/Library/Caches/CultDSP/SpatialRoot/temp-sessions/`                                                 |
+| Windows  | `%LOCALAPPDATA%/CultDSP/SpatialRoot/Cache/temp-sessions/`                                             |
 | Linux    | `$XDG_CACHE_HOME/CultDSP/SpatialRoot/temp-sessions/` or `~/.cache/CultDSP/SpatialRoot/temp-sessions/` |
 
 Contents: temporary LUSID scenes, transcoder outputs, diagnostic reports. Each session gets a UUID-stamped subdirectory with a `.spatialroot_temp_session` marker file. Deleted on clean shutdown unless `--keep-temp-sessions` is set.  
@@ -212,13 +224,14 @@ Implementation: `SpatialRootPaths::cacheRoot()` / `tempSessionsRoot()` / `Spatia
 
 ### Persistent app settings (never auto-deleted)
 
-| Platform | Path |
-|----------|------|
-| macOS    | `~/Library/Application Support/Spatial Root/` |
-| Windows  | `%APPDATA%/Spatial Root/` |
+| Platform | Path                                                          |
+| -------- | ------------------------------------------------------------- |
+| macOS    | `~/Library/Application Support/Spatial Root/`                 |
+| Windows  | `%APPDATA%/Spatial Root/`                                     |
 | Linux    | `$XDG_CONFIG_HOME/spatial-root/` or `~/.config/spatial-root/` |
 
 Contents:
+
 - `default_layout.json` — authoritative copy of the saved default speaker layout
 - `default_layout.meta.json` — display metadata (sourcePath, savedAt, layoutName)
 
@@ -260,39 +273,39 @@ Implementation: `SpatialRootPaths::appSettingsRoot()` / `DefaultLayoutManager`.
 
 ### ADM / Transcoder
 
-| Issue                                         | Solution                                                                                |
-| --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Empty scene / no frames after transcoding     | Check ADM XML format — run `cult-transcoder` with verbose output                        |
-| `cult-transcoder` not found                   | Build with `./build.sh --cult-only`                                                     |
+| Issue                                         | Solution                                                                                                                    |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Empty scene / no frames after transcoding     | Check ADM XML format — run `cult-transcoder` with verbose output                                                            |
+| `cult-transcoder` not found                   | Build with `./build.sh --cult-only`                                                                                         |
 | Confusing old data folder references          | Use `data/sourceData` and `data/processedData` as the canonical active paths; treat `data/tmpProccessedData` as temp/legacy |
-| LFE stem missing / wrong                      | Check `--lfe-mode` flag. `hardcoded` = channel 4; `speaker-label` = ADM label detection |
-| `ModuleNotFoundError: No module named 'lxml'` | You're running archived Python code. Use the current C++ toolchain.                     |
+| LFE stem missing / wrong                      | Check `--lfe-mode` flag. `hardcoded` = channel 4; `speaker-label` = ADM label detection                                     |
+| `ModuleNotFoundError: No module named 'lxml'` | You're running archived Python code. Use the current C++ toolchain.                                                         |
 
 ### Spatialization
 
-| Issue                                        | Solution                                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| **DBAP pops, clicks, gain steps — any artifact** | **Read `engine_testing/4_1_bug_audit.md` first.** It is the primary onboarding reference for all realtime engine bugs. Do not re-diagnose issues already documented there. |
-| Click on pause / stop / rapid toggle             | Bugs 11.1–11.5 — all fixed in `RealtimeBackend.hpp` (May 7). See `REALTIME_ENGINE.md § Bug 11.x`. Key fixes: (1) removed memset that wiped pause fade; (2) `stop()` now arms fade + 50ms sleep before hard stop; (3) resume step computed from current `mPauseFade` instead of resetting to 0; (4) new fast-path early-return for steady-pause skips Spatializer to prevent anchor caching. Residual intermittent soft clicks deferred — see Deferred section in REALTIME_ENGINE.md. |
-| Pops after normalized DBAP upgrade (fast-moving sources) | Bug 10.1 — fixed in `Spatializer.hpp` (May 7). `mPrevSafePos` now written as last sub-step position for fast-mover blocks. See `engine_testing/5-7-engine_fix.md` for full diagnosis. If pops persist, open Bug 10 deferred (endpoint pre-guarding). |
-| Pops at guard entry/exit (normal-path sources, near speakers) | Bug 9.1 — fixed. Cross-block guard-transition blending via `mPrevSafePos`/`mPrevGuardFired` in `Spatializer.hpp`. Do not reopen without consistent evidence. |
-| `[CLUSTER]` events every ~0.5 s / buzzing   | Correlate with `SpkG` (hard-floor guard active). If `SpkG > 0`, source is inside `kMinSpeakerDist = 0.15m` of a speaker — guard is firing repeatedly. Check source trajectory. |
-| Sources at zenith/nadir silent               | Use `--elevation_mode compress` (RescaleFullSphere)                                        |
-| Zero output / silent channels                | Verify `LayoutLoader.cpp` converts radians → degrees: `azimuth * 180.0f / M_PI`            |
-| LFE too loud/quiet                           | Tune `dbap_sub_compensation` in `SpatialRenderer.cpp` (TODO: make CLI option)              |
-| DBAP sounds wrong/reversed                   | AlloLib DBAP coordinate transform `(x,y,z)→(x,-z,y)` is compensated automatically          |
-| Render truncated (e.g. 166s instead of 566s) | RF64 auto-selection in `WavUtils.cpp` handles files > 4 GB — ensure you're on current code |
+| Issue                                                         | Solution                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **DBAP pops, clicks, gain steps — any artifact**              | **Read `engine_testing/4_1_bug_audit.md` first.** It is the primary onboarding reference for all realtime engine bugs. Do not re-diagnose issues already documented there.                                                                                                                                                                                                                                                                                                           |
+| Click on pause / stop / rapid toggle                          | Bugs 11.1–11.5 — all fixed in `RealtimeBackend.hpp` (May 7). See `REALTIME_ENGINE.md § Bug 11.x`. Key fixes: (1) removed memset that wiped pause fade; (2) `stop()` now arms fade + 50ms sleep before hard stop; (3) resume step computed from current `mPauseFade` instead of resetting to 0; (4) new fast-path early-return for steady-pause skips Spatializer to prevent anchor caching. Residual intermittent soft clicks deferred — see Deferred section in REALTIME_ENGINE.md. |
+| Pops after normalized DBAP upgrade (fast-moving sources)      | Bug 10.1 — fixed in `Spatializer.hpp` (May 7). `mPrevSafePos` now written as last sub-step position for fast-mover blocks. See `engine_testing/5-7-engine_fix.md` for full diagnosis. If pops persist, open Bug 10 deferred (endpoint pre-guarding).                                                                                                                                                                                                                                 |
+| Pops at guard entry/exit (normal-path sources, near speakers) | Bug 9.1 — fixed. Cross-block guard-transition blending via `mPrevSafePos`/`mPrevGuardFired` in `Spatializer.hpp`. Do not reopen without consistent evidence.                                                                                                                                                                                                                                                                                                                         |
+| `[CLUSTER]` events every ~0.5 s / buzzing                     | Correlate with `SpkG` (hard-floor guard active). If `SpkG > 0`, source is inside `kMinSpeakerDist = 0.15m` of a speaker — guard is firing repeatedly. Check source trajectory.                                                                                                                                                                                                                                                                                                       |
+| Sources at zenith/nadir silent                                | Use `--elevation_mode compress` (RescaleFullSphere)                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Zero output / silent channels                                 | Verify `LayoutLoader.cpp` converts radians → degrees: `azimuth * 180.0f / M_PI`                                                                                                                                                                                                                                                                                                                                                                                                      |
+| LFE too loud/quiet                                            | Tune `dbap_sub_compensation` in `SpatialRenderer.cpp` (TODO: make CLI option)                                                                                                                                                                                                                                                                                                                                                                                                        |
+| DBAP sounds wrong/reversed                                    | AlloLib DBAP coordinate transform `(x,y,z)→(x,-z,y)` is compensated automatically                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Render truncated (e.g. 166s instead of 566s)                  | RF64 auto-selection in `WavUtils.cpp` handles files > 4 GB — ensure you're on current code                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ### Build
 
-| Issue                                      | Solution                                                            |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| CMake can't find AlloLib                   | `git submodule update --init --recursive`                           |
-| Build fails "C++17 required"               | CMake 3.20+ required; ensure compiler supports C++17                |
-| Changes not reflected after rebuild        | Clean build: `rm -rf build/ && ./build.sh`                          |
-| Validation error: duplicate deviceChannel  | Each speaker/subwoofer must have a unique `deviceChannel` in the layout JSON |
-| Validation error: shared speaker/sub ch    | A speaker and subwoofer share a `deviceChannel` — fix the layout JSON |
-| Output bus wrong width / silent channels   | Verify all `deviceChannel` values in layout; engine derives output bus from `max(deviceChannel)+1` |
+| Issue                                     | Solution                                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| CMake can't find AlloLib                  | `git submodule update --init --recursive`                                                          |
+| Build fails "C++17 required"              | CMake 3.20+ required; ensure compiler supports C++17                                               |
+| Changes not reflected after rebuild       | Clean build: `rm -rf build/ && ./build.sh`                                                         |
+| Validation error: duplicate deviceChannel | Each speaker/subwoofer must have a unique `deviceChannel` in the layout JSON                       |
+| Validation error: shared speaker/sub ch   | A speaker and subwoofer share a `deviceChannel` — fix the layout JSON                              |
+| Output bus wrong width / silent channels  | Verify all `deviceChannel` values in layout; engine derives output bus from `max(deviceChannel)+1` |
 
 ### LUSID Scene
 
@@ -350,6 +363,7 @@ Sparse checkout is no longer the recommended approach; the supported path is the
 When adding new startup stages or extending existing ones (`loadScene`, `applyLayout`, `start`), use the following pattern to ensure failure details reach the GUI log:
 
 **In `EngineSession.cpp`:**
+
 1. Call `mFailureDiagnostics.clear()` at the top of the stage function.
 2. Instantiate `StageCapture cap;` immediately after — this tees `std::cout`/`std::cerr` into a buffer while still forwarding to the terminal.
 3. On each failure path: call `cap.restore()` then `storeFailureDiagnostics("<stage name>", cap.captured())` before returning `false`.
@@ -359,6 +373,7 @@ When adding new startup stages or extending existing ones (`loadScene`, `applyLa
 After each failing stage, call `appendFailureDiagnostics(mSession->getFailureDiagnostics())` to append the structured block to the engine log.
 
 **Do not:**
+
 - Install `StageCapture` inside the audio callback or any realtime path.
 - Redirect `std::cout`/`std::cerr` from multiple threads simultaneously.
 - Use `StageCapture` after `startLoader()` without first calling `restore()`.

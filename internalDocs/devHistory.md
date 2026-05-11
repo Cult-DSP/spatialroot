@@ -1,9 +1,40 @@
 # Development History
 
-**Last Updated:** May 10, 2026
+**Last Updated:** May 11, 2026
 **Note:** Newest entries at top, oldest at bottom.
 
 ---
+
+## Release-Hardening Audit — GUI Code Audit (May 11, 2026)
+
+**Status:** Complete. Small surgical fixes only; no backend or architecture changes.
+
+**What changed:**
+
+- `source/gui/imgui/src/App.hpp`: Removed dead `transcodeOutputPath()` declaration (function was defined but never called; contained stale `data/processedData/stageForRender/` repo-root path assumption).
+- `source/gui/imgui/src/App.hpp`: Removed stale "Workflow 2" comment leftover from earlier tab consolidation.
+- `source/gui/imgui/src/App.cpp`: Removed dead `transcodeOutputPath()` definition.
+- `source/gui/imgui/src/App.cpp`: Workflow combo in Transcode tab now resets `mTcDone`/`mTcSuccess` on switch, preventing stale status display ("Complete"/"Failed") when switching between ADM→LUSID and LUSID→ADM workflows.
+- `source/gui/imgui/src/App.cpp`: Fixed `doLaunchEngine()` to pass `static_cast<ElevationMode>(mElevationMode)` into `EngineOptions` rather than always hardcoding `RescaleAtmosUp`. The subsequent `setElevationMode()` call is retained for live-update consistency.
+- `source/gui/imgui/src/App.cpp`: CMD preview for Workflow 0 (Scene JSON only) now includes `--stdout-report` to match actual args sent.
+- `source/gui/imgui/src/App.cpp`: "Reset Parameters" tooltip now explicitly states elevation mode is not reset.
+
+**Deferred (packaging audit):**
+
+- `kLayoutPaths[]` in App.hpp uses `source/speaker_layouts/...` paths resolved relative to `mProjectRoot`. These only work when the app is run from the project root or when `--root` is supplied. Packaging must bundle layouts and redirect the root.
+- `findCultTranscoder()` and `findSpatialRenderer()` resolve binaries from `build/...` relative to project root. Packaged builds must bundle these binaries and redirect resolution.
+- `mRemapPath` is passed to `applyLayout()` but never set by any GUI control. It is dead GUI scaffolding; remove after layout-routing validation.
+
+---
+
+## Release-Hardening Audit — GUI Messaging Cleanup (May 11, 2026)
+
+**Status:** Complete. Minor GUI text/log updates only.
+
+**What changed:**
+
+- `source/gui/imgui/src/App.cpp`: Added explicit transcode completion/failure summary log entries after manual transcoder runs finish.
+- `source/gui/imgui/src/App.cpp`: Renamed the Transcode tab toggle to "Keep temp sessions" and added a tooltip clarifying it only preserves GUI temp sessions (not output files).
 
 ## Release-Hardening Audit — API Doc Sync (May 10, 2026)
 

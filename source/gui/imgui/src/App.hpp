@@ -160,8 +160,6 @@ private:
     int              mTcOutputType = 0; // 0=Scene JSON only, 1=Full LUSID package
 
     // Workflow 1: LUSID to ADM/BW64 Export (cult-transcoder adm-author)
-
-    // Workflow 2: LUSID to ADM Export (cult-transcoder adm-author)
     int              mTcAdmInputMode = 0;       // 0=scene+wav-dir  1=lusid-package
     std::string      mTcAdmLusid;               // scene.lusid.json (mode 0)
     std::string      mTcAdmWavDir;              // wav directory (mode 0)
@@ -268,7 +266,6 @@ private:
     std::string resolveProjectPath(const std::string& relPath) const;
     std::string findCultTranscoder() const;
     std::string findSpatialRenderer() const;
-    std::string transcodeOutputPath(const std::string& admPath) const;
     std::filesystem::path tempSessionsRoot() const;
     std::filesystem::path createOwnedTempSession(const std::string& sessionType,
                                                  const std::string& sourcePath,

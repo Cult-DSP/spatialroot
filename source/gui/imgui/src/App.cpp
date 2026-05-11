@@ -175,7 +175,13 @@ void App::tickEngine() {
     mTcRunning = mTcRunner.isRunning();
     if (tcWasRunning && !mTcRunning) {
         mTcDone = true;
-        mTcSuccess = (mTcRunner.exitCode() == 0);
+        const int tcExit = mTcRunner.exitCode();
+        mTcSuccess = (tcExit == 0);
+        if (mTcSuccess) {
+            appendTcLog("[ok] Transcode complete. Exit code 0.");
+        } else {
+            appendTcLog("[error] Transcode failed. Exit code " + std::to_string(tcExit) + ".");
+        }
         if (mTcTempSessionRoot) {
             updateManifest(*mTcTempSessionRoot, mTcTempManifest,
                            mTcSuccess ? "complete" : "failed",
@@ -478,6 +484,7 @@ void App::renderEngineTab() {
             }
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Restore gain, focus, and mix controls to their default values.\n"
+                                  "Elevation mode is not reset.\n"
                                   "Does not reload the scene, layout, or transport.");
         }
         ImGui::Spacing();
@@ -576,6 +583,7 @@ void App::renderTranscodeTab() {
     const float segW = 180.f;
     ImGui::SetNextItemWidth(segW);
     if (ImGui::Combo("##tcworkflow", &mTcWorkflow, kTcWorkflowNames, 2)) {
+        mTcDone = false; mTcSuccess = false;
     }
     ImGui::Spacing();
     ImGui::Separator();
@@ -644,7 +652,11 @@ void App::renderTranscodeTab() {
             ImGui::SetNextItemWidth(180.f);
             ImGui::Combo("##tc0lfe", &mTcLfeMode, kTcLfeModeNames, 2);
             ImGui::SameLine();
-            ImGui::Checkbox("Keep temp files##tc0", &mKeepTempSessions);
+            ImGui::Checkbox("Keep temp sessions##tc0", &mKeepTempSessions);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Preserve GUI temp sessions used for ADM auto-transcode and diagnostics.\n"
+                                  "Does not change output files.");
+            }
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -723,7 +735,8 @@ void App::renderTranscodeTab() {
                     " --in-format " + fmt +
                     " --out " + outDisp +
                     " --out-format lusid_json"
-                    " --lfe-mode " + kTcLfeModeValues[mTcLfeMode];
+                    " --lfe-mode " + kTcLfeModeValues[mTcLfeMode] +
+                    " --stdout-report";
             } else {
                 cmdPreview = "cult-transcoder package-adm-wav"
                     " --in " + (mTcInput.empty() ? "<input>" : mTcInput) +
@@ -806,7 +819,11 @@ void App::renderTranscodeTab() {
 
             ImGui::TextDisabled("Options");
             ImGui::SameLine(140.f);
-            ImGui::Checkbox("Keep temp files##tc1", &mKeepTempSessions);
+            ImGui::Checkbox("Keep temp sessions##tc1", &mKeepTempSessions);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Preserve GUI temp sessions used for ADM auto-transcode and diagnostics.\n"
+                                  "Does not change output files.");
+            }
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -996,7 +1013,7 @@ void App::doLaunchEngine(const std::string& scenePath,
     opts.bufferSize = kBufferSizes[mBufferSizeIdx];
     opts.outputDeviceName = mDeviceName;
     opts.oscPort = 9009;
-    opts.elevationMode = ElevationMode::RescaleAtmosUp;
+    opts.elevationMode = static_cast<ElevationMode>(mElevationMode);
 
     if (!mSession->configureEngine(opts)) {
         mLastError = mSession->getLastError();
@@ -1256,11 +1273,6 @@ std::string App::findSpatialRenderer() const {
 #endif
     if (fs::exists(candidate)) return candidate;
     return "";
-}
-
-std::string App::transcodeOutputPath(const std::string& admPath) const {
-    const fs::path p(admPath);
-    return resolveProjectPath("data/processedData/stageForRender/" + p.stem().string() + ".lusid.json");
 }
 
 fs::path App::tempSessionsRoot() const {
