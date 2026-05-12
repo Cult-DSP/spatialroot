@@ -115,6 +115,8 @@ private:
     SubprocessRunner mTranscoder;
     std::string      mTranscodeScene;  // output scene.lusid.json path
     std::string      mTranscodeAdm;    // original ADM WAV path (for loadScene)
+    std::vector<std::string> mTranscoderActiveArgs;
+    std::string              mTranscoderActiveCwd;
     std::optional<std::filesystem::path> mActiveTempSessionRoot;
     TempSessionManifest     mActiveTempManifest;
     bool                    mLastGeneratedSceneAvailable = false;
@@ -179,6 +181,8 @@ private:
     std::string      mTcExpectedPrimaryOutput;
     std::string      mTcExpectedSecondaryOutput;
     std::string      mTcExpectedReportPath;
+    std::vector<std::string> mTcActiveArgs;
+    std::string              mTcActiveCwd;
 
     // Transcode log is written from mTcRunner background thread → needs mutex.
     std::deque<LogEntry> mTcLog;

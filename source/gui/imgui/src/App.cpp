@@ -90,6 +90,47 @@ std::string truncateStatusText(const std::string& text, size_t maxLen) {
     if (maxLen <= 3) return text.substr(0, maxLen);
     return text.substr(0, maxLen - 3) + "...";
 }
+
+std::string currentWorkingDirectoryString() {
+    std::error_code ec;
+    const fs::path cwd = fs::current_path(ec);
+    if (ec) return "<unavailable: " + ec.message() + ">";
+    return cwd.string();
+}
+
+std::vector<std::string> tailLogText(const std::deque<LogEntry>& log, size_t maxLines) {
+    std::vector<std::string> lines;
+    if (maxLines == 0 || log.empty()) return lines;
+    const size_t begin = log.size() > maxLines ? log.size() - maxLines : 0;
+    lines.reserve(log.size() - begin);
+    for (size_t i = begin; i < log.size(); ++i) {
+        lines.push_back(log[i].text);
+    }
+    return lines;
+}
+
+template <class AppendFn>
+void appendArgvDiagnostics(AppendFn&& append,
+                           const std::vector<std::string>& args,
+                           const std::string& cwd) {
+    append("[GUI] Working directory: " + cwd);
+    append("[GUI] Executable: " + (args.empty() ? std::string("<missing>") : args.front()));
+    for (size_t i = 0; i < args.size(); ++i) {
+        append("[GUI] argv[" + std::to_string(i) + "]: " + args[i]);
+    }
+}
+
+template <class AppendFn>
+void appendRecentOutputTail(AppendFn&& append, const std::vector<std::string>& lines) {
+    if (lines.empty()) {
+        append("[error] Recent subprocess output: <none captured>");
+        return;
+    }
+    append("[error] Recent subprocess output:");
+    for (const auto& line : lines) {
+        append("[error]   " + line);
+    }
+}
 }
 
 constexpr int         App::kBufferSizes[];
@@ -210,6 +251,7 @@ void App::tickEngine() {
             appendEngineLog("[Transcoder] Complete. Launching engine...", {0.3f, 0.9f, 0.3f, 1.f});
             doLaunchEngine(mTranscodeScene, "", mTranscodeAdm);
         } else {
+            const std::vector<std::string> recentOutput = tailLogText(mEngineLog, 5);
             mLastError = "cult-transcoder exited with code " + std::to_string(code);
             if (mActiveTempSessionRoot) {
                 updateManifest(*mActiveTempSessionRoot, mActiveTempManifest,
@@ -217,6 +259,21 @@ void App::tickEngine() {
             }
             mLastFailureHasDiagnostics = true;
             appendEngineLog("[Transcoder] FAILED: " + mLastError, {1.f, 0.3f, 0.3f, 1.f});
+            appendEngineLog("[Transcoder] Executable: " +
+                            (mTranscoderActiveArgs.empty() ? std::string("<unknown>")
+                                                           : mTranscoderActiveArgs.front()),
+                            {1.f, 0.5f, 0.2f, 1.f});
+            appendEngineLog("[Transcoder] Working directory: " + mTranscoderActiveCwd,
+                            {1.f, 0.5f, 0.2f, 1.f});
+            {
+                std::error_code ec;
+                appendEngineLog("[Transcoder] Expected scene output: " + mTranscodeScene +
+                                " (exists=" + (fs::exists(mTranscodeScene, ec) ? "yes" : "no") + ")",
+                                {1.f, 0.5f, 0.2f, 1.f});
+            }
+            appendRecentOutputTail([this](const std::string& line) {
+                appendEngineLog(line, {1.f, 0.5f, 0.2f, 1.f});
+            }, recentOutput);
             mState = AppState::Error;
         }
     }
@@ -228,6 +285,11 @@ void App::tickEngine() {
         const int tcExit = mTcRunner.exitCode();
         mTcSuccess = false;
         mTcStatusDetail.clear();
+        std::vector<std::string> recentTcOutput;
+        {
+            std::lock_guard<std::mutex> lock(mTcLogMutex);
+            recentTcOutput = tailLogText(mTcLog, 5);
+        }
 
         std::vector<std::string> missingOutputs;
         std::vector<std::string> warningOutputs;
@@ -265,6 +327,26 @@ void App::tickEngine() {
                     appendTcLog("[error] Missing output: " + path);
                 }
             }
+            appendTcLog("[error] Command path: " +
+                        (mTcActiveArgs.empty() ? std::string("<unknown>") : mTcActiveArgs.front()));
+            appendTcLog("[error] Working directory: " + mTcActiveCwd);
+            appendTcLog("[error] Exit code: " + std::to_string(tcExit));
+            if (!mTcExpectedPrimaryOutput.empty()) {
+                std::error_code ec;
+                appendTcLog("[error] Expected primary output: " + mTcExpectedPrimaryOutput +
+                            " (exists=" + (fs::exists(mTcExpectedPrimaryOutput, ec) ? "yes" : "no") + ")");
+            }
+            if (!mTcExpectedSecondaryOutput.empty()) {
+                std::error_code ec;
+                appendTcLog("[error] Expected secondary output: " + mTcExpectedSecondaryOutput +
+                            " (exists=" + (fs::exists(mTcExpectedSecondaryOutput, ec) ? "yes" : "no") + ")");
+            }
+            if (!mTcExpectedReportPath.empty()) {
+                std::error_code ec;
+                appendTcLog("[error] Expected report path: " + mTcExpectedReportPath +
+                            " (exists=" + (fs::exists(mTcExpectedReportPath, ec) ? "yes" : "no") + ")");
+            }
+            appendRecentOutputTail([this](const std::string& line) { appendTcLog(line); }, recentTcOutput);
         }
         if (mTcTempSessionRoot) {
             updateManifest(*mTcTempSessionRoot, mTcTempManifest,
@@ -1012,7 +1094,11 @@ void App::renderTranscodeTab() {
                     mTcExpectedReportPath = reportPath.string();
                 }
 
-                appendTcLog("[GUI] Running: " + joinCommandForDisplay(args));
+                mTcActiveArgs = args;
+                mTcActiveCwd = currentWorkingDirectoryString();
+                appendTcLog("[GUI] Launching cult-transcoder...");
+                appendArgvDiagnostics([this](const std::string& line) { appendTcLog(line); },
+                                      mTcActiveArgs, mTcActiveCwd);
                 if (!mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); })) {
                     mTcRunning = false;
                     mTcDone = true;
@@ -1215,7 +1301,11 @@ void App::renderTranscodeTab() {
                 mTcExpectedPrimaryOutput = mTcAdmOutXml;
                 mTcExpectedSecondaryOutput = mTcAdmOutWav;
                 mTcExpectedReportPath = reportPath.string();
-                appendTcLog("[GUI] Running: " + joinCommandForDisplay(args));
+                mTcActiveArgs = args;
+                mTcActiveCwd = currentWorkingDirectoryString();
+                appendTcLog("[GUI] Launching cult-transcoder...");
+                appendArgvDiagnostics([this](const std::string& line) { appendTcLog(line); },
+                                      mTcActiveArgs, mTcActiveCwd);
                 if (!mTcRunner.start(args, [this](const std::string& line) { appendTcLog(line); })) {
                     mTcRunning = false;
                     mTcDone = true;
@@ -1345,10 +1435,22 @@ void App::onStart() {
             "--out", mTranscodeScene, "--out-format", "lusid_json",
             "--report", reportPath.string(), "--lfe-mode", "hardcoded",
         };
+        mTranscoderActiveArgs = args;
+        mTranscoderActiveCwd = currentWorkingDirectoryString();
         appendEngineLog("[GUI] ADM source detected. Running cult-transcoder...",
                         {1.f, 0.8f, 0.2f, 1.f});
+        appendArgvDiagnostics([this](const std::string& line) {
+            appendEngineLog(line, {1.f, 0.8f, 0.2f, 1.f});
+        }, mTranscoderActiveArgs, mTranscoderActiveCwd);
         mState = AppState::Transcoding;
-        mTranscoder.start(args, [this](const std::string& line) { appendEngineLog("[transcoder] " + line); });
+        if (!mTranscoder.start(args, [this](const std::string& line) {
+                appendEngineLog("[transcoder] " + line);
+            })) {
+            mLastError = "Failed to launch cult-transcoder subprocess.";
+            mState = AppState::Error;
+            appendEngineLog("[GUI] " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+            return;
+        }
     } else {
         doLaunchEngine((fs::path(mSourcePath) / "scene.lusid.json").string(), mSourcePath, "");
     }

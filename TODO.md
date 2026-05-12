@@ -4,8 +4,6 @@
 
 ## next tasks
 
-- validate back end audio behavior
-
 - fix bugs in transcoder tab: 360ra -> lusid path
 - -packaging bugs + potential path bugs
 

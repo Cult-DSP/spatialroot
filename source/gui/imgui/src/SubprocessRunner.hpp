@@ -2,7 +2,10 @@
 // SubprocessRunner — cross-platform background subprocess with line-buffered output.
 //
 // Runs a subprocess (e.g. cult-transcoder) on a background thread and streams
-// its stdout+stderr (merged via 2>&1) to an OutputCallback, one line at a time.
+// its stdout+stderr to an OutputCallback, one line at a time.
+// On POSIX, the process is launched with a real argv vector (no shell), so
+// spaces and shell metacharacters in paths are preserved verbatim.
+// On Windows, the current implementation falls back to _popen().
 //
 // Thread safety: OutputCallback is called from the background thread.
 // The caller is responsible for protecting any shared state the callback touches
@@ -41,7 +44,7 @@ public:
     int wait();
 
 private:
-    void threadFunc(std::string command, OutputCallback cb);
+    void threadFunc(std::vector<std::string> commandAndArgs, OutputCallback cb);
 
     std::thread           mThread;
     std::atomic<bool>     mRunning{false};
