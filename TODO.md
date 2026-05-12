@@ -4,24 +4,9 @@
 
 ## next tasks
 
-- fix bugs in transcoder tab: 360ra -> lusid path
-- -packaging bugs + potential path bugs
+update all documentation
 
 ## audit
-
-api audit
-gui audit
-dsp audit
-cmake wiring audit
-build system audit
-git submodule fetching audit
-overall codebase audit
-OS AND COMPATIBILITY
-
-- windows
-- linux
-- audio backend
-- glfw
 
 ## docs
 

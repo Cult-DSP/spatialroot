@@ -12,7 +12,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BINARY="${SCRIPT_DIR}/build/source/gui/imgui/Spatial Root"
+
+if [ "$(uname)" = "Darwin" ]; then
+    BINARY="${SCRIPT_DIR}/build/source/gui/imgui/Spatial Root.app/Contents/MacOS/Spatial Root"
+else
+    BINARY="${SCRIPT_DIR}/build/source/gui/imgui/Spatial Root"
+fi
 
 if [ ! -f "${BINARY}" ]; then
     echo "Error: \"Spatial Root\" not found at:"
