@@ -5,6 +5,69 @@
 
 ---
 
+## Realtime Audio Backend/API Visibility + 48 kHz Truthfulness (May 11, 2026)
+
+**Status:** Complete. Focused backend/API reporting and sample-rate correctness pass; no new backend families, no sample-rate selection, no transport redesign.
+
+**What changed:**
+
+- `source/spatial_engine/realtimeEngine/src/EngineSession.hpp` / `EngineSession.cpp`
+  - extended `EngineStatus` with a minimal read-only audio/backend snapshot:
+    - `audioBackendLabel`
+    - `requestedSampleRate`
+    - `effectiveStreamSampleRate`
+    - `effectiveStreamSampleRateKnown`
+    - `outputDeviceName`
+    - `outputDevicePreferredSampleRate`
+    - `outputDevicePreferredSampleRateKnown`
+  - `queryStatus()` now surfaces backend/API and sample-rate truth to the GUI and any host embedding `EngineSessionCore`
+  - startup failure handling continues to use existing `getLastError()` / `getFailureDiagnostics()` plumbing, but now prefers backend-provided error strings when available
+
+- `source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp`
+  - added read-only accessors for backend family/API label, selected device name, selected device preferred/default sample rate, and effective running stream sample rate
+  - added contextual backend error text so init/start failures include backend label, selected device, requested rate, preferred/default rate, and effective rate when known
+  - added a post-open/post-start stream-rate verification step to close the AlloLib fallback hole
+  - if the effective running stream rate is known and not `48000`, startup now fails immediately with:
+    - `Sample rate mismatch: Spatial Root requires 48000 Hz, but the audio stream is running at <rate> Hz.`
+
+- `internal/cult-allolib/include/al/io/al_AudioIO.hpp` / `src/io/al_AudioIO.cpp`
+  - added narrow read-only accessors to expose compiled backend family, active API display name, and effective stream sample rate without redesigning the backend abstraction
+  - RtAudio-backed builds now report the best available API label, e.g. `RtAudio / CoreAudio`, `RtAudio / JACK`, `RtAudio / ALSA`, `RtAudio / PulseAudio`, `RtAudio / WASAPI`, or `RtAudio API unknown`
+
+- `source/gui/imgui/src/App.cpp`
+  - removed the old platform-guess backend label helper
+  - Audio Setup and Copy Diagnostics now distinguish:
+    - required sample rate
+    - requested engine sample rate
+    - selected device preferred/default sample rate
+    - actual stream sample rate
+  - `Sample Rate OK` is now shown only when the effective running stream rate is known and equals `48000`
+  - when the actual stream rate is unavailable, the GUI reports `48 kHz Not Confirmed` / `Actual stream sample rate: unknown` rather than guessing
+  - Audio Setup layout was tightened afterward so these fields fit in the existing card without scrolling; `FORMAT` was renamed to `BUFFER SIZE`, `Copy Diagnostics` was moved onto the same row, and the sample-rate status text was compacted and made more legible
+
+**Existing diagnostics reused:**
+
+- `EngineSession::getLastError()`
+- `EngineSession::getFailureDiagnostics()`
+- existing startup-stage capture in `EngineSession::start()`
+- `EngineSession::queryStatus()` / `EngineStatus` as the single GUI-facing status surface
+
+**Behavioral impact:**
+
+- Backend support policy did **not** change in this pass.
+- The only functional backend behavior change is startup failure when the effective running stream rate is known to differ from `48000 Hz`.
+- Selected-device preferred/default rate remains warning-only metadata; it is no longer treated as proof of the actual runtime stream rate.
+
+**Validation:**
+
+- `./build.sh --gui` passed after the core backend/sample-rate implementation.
+- Final GUI-only follow-up tweaks after that build:
+  - sample-rate box body text changed to white in the OK state
+  - Audio Setup row/box layout compressed to avoid scroll
+  - these two tweaks were not rebuilt separately
+
+---
+
 ## Release-Hardening Audit — CULT package-adm-wav Backend Bug Pass (May 11, 2026)
 
 **Status:** Complete. Small backend fix only; no GUI redesign, no EngineSession/CULT ownership changes.

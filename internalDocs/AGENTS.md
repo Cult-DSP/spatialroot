@@ -1,6 +1,6 @@
 # spatialroot — Agent Context
 
-**Last Updated:** May 7, 2026  
+**Last Updated:** May 11, 2026  
 **Project:** spatialroot — Open Spatial Audio Infrastructure  
 **Lead Developer:** Lucian Parisi
 
@@ -159,6 +159,8 @@ Renders a LUSID scene + sources to an N-channel WAV file (offline, not real-time
 ### `EngineSession` — C++ Embeddable Engine API
 
 `EngineSessionCore` static library. Strict 5-stage lifecycle. See [API_internal.md](API_internal.md) for full contract, hard constraints, and threading rules.
+
+Current audio/backend note: the GUI no longer guesses the realtime driver/API from platform macros. Backend/API label and sample-rate status now come from `EngineSession::queryStatus()` / `EngineStatus`, which surface the best available backend truth from `RealtimeBackend` and AlloLib. Treat `audioBackendLabel`, `requestedSampleRate`, `outputDevicePreferredSampleRate`, and `effectiveStreamSampleRate` as the canonical host-facing fields for Audio Setup and diagnostics.
 
 ### LUSID Schema
 

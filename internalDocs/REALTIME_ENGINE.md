@@ -1,6 +1,6 @@
 # Realtime Engine — Internal Reference
 
-**Last Updated:** May 7, 2026  
+**Last Updated:** May 11, 2026  
 **Source:** `source/spatial_engine/realtimeEngine/`  
 **Primary entry points:** `spatialroot_realtime` CLI binary, `source/gui/imgui/` (embeds `EngineSessionCore` in-process)
 
@@ -265,6 +265,24 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 **Real-Time Constraints:** `processBlock()` is the RT entry point — no allocations, no locks, deterministic execution, minimal overhead.
 
+**Current backend/API truth path (May 11, 2026):**
+
+- `RealtimeBackend` is now the authoritative source for host-visible realtime audio backend state.
+- `EngineSession::queryStatus()` forwards a minimal read-only snapshot through `EngineStatus` so the GUI can show backend/API and sample-rate truth without duplicating diagnostics.
+- The host/GUI must distinguish four separate rate concepts:
+  - required sample rate: Spatial Root policy (`48000 Hz`)
+  - requested engine sample rate: what `EngineOptions.sampleRate` asked for
+  - selected device preferred/default sample rate: scan/open metadata only
+  - actual running stream sample rate: effective backend stream rate after open/start, if known
+- Do not treat device-scan preferred/default rate as the actual runtime stream rate.
+- If the effective running stream rate is known and is not `48000`, `RealtimeBackend` now fails startup immediately and surfaces a specific mismatch error through existing `EngineSession` diagnostics.
+
+**Backend/API labels:**
+
+- RtAudio builds report backend family `RtAudio` plus the best available active API label from RtAudio itself.
+- Known labels include `RtAudio / CoreAudio`, `RtAudio / JACK`, `RtAudio / ALSA`, `RtAudio / PulseAudio`, and `RtAudio / WASAPI`.
+- If the active RtAudio API cannot be proven, report `RtAudio API unknown` rather than guessing from the platform.
+
 **Phase 10 additions to `processBlock()`:**
 
 1. **Atomic snapshot** — all control parameters captured at block start via `std::memory_order_relaxed` loads into `ControlSnapshot ctrl`
@@ -288,6 +306,8 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 `configureRuntime()` no longer performs output routing setup. Output routing is now initialized in `applyLayout()` → `configureOutputRouting()`. `configureRuntime()` is safe to call before or after `start()`.
 
 `RuntimeParams::defaults()` is the single canonical source of default values for API, CLI, and GUI. `resetRuntimeParams()` is equivalent to `configureRuntime(RuntimeParams::defaults())`.
+
+**48 kHz verification note (May 11, 2026):** AlloLib audio setup can fall back from requested `48000` to a device-preferred/default rate when the requested rate is unsupported. The backend now performs a smallest-safe post-start verification using the effective stream rate when available. If the effective rate is known and not `48000`, startup aborts immediately instead of continuing with a false `48 kHz` assumption.
 
 | Control     | Public API                                              | Range      | Default | OSC address                |
 | ----------- | ------------------------------------------------------- | ---------- | ------- | -------------------------- |

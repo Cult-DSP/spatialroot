@@ -1,6 +1,6 @@
 # EngineSession API — Internal Reference
 
-**Last Updated:** April 2026  
+**Last Updated:** May 2026  
 **Source files:** `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
 
 ---
@@ -17,7 +17,7 @@
 | `SceneInput` | Audio scene definition (LUSID scene path, sources folder, ADM file) |
 | `LayoutInput` | Speaker layout path and optional remap CSV path |
 | `RuntimeParams` | Initial gain/focus/mix values passed at configure time |
-| `EngineStatus` | Side-effect-free snapshot of current state (playhead, CPU load, masks, RMS, xruns) |
+| `EngineStatus` | Side-effect-free snapshot of current state (playhead, CPU load, masks, RMS, xruns, backend/sample-rate status) |
 | `DiagnosticEvents` | Relocation and cluster-change event flags + bitmask pairs; consumed once per call |
 
 > **Note:** All structs are global (outside any namespace) to avoid polluting public interfaces with internal legacy types.
@@ -67,6 +67,28 @@ struct RuntimeParams {
 All dB fields are converted to linear at store time via `clampDb` → `dbToLinear`.
 `getRuntimeParams()` performs the inverse conversion (`linearToDb`) and re-clamps; a zero or
 negative linear value returns `-60.0f` (never `-inf` or `NaN`).
+
+**`EngineStatus`** — returned by `queryStatus()`:
+
+In addition to the existing playhead / CPU / mask / RMS / underrun fields, `EngineStatus` now carries a minimal read-only backend/audio snapshot for host-facing diagnostics:
+
+```cpp
+std::string audioBackendLabel;              // best-effort runtime backend/API label
+int requestedSampleRate = 48000;           // requested engine rate
+double effectiveStreamSampleRate = 0.0;    // actual running stream rate, if known
+bool effectiveStreamSampleRateKnown = false;
+std::string outputDeviceName;              // selected output device, if known
+double outputDevicePreferredSampleRate = 0.0; // device preferred/default rate, if known
+bool outputDevicePreferredSampleRateKnown = false;
+```
+
+Semantics:
+
+- `audioBackendLabel` is sourced from the backend, not from GUI platform guesses.
+- RtAudio builds report the best available API-specific label from RtAudio itself, e.g. `RtAudio / CoreAudio`, `RtAudio / JACK`, `RtAudio / ALSA`, `RtAudio / PulseAudio`, `RtAudio / WASAPI`, or `RtAudio API unknown`.
+- `outputDevicePreferredSampleRate` is scan/open metadata only. It is **not** the same thing as the actual running stream rate.
+- `effectiveStreamSampleRate` is the authoritative runtime rate when available after backend open/start.
+- Hosts must check the `*Known` flags before presenting either rate as confirmed.
 
 ---
 
@@ -120,6 +142,19 @@ Individual setters do **not** sync OSC visible parameter values. Use `configureR
   - `renderDomRelocEvent` / `deviceDomRelocEvent` — dominant-speaker mask change (render / device)
   - `renderClusterEvent` / `deviceClusterEvent` — top-4 cluster changed (render / device)
   - Each `*Prev`/`*Next` pair is a `uint64_t` bitmask.
+
+**Backend/sample-rate failure reporting (May 2026):**
+
+- Existing `EngineSession::getLastError()` and `getFailureDiagnostics()` remain the canonical failure surface.
+- `EngineSession::start()` now prefers backend-provided init/start errors when `RealtimeBackend` can provide a more specific reason.
+- Backend failure strings may include:
+  - backend/API label
+  - selected device
+  - requested sample rate
+  - selected device preferred/default sample rate, if known
+  - effective running stream sample rate, if known
+- If the effective running stream rate is known and not `48000`, startup fails immediately with:
+  - `Sample rate mismatch: Spatial Root requires 48000 Hz, but the audio stream is running at <rate> Hz.`
 
 ### Threading Constraints
 

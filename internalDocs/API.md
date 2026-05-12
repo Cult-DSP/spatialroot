@@ -1,6 +1,6 @@
 # EngineSession API — Internal Reference
 
-**Last Updated:** March 2026  
+**Last Updated:** May 2026  
 **Source files:** `source/spatial_engine/realtimeEngine/src/EngineSession.hpp/.cpp`, `PUBLIC_DOCS/API.md`
 
 ---
@@ -17,7 +17,7 @@
 | `SceneInput`       | Audio scene definition (ADM/LUSID payload paths)                               |
 | `LayoutInput`      | Speaker layout and routing parameters                                          |
 | `RuntimeParams`    | Runtime DSP parameters (gain, focus, mix trims)                                |
-| `EngineStatus`     | Side-effect-free snapshot of current state (playhead, CPU load, active voices) |
+| `EngineStatus`     | Side-effect-free snapshot of current state (playhead, CPU load, active voices, backend/sample-rate status) |
 | `DiagnosticEvents` | Structured per-tick relocation/cluster events                                  |
 
 > **Note:** Core structs are deliberately outside the `spatial::` namespace to avoid polluting public interfaces with internal legacy types — they are global structs.
@@ -60,6 +60,31 @@ All writes use `std::memory_order_relaxed`. Safe to call after `start()` and bef
 
 - **Synchronous:** Lifecycle methods return `bool`. On failure: `getLastError() -> std::string`.
 - **Async/Runtime:** Non-fatal errors routed to queue via `consumeDiagnostics()`.
+
+### Backend/API and Sample-Rate Status
+
+`queryStatus()` is the canonical read-only path for GUI and host-facing realtime audio status. `EngineStatus` now includes a minimal backend/audio snapshot in addition to transport and render metrics:
+
+- `audioBackendLabel`
+  - best-effort backend/API label from the running backend when available
+  - examples: `RtAudio / CoreAudio`, `RtAudio / JACK`, `RtAudio / WASAPI`
+  - if the active RtAudio API cannot be proven, the status reports `RtAudio API unknown` rather than guessing
+- `requestedSampleRate`
+  - the engine request, currently expected to remain `48000`
+- `outputDeviceName`
+  - selected output device name, if known
+- `outputDevicePreferredSampleRate`
+  - selected device preferred/default rate, if known from scan/open metadata
+- `outputDevicePreferredSampleRateKnown`
+  - distinguishes a real preferred/default rate from `unknown`
+- `effectiveStreamSampleRate`
+  - actual running backend stream rate, if available after backend open/start
+- `effectiveStreamSampleRateKnown`
+  - distinguishes a confirmed running rate from `unknown`
+
+These fields are intentionally read-only. They do not add new backend-selection or sample-rate-selection controls.
+
+**Important policy:** Spatial Root still requires `48000 Hz`. Preferred/default device rate is metadata only and must not be treated as proof of the actual runtime stream rate. If the effective running stream rate is known and differs from `48000`, startup now fails through the existing error path.
 
 ### Threading Constraints
 
