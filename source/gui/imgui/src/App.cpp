@@ -425,7 +425,8 @@ void App::renderEngineTab() {
                                                         : "Audio Setup \xE2\x96\xBC";
     if (audioNotReady) mShowAudioSetupPanel = true;
 
-    if (ImGui::BeginChild("##inputcard", {0.f, 220.f}, true)) {
+    if (ImGui::BeginChild("##inputcard", ImVec2(0.f, 0.f),
+                          ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY)) {
         ImGui::TextDisabled("INPUT CONFIGURATION");
         ImGui::Spacing();
         if (isRunning) ImGui::BeginDisabled(true);
@@ -502,7 +503,8 @@ void App::renderEngineTab() {
     ImGui::Spacing();
 
     if (mShowAudioSetupPanel) {
-        if (ImGui::BeginChild("##audiosetupcard", {0.f, 340.f}, true)) {
+        if (ImGui::BeginChild("##audiosetupcard", ImVec2(0.f, 0.f),
+                              ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY)) {
             ImGui::TextDisabled("AUDIO SETUP   STATUS");
             ImGui::Text("Realtime Audio: %s", audioReady ? "Ready" : (audioNotReady ? "Not Ready" : "Unknown"));
             ImGui::Text("Backend: %s", backendLabel.c_str());
@@ -532,7 +534,6 @@ void App::renderEngineTab() {
                    << "Last Error: " << (mLastError.empty() ? "none" : mLastError);
                 ImGui::SetClipboardText(os.str().c_str());
             }
-            ImGui::Spacing();
 
             if (isRunning) ImGui::BeginDisabled(true);
 
@@ -612,7 +613,8 @@ void App::renderEngineTab() {
 
                 ImGui::PushStyleColor(ImGuiCol_ChildBg,
                     ImVec4(srColor.x * 0.10f, srColor.y * 0.10f, srColor.z * 0.10f, 1.f));
-                if (ImGui::BeginChild("##srbox", {0.f, 84.f}, true,
+                if (ImGui::BeginChild("##srbox", ImVec2(0.f, 0.f),
+                                     ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY,
                                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
                     ImGui::TextColored(srColor, "%s", srTitle);
                     if (srOk) {
@@ -707,7 +709,9 @@ void App::renderEngineTab() {
     ImGui::Spacing();
 
     if (ImGui::BeginChild("##ctrlcard", {0.f, 190.f}, true)) {
-        ImGui::TextDisabled("RUNTIME CONTROLS");
+        const bool runtimeControlsReady = audioReady;
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "RUNTIME CONTROLS");
+        else ImGui::TextDisabled("RUNTIME CONTROLS");
         // Reset Parameters button — right-aligned in the header row.
         // Before Run: resets staged values. After Run: resets live engine params.
         {
@@ -737,7 +741,8 @@ void App::renderEngineTab() {
 
         // Controls are always enabled — editable before Run as staged values,
         // and live-updated after Run. Setters are only called when running.
-        ImGui::TextDisabled("MASTER GAIN");
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "MASTER GAIN");
+        else ImGui::TextDisabled("MASTER GAIN");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##gain", &mGainDb, -60.f, 12.f, "%.1f dB")) {
@@ -750,7 +755,8 @@ void App::renderEngineTab() {
             if (isRunning) mSession->setMasterGainDb(mGainDb);
         }
 
-        ImGui::TextDisabled("DBAP FOCUS");
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "DBAP FOCUS");
+        else ImGui::TextDisabled("DBAP FOCUS");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##focus", &mFocus, 0.1f, 5.0f, "%.2f")) {
@@ -763,7 +769,8 @@ void App::renderEngineTab() {
             if (isRunning) mSession->setDbapFocus(mFocus);
         }
 
-        ImGui::TextDisabled("SPEAKER MIX (DB)");
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "SPEAKER MIX (DB)");
+        else ImGui::TextDisabled("SPEAKER MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##spkmix", &mSpkMixDb, -60.f, 12.f, "%.1f dB")) {
@@ -776,7 +783,8 @@ void App::renderEngineTab() {
             if (isRunning) mSession->setSpeakerMixDb(mSpkMixDb);
         }
 
-        ImGui::TextDisabled("SUB MIX (DB)");
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "SUB MIX (DB)");
+        else ImGui::TextDisabled("SUB MIX (DB)");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.f);
         if (ImGui::SliderFloat("##submix", &mSubMixDb, -60.f, 12.f, "%.1f dB")) {
@@ -789,7 +797,8 @@ void App::renderEngineTab() {
             if (isRunning) mSession->setSubMixDb(mSubMixDb);
         }
 
-        ImGui::TextDisabled("ELEVATION MODE");
+        if (runtimeControlsReady) ImGui::TextColored(kGreen, "ELEVATION MODE");
+        else ImGui::TextDisabled("ELEVATION MODE");
         ImGui::SameLine(160.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
         if (ImGui::Combo("##elevmode", &mElevationMode, kElevModeNames, 3) && isRunning) {
