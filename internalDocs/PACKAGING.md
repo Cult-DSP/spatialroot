@@ -18,31 +18,41 @@ This pass established the baseline macOS bundle and install-tree structure for `
 
 Notarization, DMG creation, CPack polish, and Homebrew formulae were **not** attempted and remain future work.
 
+process:
+stage app
+ad-hoc sign app
+create DMG with hdiutil
+verify codesign inside mounted DMG
+upload to GitHub release
+download and test
+
 ---
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| [CMakeLists.txt](../CMakeLists.txt) (line 11) | Added `include(GNUInstallDirs)`. Added `SPATIALROOT_INSTALL_RESOURCE_ROOT` and macOS bundle destination variables (`SPATIALROOT_MACOS_APP_BUNDLE_NAME`, `SPATIALROOT_MACOS_APP_RESOURCES_DESTINATION`). |
-| [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) (line 13) | Set `MACOSX_BUNDLE TRUE` + bundle metadata on `spatialroot_gui`. Added `install(TARGETS … BUNDLE …)` for macOS and `RUNTIME` for Linux. Added `install(DIRECTORY … speaker_layouts …)` for both platforms. Added Linux GLFW X11/Wayland pin. Added macOS app icon resource and set `MACOSX_BUNDLE_ICON_FILE` to the renamed icon. |
-| [source/gui/imgui/resources/SpatialRootApp.icns](../source/gui/imgui/resources/SpatialRootApp.icns) | Renamed macOS app icon to force Finder cache refresh (same artwork as previous `SpatialRoot.icns`). |
-| [source/gui/imgui/cmake/Info.plist.in](../source/gui/imgui/cmake/Info.plist.in) | New file. Minimal macOS `Info.plist` template: bundle ID `com.cultdsp.spatialroot`, LSMinimumSystemVersion 11.0, NSHighResolutionCapable. CMake substitutes `MACOSX_BUNDLE_*` variables at configure time. |
-| [source/gui/imgui/src/App.cpp](../source/gui/imgui/src/App.cpp) (line 124) | Added `currentExecutablePath()`, `executableDirectory()`, `macBundleResourcesDirectory()`, `installPrefixFromExecutable()`, `layoutPackagedSubpath()`. Updated layout search to: `SPATIALROOT_ASSET_ROOT` → bundle `Contents/Resources` → install-prefix `share/spatialroot` → executable-relative packaged path → repo-root fallback. Updated `cult-transcoder` search to: `SPATIALROOT_CULT_TRANSCODER` → executable-relative packaged locations → bundle `Contents/Resources/bin` → build-tree/dev fallbacks. |
-| [source/gui/imgui/src/main.cpp](../source/gui/imgui/src/main.cpp) (line 13) | Updated usage comment to reflect package-relative lookup and repo-root fallback modes. |
-| [internal/cult_transcoder/CMakeLists.txt](../internal/cult_transcoder/CMakeLists.txt) (line 258) | Added `install(TARGETS cult-transcoder …)` rules for both macOS (into `Contents/Resources/bin`) and Linux/other (into `${CMAKE_INSTALL_BINDIR}`), under `SpatialRootRuntime` component. |
-| [internal/cult-allolib/external/rtaudio/CMakeLists.txt](../internal/cult-allolib/external/rtaudio/CMakeLists.txt) (line 343) | Suppressed or no-op'd unwanted rtaudio install rules that were polluting a full `cmake --install` run with vendored SDK/doc payloads. |
+| File                                                                                                                         | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [CMakeLists.txt](../CMakeLists.txt) (line 11)                                                                                | Added `include(GNUInstallDirs)`. Added `SPATIALROOT_INSTALL_RESOURCE_ROOT` and macOS bundle destination variables (`SPATIALROOT_MACOS_APP_BUNDLE_NAME`, `SPATIALROOT_MACOS_APP_RESOURCES_DESTINATION`).                                                                                                                                                                                                                                                                                                          |
+| [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) (line 13)                                              | Set `MACOSX_BUNDLE TRUE` + bundle metadata on `spatialroot_gui`. Added `install(TARGETS … BUNDLE …)` for macOS and `RUNTIME` for Linux. Added `install(DIRECTORY … speaker_layouts …)` for both platforms. Added Linux GLFW X11/Wayland pin. Added macOS app icon resource and set `MACOSX_BUNDLE_ICON_FILE` to the renamed icon.                                                                                                                                                                                |
+| [source/gui/imgui/resources/SpatialRootApp.icns](../source/gui/imgui/resources/SpatialRootApp.icns)                          | Renamed macOS app icon to force Finder cache refresh (same artwork as previous `SpatialRoot.icns`).                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [source/gui/imgui/cmake/Info.plist.in](../source/gui/imgui/cmake/Info.plist.in)                                              | New file. Minimal macOS `Info.plist` template: bundle ID `com.cultdsp.spatialroot`, LSMinimumSystemVersion 11.0, NSHighResolutionCapable. CMake substitutes `MACOSX_BUNDLE_*` variables at configure time.                                                                                                                                                                                                                                                                                                       |
+| [source/gui/imgui/src/App.cpp](../source/gui/imgui/src/App.cpp) (line 124)                                                   | Added `currentExecutablePath()`, `executableDirectory()`, `macBundleResourcesDirectory()`, `installPrefixFromExecutable()`, `layoutPackagedSubpath()`. Updated layout search to: `SPATIALROOT_ASSET_ROOT` → bundle `Contents/Resources` → install-prefix `share/spatialroot` → executable-relative packaged path → repo-root fallback. Updated `cult-transcoder` search to: `SPATIALROOT_CULT_TRANSCODER` → executable-relative packaged locations → bundle `Contents/Resources/bin` → build-tree/dev fallbacks. |
+| [source/gui/imgui/src/main.cpp](../source/gui/imgui/src/main.cpp) (line 13)                                                  | Updated usage comment to reflect package-relative lookup and repo-root fallback modes.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| [internal/cult_transcoder/CMakeLists.txt](../internal/cult_transcoder/CMakeLists.txt) (line 258)                             | Added `install(TARGETS cult-transcoder …)` rules for both macOS (into `Contents/Resources/bin`) and Linux/other (into `${CMAKE_INSTALL_BINDIR}`), under `SpatialRootRuntime` component.                                                                                                                                                                                                                                                                                                                          |
+| [internal/cult-allolib/external/rtaudio/CMakeLists.txt](../internal/cult-allolib/external/rtaudio/CMakeLists.txt) (line 343) | Suppressed or no-op'd unwanted rtaudio install rules that were polluting a full `cmake --install` run with vendored SDK/doc payloads.                                                                                                                                                                                                                                                                                                                                                                            |
 
 ---
 
 ## Staged Tree (macOS)
 
 Install command:
+
 ```
 cmake --install build --prefix <dir> --component SpatialRootRuntime
 ```
 
 Resulting layout:
+
 ```
 <prefix>/
 └── Spatial Root.app/
@@ -103,29 +113,29 @@ Treat signing/notarization as a release-engineering phase on top of the current 
 
 ## Validation Results
 
-| Command | Result |
-|---------|--------|
-| `cmake -S . -B build -DSPATIALROOT_BUILD_GUI=ON` | ✅ passed |
-| `cmake --build build --target spatialroot_gui cult-transcoder --parallel 8` | ✅ passed |
-| `cmake --install build --prefix /private/tmp/spatialroot-stage.x8TkcZ --component SpatialRootRuntime` | ✅ passed |
-| `test -f '.../Spatial Root.app/Contents/Resources/speaker_layouts/stereo.json'` | ✅ passed |
-| `test -x '.../Spatial Root.app/Contents/Resources/bin/cult-transcoder'` | ✅ passed |
-| `test -f 'source/speaker_layouts/stereo.json'` (source tree) | ✅ passed |
-| `test -x 'build/internal/cult_transcoder/cult-transcoder'` (build tree) | ✅ passed |
-| `'<stage>/Spatial Root.app/Contents/MacOS/Spatial Root' --help` from `/private/tmp` | ✅ passed (exited 1 before GLFW/App logging — expected for `--help` path without display) |
-| Interactive GUI launch from staged bundle | ⚠️ not validated — `open` unavailable in this environment (`kLSServerCommunicationErr -10822`); staged files and lookup paths are correct |
+| Command                                                                                               | Result                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `cmake -S . -B build -DSPATIALROOT_BUILD_GUI=ON`                                                      | ✅ passed                                                                                                                                 |
+| `cmake --build build --target spatialroot_gui cult-transcoder --parallel 8`                           | ✅ passed                                                                                                                                 |
+| `cmake --install build --prefix /private/tmp/spatialroot-stage.x8TkcZ --component SpatialRootRuntime` | ✅ passed                                                                                                                                 |
+| `test -f '.../Spatial Root.app/Contents/Resources/speaker_layouts/stereo.json'`                       | ✅ passed                                                                                                                                 |
+| `test -x '.../Spatial Root.app/Contents/Resources/bin/cult-transcoder'`                               | ✅ passed                                                                                                                                 |
+| `test -f 'source/speaker_layouts/stereo.json'` (source tree)                                          | ✅ passed                                                                                                                                 |
+| `test -x 'build/internal/cult_transcoder/cult-transcoder'` (build tree)                               | ✅ passed                                                                                                                                 |
+| `'<stage>/Spatial Root.app/Contents/MacOS/Spatial Root' --help` from `/private/tmp`                   | ✅ passed (exited 1 before GLFW/App logging — expected for `--help` path without display)                                                 |
+| Interactive GUI launch from staged bundle                                                             | ⚠️ not validated — `open` unavailable in this environment (`kLSServerCommunicationErr -10822`); staged files and lookup paths are correct |
 
 ---
 
 ## Remaining Package Blockers
 
-| Item | Status |
-|------|--------|
-| Full `cmake --install build --prefix <dir>` (no component filter) stages vendored third-party SDK/doc payloads | Known — use `--component SpatialRootRuntime` for now; a later pass should prune dependency install rules before CPack work |
-| Interactive GUI launch outside repo root | Not validated in this environment — staged files are correct, human verification needed |
-| `spatialroot_spatial_render` packaging | Out of scope for this pass; offline-render UI is hidden and not a current blocker |
-| Notarization, DMG, CPack, Homebrew | Not attempted — future distribution pass |
-| macOS Dock icon | Resolved in bundle metadata; Finder may cache old icons. If generic icon persists, restage to a new path or rename the app bundle. |
+| Item                                                                                                           | Status                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Full `cmake --install build --prefix <dir>` (no component filter) stages vendored third-party SDK/doc payloads | Known — use `--component SpatialRootRuntime` for now; a later pass should prune dependency install rules before CPack work         |
+| Interactive GUI launch outside repo root                                                                       | Not validated in this environment — staged files are correct, human verification needed                                            |
+| `spatialroot_spatial_render` packaging                                                                         | Out of scope for this pass; offline-render UI is hidden and not a current blocker                                                  |
+| Notarization, DMG, CPack, Homebrew                                                                             | Not attempted — future distribution pass                                                                                           |
+| macOS Dock icon                                                                                                | Resolved in bundle metadata; Finder may cache old icons. If generic icon persists, restage to a new path or rename the app bundle. |
 
 ---
 
@@ -140,9 +150,11 @@ Treat signing/notarization as a release-engineering phase on top of the current 
 The bundle icon is staged via `MACOSX_BUNDLE_ICON_FILE` and the icon file is explicitly added as a bundle resource.
 
 Current icon asset:
+
 - [source/gui/imgui/resources/SpatialRootApp.icns](../source/gui/imgui/resources/SpatialRootApp.icns)
 
 CMake wiring:
+
 - [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) sets `MACOSX_BUNDLE_ICON_FILE` to `SpatialRootApp.icns` and adds the icon to `MACOSX_PACKAGE_LOCATION` `Resources`.
 
 Finder caches app icons aggressively. If the staged `.app` still shows a generic icon:
