@@ -391,6 +391,8 @@ void App::renderEngineTab() {
         (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceSampleRates.size()))
             ? mDeviceSampleRates[mDeviceIdx]
             : 0.0;
+    // Backend-confirmed preferred/default rate when available; falls back to GUI scan metadata.
+    // Used for display and mismatch warnings only — never for the "Sample Rate OK" determination.
     const double selectedDeviceSampleRate = mStatus.outputDevicePreferredSampleRateKnown
         ? mStatus.outputDevicePreferredSampleRate
         : scannedDeviceSampleRate;

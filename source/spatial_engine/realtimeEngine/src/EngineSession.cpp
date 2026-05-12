@@ -564,13 +564,15 @@ EngineStatus EngineSession::queryStatus() const
         st.effectiveStreamSampleRateKnown = mBackend->effectiveStreamSampleRateKnown();
     } else {
         const std::string backendFamily = al::AudioIO::compiledBackendName();
-        const std::string backendApi = al::AudioIO::defaultBackendApiDisplayName();
         if (backendFamily == "RtAudio") {
-            st.audioBackendLabel =
-                (backendApi.empty() || backendApi == "Unknown")
-                    ? "RtAudio API unknown"
-                    : (backendApi == "RtAudio API unknown" ? backendApi : "RtAudio / " + backendApi);
+            // Pre-start: the active API is not confirmed until a stream is opened.
+            // Avoid probing defaultBackendApiDisplayName() here — on Linux with JACK
+            // compiled in, a temporary RtAudio() may select UNIX_JACK before the
+            // server is known to be running. The post-start label comes from the
+            // actual open stream via mBackend->backendDisplayLabel().
+            st.audioBackendLabel = "RtAudio API unknown";
         } else if (!backendFamily.empty()) {
+            const std::string backendApi = al::AudioIO::defaultBackendApiDisplayName();
             st.audioBackendLabel =
                 (backendApi.empty() || backendApi == "Unknown") ? backendFamily
                                                                 : backendFamily + " / " + backendApi;
