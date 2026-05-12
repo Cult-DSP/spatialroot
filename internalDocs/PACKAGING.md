@@ -25,7 +25,8 @@ Notarization, DMG creation, CPack polish, and Homebrew formulae were **not** att
 | File | Change |
 |------|--------|
 | [CMakeLists.txt](../CMakeLists.txt) (line 11) | Added `include(GNUInstallDirs)`. Added `SPATIALROOT_INSTALL_RESOURCE_ROOT` and macOS bundle destination variables (`SPATIALROOT_MACOS_APP_BUNDLE_NAME`, `SPATIALROOT_MACOS_APP_RESOURCES_DESTINATION`). |
-| [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) (line 13) | Set `MACOSX_BUNDLE TRUE` + bundle metadata on `spatialroot_gui`. Added `install(TARGETS … BUNDLE …)` for macOS and `RUNTIME` for Linux. Added `install(DIRECTORY … speaker_layouts …)` for both platforms. Added Linux GLFW X11/Wayland pin. |
+| [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) (line 13) | Set `MACOSX_BUNDLE TRUE` + bundle metadata on `spatialroot_gui`. Added `install(TARGETS … BUNDLE …)` for macOS and `RUNTIME` for Linux. Added `install(DIRECTORY … speaker_layouts …)` for both platforms. Added Linux GLFW X11/Wayland pin. Added macOS app icon resource and set `MACOSX_BUNDLE_ICON_FILE` to the renamed icon. |
+| [source/gui/imgui/resources/SpatialRootApp.icns](../source/gui/imgui/resources/SpatialRootApp.icns) | Renamed macOS app icon to force Finder cache refresh (same artwork as previous `SpatialRoot.icns`). |
 | [source/gui/imgui/cmake/Info.plist.in](../source/gui/imgui/cmake/Info.plist.in) | New file. Minimal macOS `Info.plist` template: bundle ID `com.cultdsp.spatialroot`, LSMinimumSystemVersion 11.0, NSHighResolutionCapable. CMake substitutes `MACOSX_BUNDLE_*` variables at configure time. |
 | [source/gui/imgui/src/App.cpp](../source/gui/imgui/src/App.cpp) (line 124) | Added `currentExecutablePath()`, `executableDirectory()`, `macBundleResourcesDirectory()`, `installPrefixFromExecutable()`, `layoutPackagedSubpath()`. Updated layout search to: `SPATIALROOT_ASSET_ROOT` → bundle `Contents/Resources` → install-prefix `share/spatialroot` → executable-relative packaged path → repo-root fallback. Updated `cult-transcoder` search to: `SPATIALROOT_CULT_TRANSCODER` → executable-relative packaged locations → bundle `Contents/Resources/bin` → build-tree/dev fallbacks. |
 | [source/gui/imgui/src/main.cpp](../source/gui/imgui/src/main.cpp) (line 13) | Updated usage comment to reflect package-relative lookup and repo-root fallback modes. |
@@ -50,6 +51,7 @@ Resulting layout:
         │   └── Spatial Root          ← GUI executable
         ├── Info.plist                ← generated from Info.plist.in
         └── Resources/
+            ├── SpatialRootApp.icns   ← macOS Finder/Dock app icon
             ├── speaker_layouts/      ← all JSON layout presets
             │   ├── stereo.json
             │   ├── quad.json
@@ -111,7 +113,7 @@ GLFW is forced to X11 on Linux (`GLFW_BUILD_X11=ON`, `GLFW_BUILD_WAYLAND=OFF`). 
 | Interactive GUI launch outside repo root | Not validated in this environment — staged files are correct, human verification needed |
 | `spatialroot_spatial_render` packaging | Out of scope for this pass; offline-render UI is hidden and not a current blocker |
 | Notarization, DMG, CPack, Homebrew | Not attempted — future distribution pass |
-| macOS Dock icon | Unresolved (see [agents.md](agents.md) item 5 reference in MEMORY.md) |
+| macOS Dock icon | Resolved in bundle metadata; Finder may cache old icons. If generic icon persists, restage to a new path or rename the app bundle. |
 
 ---
 
@@ -120,6 +122,22 @@ GLFW is forced to X11 on Linux (`GLFW_BUILD_X11=ON`, `GLFW_BUILD_WAYLAND=OFF`). 
 ### Info.plist
 
 `source/gui/imgui/cmake/Info.plist.in` is a CMake-template plist (not a static file). CMake substitutes `${MACOSX_BUNDLE_EXECUTABLE_NAME}`, `${MACOSX_BUNDLE_BUNDLE_NAME}`, `${MACOSX_BUNDLE_SHORT_VERSION_STRING}`, and `${MACOSX_BUNDLE_BUNDLE_VERSION}` from the `set_target_properties(spatialroot_gui … MACOSX_BUNDLE_*)` values in the GUI `CMakeLists.txt`. Bundle version comes from `PROJECT_VERSION` (currently `0.1.0`).
+
+### macOS app icon
+
+The bundle icon is staged via `MACOSX_BUNDLE_ICON_FILE` and the icon file is explicitly added as a bundle resource.
+
+Current icon asset:
+- [source/gui/imgui/resources/SpatialRootApp.icns](../source/gui/imgui/resources/SpatialRootApp.icns)
+
+CMake wiring:
+- [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt) sets `MACOSX_BUNDLE_ICON_FILE` to `SpatialRootApp.icns` and adds the icon to `MACOSX_PACKAGE_LOCATION` `Resources`.
+
+Finder caches app icons aggressively. If the staged `.app` still shows a generic icon:
+
+- Restage to a new path and copy the app into a new folder.
+- Rename the app bundle (e.g., `Spatial Root 2.app`) before checking Finder/Dock.
+- As a last resort, re-register LaunchServices for the bundle.
 
 ### Component install
 
