@@ -393,6 +393,10 @@ void App::renderEngineTab() {
         (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceOutputChannels.size()))
             ? mDeviceOutputChannels[mDeviceIdx]
             : 0;
+    const double selectedDeviceSampleRate =
+        (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceSampleRates.size()))
+            ? mDeviceSampleRates[mDeviceIdx]
+            : 0.0;
     std::string audioStatusText;
     if (audioReady) {
         std::ostringstream os;
@@ -412,7 +416,7 @@ void App::renderEngineTab() {
                                                         : "Audio Setup \xE2\x96\xBC";
     if (audioNotReady) mShowAudioSetupPanel = true;
 
-    if (ImGui::BeginChild("##inputcard", {0.f, 240.f}, true)) {
+    if (ImGui::BeginChild("##inputcard", {0.f, 220.f}, true)) {
         ImGui::TextDisabled("INPUT CONFIGURATION");
         ImGui::Spacing();
         if (isRunning) ImGui::BeginDisabled(true);
@@ -489,7 +493,7 @@ void App::renderEngineTab() {
     ImGui::Spacing();
 
     if (mShowAudioSetupPanel) {
-        if (ImGui::BeginChild("##audiosetupcard", {0.f, 260.f}, true)) {
+        if (ImGui::BeginChild("##audiosetupcard", {0.f, 344.f}, true)) {
             ImGui::TextDisabled("AUDIO SETUP");
             ImGui::Spacing();
 
@@ -535,10 +539,47 @@ void App::renderEngineTab() {
                     "Safest workflow: stop playback before changing this setting."
                 );
             }
-            ImGui::Text("Sample Rate: %d Hz", sampleRate);
             ImGui::TextDisabled("Buffer changes apply after restarting audio.");
 
             if (isRunning) ImGui::EndDisabled();
+
+            ImGui::Spacing();
+            {
+                const bool srKnown    = selectedDeviceSampleRate > 0.0;
+                const bool srOk       = srKnown && static_cast<int>(std::round(selectedDeviceSampleRate)) == 48000;
+                const bool srMismatch = srKnown && !srOk;
+                const ImVec4 srColor  = srOk ? kGreen : (srMismatch ? kRed : kAmber);
+                const char* srTitle   = srOk       ? "Sample Rate OK"
+                                      : srMismatch ? "Sample Rate Mismatch"
+                                                   : "Sample Rate Unknown";
+                std::string srDeviceStr;
+                if (srKnown) {
+                    srDeviceStr = "Device/engine: "
+                                + std::to_string(static_cast<int>(std::round(selectedDeviceSampleRate)))
+                                + " Hz";
+                } else {
+                    srDeviceStr = "Device/engine: unknown";
+                }
+                const char* srDesc = srOk
+                    ? "Spatial Root is using the expected 48 kHz playback rate."
+                    : (srMismatch
+                        ? "Spatial Root currently expects 48000 Hz playback. Please switch the device to 48000 Hz"
+                          " in Audio MIDI Setup, JACK/PipeWire, or system audio settings, then rescan audio."
+                        : "Spatial Root expects 48000 Hz playback. If playback sounds wrong, confirm the device"
+                          " is set to 48000 Hz in Audio MIDI Setup, JACK/PipeWire, or system audio settings.");
+
+                ImGui::PushStyleColor(ImGuiCol_ChildBg,
+                    ImVec4(srColor.x * 0.10f, srColor.y * 0.10f, srColor.z * 0.10f, 1.f));
+                if (ImGui::BeginChild("##srbox", {0.f, 96.f}, true,
+                                     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+                    ImGui::TextColored(srColor, "%s", srTitle);
+                    ImGui::Text("Required: 48000 Hz");
+                    ImGui::Text("%s", srDeviceStr.c_str());
+                    ImGui::TextWrapped("%s", srDesc);
+                }
+                ImGui::EndChild();
+                ImGui::PopStyleColor();
+            }
 
             ImGui::Spacing();
             ImGui::TextDisabled("ACTIONS");
@@ -560,7 +601,7 @@ void App::renderEngineTab() {
         ImGui::Spacing();
     }
 
-    if (ImGui::BeginChild("##transportcard", {0.f, 110.f}, true)) {
+    if (ImGui::BeginChild("##transportcard", {0.f, 90.f}, true)) {
         ImGui::TextDisabled("TRANSPORT");
         ImGui::Spacing();
 
@@ -1498,14 +1539,17 @@ void App::resetRuntimeToDefaults() {
 void App::scanDevices() {
     mDeviceList.clear();
     mDeviceOutputChannels.clear();
+    mDeviceSampleRates.clear();
     mDeviceList.push_back("(system default)");
     mDeviceOutputChannels.push_back(0);
+    mDeviceSampleRates.push_back(0.0);
     const int n = al::AudioDevice::numDevices();
     for (int i = 0; i < n; ++i) {
         al::AudioDevice dev(i);
         if (dev.valid() && dev.hasOutput()) {
             mDeviceList.push_back(std::string(dev.name()));
             mDeviceOutputChannels.push_back(dev.channelsOutMax());
+            mDeviceSampleRates.push_back(dev.defaultSampleRate());
         }
     }
     mDeviceIdx = 0;

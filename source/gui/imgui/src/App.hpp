@@ -93,6 +93,7 @@ private:
     std::string              mDeviceName;   // "" = system default
     std::vector<std::string> mDeviceList;  // populated by scanDevices(); [0] = system default
     std::vector<int>         mDeviceOutputChannels; // mirrors mDeviceList; 0 = unknown/system default
+    std::vector<double>      mDeviceSampleRates;    // mirrors mDeviceList; 0.0 = unknown/system default
     int                      mDeviceIdx = 0;
     int         mBufferSizeIdx = 3;   // index into kBufferSizes[]
     int         mLayoutPreset  = 0;   // index into kLayoutNames[]
