@@ -82,7 +82,13 @@ if(APPLE)
     target_sources(spatialroot_gui PRIVATE ${SPATIALROOT_ICON})
 endif()
 
-set_target_properties(spatialroot_gui PROPERTIES OUTPUT_NAME "Spatial Root")
+if(WIN32)
+    # Avoid a space in the exe name on Windows; "Spatial Root.exe" causes quoting
+    # pain in shell scripts and some file dialogs.
+    set_target_properties(spatialroot_gui PROPERTIES OUTPUT_NAME "SpatialRoot")
+else()
+    set_target_properties(spatialroot_gui PROPERTIES OUTPUT_NAME "Spatial Root")
+endif()
 
 if(APPLE)
     set_target_properties(spatialroot_gui PROPERTIES
@@ -140,6 +146,12 @@ if(APPLE)
         DESTINATION "${SPATIALROOT_MACOS_APP_RESOURCES_DESTINATION}"
         COMPONENT SpatialRootRuntime
     )
+elseif(WIN32)
+    # Flat Windows portable package: exe at package root, resources under resources/.
+    install(TARGETS spatialroot_gui
+        RUNTIME DESTINATION .
+        COMPONENT SpatialRootRuntime
+    )
 else()
     install(TARGETS spatialroot_gui
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -151,6 +163,16 @@ if(APPLE)
     install(
         DIRECTORY "${CMAKE_SOURCE_DIR}/source/speaker_layouts"
         DESTINATION "${SPATIALROOT_MACOS_APP_RESOURCES_DESTINATION}"
+        COMPONENT SpatialRootRuntime
+    )
+elseif(WIN32)
+    install(
+        DIRECTORY "${CMAKE_SOURCE_DIR}/source/speaker_layouts"
+        DESTINATION "resources"
+        COMPONENT SpatialRootRuntime
+    )
+    install(FILES "${CMAKE_SOURCE_DIR}/README.md"
+        DESTINATION .
         COMPONENT SpatialRootRuntime
     )
 else()

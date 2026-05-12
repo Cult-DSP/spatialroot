@@ -217,3 +217,22 @@ message(STATUS "  GUI      (ImGui + GLFW desktop app)   : ${SPATIALROOT_BUILD_GU
 message(STATUS "  DEVTOOLS (validation/smoke helpers)   : ${SPATIALROOT_BUILD_DEVTOOLS}")
 message(STATUS "=======================================")
 message(STATUS "")
+
+# ── CPack ZIP packaging (Windows x64 portable) ────────────────────────────────
+# Only configured on Windows. macOS packaging uses hdiutil (see internalDocs/PACKAGING.md).
+# CPack is gated on SPATIALROOT_BUILD_GUI because the app exe is the package root entry point.
+# Produces: SpatialRoot-alpha-v1-windows-x64.zip
+# Run: cpack --config build-windows/CPackConfig.cmake -G ZIP -C Release
+if(WIN32 AND SPATIALROOT_BUILD_GUI)
+    set(CPACK_PACKAGE_NAME        "SpatialRoot")
+    set(CPACK_PACKAGE_VENDOR      "CultDSP")
+    set(CPACK_PACKAGE_VERSION     "alpha-v1")
+    set(CPACK_PACKAGE_FILE_NAME   "SpatialRoot-alpha-v1-windows-x64")
+    set(CPACK_GENERATOR           "ZIP")
+    # No top-level directory inside the ZIP — extraction gives a flat tree the
+    # user can place in any directory they choose.
+    set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+    set(CPACK_COMPONENTS_ALL      SpatialRootRuntime)
+    set(CPACK_COMPONENT_SPATIALROOTRUNTIME_REQUIRED TRUE)
+    include(CPack)
+endif()

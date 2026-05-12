@@ -893,7 +893,7 @@ MultiWavData SpatialRenderer::render(const RenderConfig &config) {
     // Write statistics to JSON if diagnostics enabled
     if (config.debugDiagnostics) {
         fs::create_directories(config.debugOutputDir);
-        std::ofstream statsFile(config.debugOutputDir + "/render_stats.json");
+        std::ofstream statsFile(fs::path(config.debugOutputDir) / "render_stats.json");
         statsFile << "{\n";
         statsFile << "  \"spatializer\": \"" << pannerTypeName(config.pannerType) << "\",\n";
         statsFile << "  \"totalSamples\": " << mLastStats.totalSamples << ",\n";

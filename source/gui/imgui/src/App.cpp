@@ -1912,18 +1912,33 @@ std::string App::findCultTranscoder() const {
 }
 
 std::string App::findSpatialRenderer() const {
-    // Explicit env var override — set by packaged builds or for testing.
     if (const char* env = std::getenv("SPATIALROOT_SPATIAL_RENDER"); env && *env) {
         if (fs::exists(env)) return env;
         return "";
     }
+
+    std::vector<fs::path> candidates;
+
+    // Install-relative: beside the GUI exe (flat Windows package) or in bin/
+    // for FHS-style installs.
+    if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        appendCandidate(candidates,
+            exeDir / withExecutableSuffix("spatialroot_spatial_render"));
+        appendCandidate(candidates,
+            exeDir.parent_path() / "bin" /
+            withExecutableSuffix("spatialroot_spatial_render"));
+    }
+
     // Developer build-tree fallback.
-    std::string candidate = resolveProjectPath(
-        "build/source/spatial_engine/spatialRender/spatialroot_spatial_render");
-#ifdef _WIN32
-    candidate += ".exe";
-#endif
-    if (fs::exists(candidate)) return candidate;
+    appendCandidate(candidates,
+        fs::path(mProjectRoot) / "build/source/spatial_engine/spatialRender" /
+        withExecutableSuffix("spatialroot_spatial_render"));
+
+    std::error_code ec;
+    for (const auto& candidate : candidates) {
+        if (fs::exists(candidate, ec)) return candidate.string();
+        ec.clear();
+    }
     return "";
 }
 

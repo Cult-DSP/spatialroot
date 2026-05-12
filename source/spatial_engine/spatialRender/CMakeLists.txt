@@ -54,3 +54,17 @@ target_link_libraries(spatialroot_spatial_render
     Gamma
     SndFile::sndfile
 )
+
+include(GNUInstallDirs)
+
+if(WIN32)
+    install(TARGETS spatialroot_spatial_render
+        RUNTIME DESTINATION .
+        COMPONENT SpatialRootRuntime
+    )
+else()
+    install(TARGETS spatialroot_spatial_render
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        COMPONENT SpatialRootRuntime
+    )
+endif()
