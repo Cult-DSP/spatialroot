@@ -40,6 +40,8 @@ file(GET_RUNTIME_DEPENDENCIES
     PRE_EXCLUDE_REGEXES
         "api-ms-win-.*"
         "ext-ms-.*"
+        "HvsiFileTrust\\.dll"
+        "wpaxholder\\.dll"
     POST_EXCLUDE_REGEXES
         ".*/Windows/System32/.*"
         ".*/Windows/SystemApps/.*"
