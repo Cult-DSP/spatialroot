@@ -123,6 +123,7 @@ set(CMAKE_SKIP_INSTALL_RULES ON)
 add_subdirectory(
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libsndfile
     ${CMAKE_CURRENT_BINARY_DIR}/libsndfile-build
+    EXCLUDE_FROM_ALL  # prevents cmake_install.cmake from including this subdirectory
 )
 set(CMAKE_SKIP_INSTALL_RULES "${_spatialroot_skip_install_rules_saved}")
 # Pre-populate the find variables so Gamma resolves to our vendored target.
@@ -166,6 +167,7 @@ if(SPATIALROOT_BUILD_ENGINE OR SPATIALROOT_BUILD_OFFLINE)
     add_subdirectory(
         ${CMAKE_CURRENT_SOURCE_DIR}/internal/cult-allolib
         ${CMAKE_CURRENT_BINARY_DIR}/allolib-build
+        EXCLUDE_FROM_ALL  # prevents cmake_install.cmake from including this subdirectory
     )
     set(CMAKE_SKIP_INSTALL_RULES "${_spatialroot_skip_install_rules_saved}")
 endif()
