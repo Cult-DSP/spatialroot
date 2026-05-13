@@ -2,6 +2,7 @@
 
 #include "App.hpp"
 #include "FileDialog.hpp"
+#include "StartupLogger.hpp"
 #include "imgui_stdlib.h"
 
 #include <al/io/al_AudioIO.hpp>
@@ -1504,16 +1505,19 @@ void App::renderTranscodeTab() {
 }
 
 void App::onStart() {
+    StartupLogger::append("audio/backend init requested");
     if (mSourcePath.empty()) {
         mLastError = "Source path is required.";
         mState = AppState::Error;
         appendEngineLog("[GUI] Cannot start: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+        StartupLogger::append("last successful startup step before failure: audio/backend init requested");
         return;
     }
     if (mLayoutPath.empty()) {
         mLastError = "Layout path is required.";
         mState = AppState::Error;
         appendEngineLog("[GUI] Cannot start: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+        StartupLogger::append("last successful startup step before failure: audio/backend init requested");
         return;
     }
 
@@ -1522,6 +1526,7 @@ void App::onStart() {
         mLastError = "Source must be an ADM WAV file or a LUSID package directory (containing scene.lusid.json).";
         mState = AppState::Error;
         appendEngineLog("[GUI] Cannot start: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+        StartupLogger::append("last successful startup step before failure: audio/backend init requested");
         return;
     }
 
@@ -1534,6 +1539,7 @@ void App::onStart() {
             mLastError = cultTranscoderNotFoundMessage();
             mState = AppState::Error;
             appendEngineLog("[GUI] " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+            StartupLogger::append("last successful startup step before failure: helper binary checks");
             return;
         }
 
@@ -1563,6 +1569,7 @@ void App::onStart() {
             mLastError = "Failed to launch cult-transcoder subprocess.";
             mState = AppState::Error;
             appendEngineLog("[GUI] " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
+            StartupLogger::append("last successful startup step before failure: helper binary checks");
             return;
         }
     } else {
@@ -1599,8 +1606,10 @@ void App::onResume() {
 void App::doLaunchEngine(const std::string& scenePath,
                          const std::string& sourcesFolder,
                          const std::string& admFile) {
+    std::string lastStartupStep = "EngineSession created";
     mSession = std::make_unique<EngineSession>();
     appendEngineLog("[GUI] Configuring engine...");
+    StartupLogger::append("audio/backend init start");
 
     EngineOptions opts;
     opts.sampleRate = 48000;
@@ -1614,8 +1623,10 @@ void App::doLaunchEngine(const std::string& scenePath,
         mState = AppState::Error;
         appendEngineLog("[Engine] configureEngine failed: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
         appendFailureDiagnostics(mSession->getFailureDiagnostics());
+        StartupLogger::append("last successful startup step before failure: " + lastStartupStep);
         return;
     }
+    lastStartupStep = "configureEngine";
 
     SceneInput scene;
     scene.scenePath = scenePath;
@@ -1629,8 +1640,10 @@ void App::doLaunchEngine(const std::string& scenePath,
         appendEngineLog("[Engine] loadScene failed: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
         appendFailureDiagnostics(mSession->getFailureDiagnostics());
         mSession->shutdown();
+        StartupLogger::append("last successful startup step before failure: " + lastStartupStep);
         return;
     }
+    lastStartupStep = "loadScene";
 
     LayoutInput layout;
     layout.layoutPath = mLayoutPath;
@@ -1642,8 +1655,10 @@ void App::doLaunchEngine(const std::string& scenePath,
         appendEngineLog("[Engine] applyLayout failed: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
         appendFailureDiagnostics(mSession->getFailureDiagnostics());
         mSession->shutdown();
+        StartupLogger::append("last successful startup step before failure: " + lastStartupStep);
         return;
     }
+    lastStartupStep = "applyLayout";
 
     RuntimeParams rp;
     rp.masterGainDb = mGainDb;
@@ -1656,8 +1671,10 @@ void App::doLaunchEngine(const std::string& scenePath,
         appendEngineLog("[Engine] configureRuntime failed: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
         appendFailureDiagnostics(mSession->getFailureDiagnostics());
         mSession->shutdown();
+        StartupLogger::append("last successful startup step before failure: " + lastStartupStep);
         return;
     }
+    lastStartupStep = "configureRuntime";
 
     if (!mSession->start()) {
         mLastError = mSession->getLastError();
@@ -1665,6 +1682,7 @@ void App::doLaunchEngine(const std::string& scenePath,
         appendEngineLog("[Engine] start() failed: " + mLastError, {1.f, 0.4f, 0.4f, 1.f});
         appendFailureDiagnostics(mSession->getFailureDiagnostics());
         mSession->shutdown();
+        StartupLogger::append("last successful startup step before failure: " + lastStartupStep);
         return;
     }
 
@@ -1675,6 +1693,7 @@ void App::doLaunchEngine(const std::string& scenePath,
         mLastGeneratedSceneAvailable = true;
     }
     appendEngineLog("[Engine] Started successfully. OSC port 9009.", {0.3f, 0.9f, 0.3f, 1.f});
+    StartupLogger::append("audio/backend init complete");
 }
 
 void App::tryLoadDefaultLayoutOnStartup() {
@@ -1870,6 +1889,7 @@ std::string App::resolveProjectPath(const std::string& relPath) const {
     }
 
     if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        appendCandidate(candidates, exeDir / "resources" / kPackagedLayoutRoot / packagedSubpath);
         appendCandidate(candidates, exeDir / kPackagedLayoutRoot / packagedSubpath);
         appendCandidate(candidates, exeDir.parent_path() / "share" / "spatialroot" /
                                     kPackagedLayoutRoot / packagedSubpath);

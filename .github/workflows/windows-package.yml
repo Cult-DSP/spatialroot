@@ -63,7 +63,34 @@ jobs:
           if (!(Test-Path "$root/resources/speaker_layouts")) {
             throw "Missing resources/speaker_layouts"
           }
+          if (!(Test-Path "$root/README.md")) {
+            throw "Missing README.md"
+          }
+          if (!(Test-Path "$root/LICENSE")) {
+            throw "Missing LICENSE"
+          }
+          if (!(Test-Path "$root/msvcp140.dll")) {
+            throw "Missing msvcp140.dll"
+          }
+          if (!(Test-Path "$root/vcruntime140.dll")) {
+            throw "Missing vcruntime140.dll"
+          }
+          if (!(Test-Path "$root/vcruntime140_1.dll")) {
+            throw "Missing vcruntime140_1.dll"
+          }
           Write-Host "=== Staged package verification passed ==="
+
+      - name: Audit staged runtime dependencies
+        shell: pwsh
+        run: |
+          cmake -DPACKAGE_ROOT="$PWD/stage" -P cmake/VerifyWindowsPackage.cmake
+
+      - name: Run packaged self-test
+        shell: pwsh
+        run: |
+          Push-Location stage
+          .\SpatialRoot.exe --package-self-test
+          Pop-Location
 
       - name: Package ZIP
         shell: pwsh

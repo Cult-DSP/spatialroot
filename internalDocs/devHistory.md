@@ -1,7 +1,36 @@
 # Development History
 
-**Last Updated:** May 11, 2026
+**Last Updated:** May 13, 2026
 **Note:** Newest entries at top, oldest at bottom.
+
+---
+
+## Windows Portable ZIP Runtime Hardening (May 13, 2026)
+
+**Status:** Complete for CI packaging; clean-machine manual validation still required.
+
+**Decision:**
+
+- Chose app-local Microsoft VC runtime DLL bundling for the Windows alpha ZIP.
+- Deferred static `/MT` runtime linking for now because the Windows package needs a reliable first-pass clean-machine result across the GUI, offline renderer, transcoder, vendored libraries, and FetchContent-built dependencies, and that mixed-target validation was not yet proven.
+- NSIS/MSI remains intentionally deferred until the portable ZIP experience is confirmed.
+
+**What changed:**
+
+- Top-level CMake now uses `InstallRequiredSystemLibraries` on Windows packaging builds to stage the official redistributable MSVC runtime beside the packaged executables.
+- The Windows package now installs `LICENSE` alongside `README.md`.
+- `source/gui/imgui/src/main.cpp` gained `--package-self-test`, package-root diagnostics, temp/cache write testing, and `SpatialRoot-package-self-test.log`.
+- `source/gui/imgui/src/StartupLogger.cpp` / `StartupLogger.hpp` were added, and GUI startup/engine launch now write `SpatialRoot-startup.log`.
+- `source/gui/imgui/src/App.cpp` now checks the packaged Windows `resources/speaker_layouts/` path directly instead of falling through to repo-only discovery.
+- `.github/workflows/windows-package.yml` now verifies staged runtime DLLs, audits runtime dependencies, and runs the packaged self-test before zipping.
+
+**Why:**
+
+- CI build success alone was not enough. The original Windows ZIP launched on the build machine but failed on a clean Windows system with:
+  - `msvcp140.dll not found`
+  - `vcruntime140.dll not found`
+  - `vcruntime140_1.dll not found`
+- App-local bundling from the official Visual Studio redistributable locations gives a simpler alpha-user experience than requiring a manual VC++ Redistributable install.
 
 ---
 

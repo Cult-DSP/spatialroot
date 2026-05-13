@@ -34,6 +34,15 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 No Python toolchain required. Requires CMake 3.20+ and a C++17 compiler.
 
+### Windows Alpha ZIP
+
+The Windows alpha artifact is `SpatialRoot-alpha-v1-windows-x64.zip`.
+
+- Extract the ZIP to any normal folder on Windows 10/11 x64.
+- Launch `SpatialRoot.exe` directly from the extracted folder.
+- The ZIP now bundles the required Microsoft Visual C++ runtime DLLs app-locally, so a separate VC++ Redistributable install should not be needed for the normal alpha flow.
+- For a quick package check, run `.\SpatialRoot.exe --package-self-test` from PowerShell inside the extracted folder.
+
 After setup, binaries are at:
 
 | Binary                       | Path                                                                   |

@@ -220,6 +220,25 @@ message(STATUS "  DEVTOOLS (validation/smoke helpers)   : ${SPATIALROOT_BUILD_DE
 message(STATUS "=======================================")
 message(STATUS "")
 
+if(WIN32 AND SPATIALROOT_BUILD_GUI)
+    # Strategy B: bundle the official Microsoft VC runtime app-locally for the
+    # portable ZIP. This keeps the first Windows artifact double-clickable on a
+    # clean Windows 10/11 machine without requiring a manual VC++ redist install.
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ".")
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT SpatialRootRuntime)
+    set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    include(InstallRequiredSystemLibraries)
+
+    if(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+        message(STATUS "Windows app-local runtime files:")
+        foreach(_runtime_lib IN LISTS CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+            message(STATUS "  ${_runtime_lib}")
+        endforeach()
+    else()
+        message(WARNING "InstallRequiredSystemLibraries did not report any Windows runtime files.")
+    endif()
+endif()
+
 # ── CPack ZIP packaging (Windows x64 portable) ────────────────────────────────
 # Only configured on Windows. macOS packaging uses hdiutil (see internalDocs/PACKAGING.md).
 # CPack is gated on SPATIALROOT_BUILD_GUI because the app exe is the package root entry point.

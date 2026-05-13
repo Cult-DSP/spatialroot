@@ -22,10 +22,27 @@
 #include <GLFW/glfw3.h>
 
 #include "App.hpp"
+#include "StartupLogger.hpp"
 
+#include <algorithm>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
+#include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#else
+#include <unistd.h>
+#endif
+
+namespace fs = std::filesystem;
 
 #ifdef __APPLE__
 // Defined in FileDialog_macOS.mm — sets the Dock/app-switcher icon from embedded bytes.
@@ -43,7 +60,7 @@ static void glfwErrorCallback(int error, const char* description) {
 
 // ── Argument parsing ──────────────────────────────────────────────────────────
 static void printUsage(const char* prog) {
-    printf("Usage: %s [--root <project_root>] [--keep-temp-sessions] [--temp-root <path>] [--help]\n", prog);
+    printf("Usage: %s [--root <project_root>] [--keep-temp-sessions] [--temp-root <path>] [--package-self-test] [--help]\n", prog);
     printf("\n");
     printf("  --root <path>   Developer override for the spatialroot project root.\n");
     printf("                  Defaults to '.' and is only used after packaged\n");
@@ -53,6 +70,9 @@ static void printUsage(const char* prog) {
     printf("                  By default they are deleted on app close.\n");
     printf("  --temp-root <path>\n");
     printf("                  Developer override for the temp session root.\n");
+    printf("  --package-self-test\n");
+    printf("                  Verify packaged paths, helper binaries, resources,\n");
+    printf("                  temp/cache writability, and Windows runtime DLLs.\n");
     printf("  --help          Show this message.\n");
     printf("\n");
 }
@@ -61,6 +81,7 @@ struct AppLaunchOptions {
     std::string projectRoot = ".";
     bool keepTempSessions = false;
     std::string tempRootOverride;
+    bool packageSelfTest = false;
 };
 
 static AppLaunchOptions parseLaunchOptions(int argc, char* argv[]) {
@@ -76,18 +97,304 @@ static AppLaunchOptions parseLaunchOptions(int argc, char* argv[]) {
             opts.keepTempSessions = true;
         } else if ((strcmp(argv[i], "--temp-root") == 0) && (i + 1 < argc)) {
             opts.tempRootOverride = argv[++i];
+        } else if (strcmp(argv[i], "--package-self-test") == 0) {
+            opts.packageSelfTest = true;
         }
     }
     return opts;
 }
 
+static fs::path currentExecutablePath() {
+#ifdef _WIN32
+    std::wstring buffer(MAX_PATH, L'\0');
+    for (;;) {
+        const DWORD len = GetModuleFileNameW(nullptr, buffer.data(),
+                                             static_cast<DWORD>(buffer.size()));
+        if (len == 0) return {};
+        if (len < buffer.size() - 1) {
+            buffer.resize(len);
+            return fs::path(buffer);
+        }
+        buffer.resize(buffer.size() * 2);
+    }
+#elif defined(__APPLE__)
+    uint32_t size = 1024;
+    std::vector<char> buffer(size, '\0');
+    if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
+        buffer.assign(size, '\0');
+        if (_NSGetExecutablePath(buffer.data(), &size) != 0) return {};
+    }
+    return fs::weakly_canonical(fs::path(buffer.data()));
+#else
+    std::vector<char> buffer(1024, '\0');
+    for (;;) {
+        const ssize_t len = readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);
+        if (len < 0) return {};
+        if (static_cast<size_t>(len) < buffer.size() - 1) {
+            buffer[static_cast<size_t>(len)] = '\0';
+            return fs::path(buffer.data());
+        }
+        buffer.resize(buffer.size() * 2, '\0');
+    }
+#endif
+}
+
+static fs::path executableDirectory() {
+    const fs::path exe = currentExecutablePath();
+    return exe.empty() ? fs::path{} : exe.parent_path();
+}
+
+static fs::path macBundleResourcesDirectory() {
+#ifdef __APPLE__
+    const fs::path exeDir = executableDirectory();
+    if (exeDir.empty()) return {};
+    const fs::path contentsDir = exeDir.parent_path();
+    if (contentsDir.filename() != "Contents") return {};
+    const fs::path resourcesDir = contentsDir / "Resources";
+    std::error_code ec;
+    if (fs::exists(resourcesDir, ec)) return resourcesDir;
+#endif
+    return {};
+}
+
+static fs::path installPrefixFromExecutable() {
+    const fs::path exeDir = executableDirectory();
+    if (exeDir.empty() || exeDir.filename() != "bin") return {};
+    return exeDir.parent_path();
+}
+
+static std::string withExecutableSuffix(std::string name) {
+#ifdef _WIN32
+    name += ".exe";
+#endif
+    return name;
+}
+
+static void appendCandidate(std::vector<fs::path>& candidates, const fs::path& path) {
+    if (path.empty()) return;
+    if (std::find(candidates.begin(), candidates.end(), path) == candidates.end()) {
+        candidates.push_back(path);
+    }
+}
+
+static fs::path resolveAppRoot() {
+    if (const fs::path resourcesDir = macBundleResourcesDirectory(); !resourcesDir.empty()) {
+        return resourcesDir.parent_path().parent_path();
+    }
+    if (const fs::path installPrefix = installPrefixFromExecutable(); !installPrefix.empty()) {
+        return installPrefix;
+    }
+    return executableDirectory();
+}
+
+static fs::path resolveResourcesPath() {
+    if (const char* assetRoot = std::getenv("SPATIALROOT_ASSET_ROOT"); assetRoot && *assetRoot) {
+        return fs::path(assetRoot);
+    }
+    if (const fs::path resourcesDir = macBundleResourcesDirectory(); !resourcesDir.empty()) {
+        return resourcesDir;
+    }
+    if (const fs::path installPrefix = installPrefixFromExecutable(); !installPrefix.empty()) {
+        return installPrefix / "share" / "spatialroot";
+    }
+    if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        return exeDir / "resources";
+    }
+    return {};
+}
+
+static fs::path resolveLayoutsPath(const std::string& projectRoot) {
+    std::vector<fs::path> candidates;
+    const fs::path resourcesPath = resolveResourcesPath();
+    if (!resourcesPath.empty()) {
+        appendCandidate(candidates, resourcesPath / "speaker_layouts");
+        appendCandidate(candidates, resourcesPath / "source" / "speaker_layouts");
+    }
+    if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        appendCandidate(candidates, exeDir / "speaker_layouts");
+        appendCandidate(candidates, exeDir.parent_path() / "share" / "spatialroot" / "speaker_layouts");
+    }
+    appendCandidate(candidates, fs::path(projectRoot) / "source" / "speaker_layouts");
+
+    std::error_code ec;
+    for (const auto& candidate : candidates) {
+        if (fs::exists(candidate, ec)) return candidate;
+        ec.clear();
+    }
+    return candidates.empty() ? fs::path{} : candidates.front();
+}
+
+static fs::path findCultTranscoder(const std::string& projectRoot) {
+    if (const char* env = std::getenv("SPATIALROOT_CULT_TRANSCODER"); env && *env) {
+        return fs::path(env);
+    }
+
+    std::vector<fs::path> candidates;
+    if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        appendCandidate(candidates, exeDir / withExecutableSuffix("cult-transcoder"));
+        appendCandidate(candidates, exeDir.parent_path() / "libexec" / "spatialroot" /
+                                    withExecutableSuffix("cult-transcoder"));
+    }
+    if (const fs::path resourcesDir = macBundleResourcesDirectory(); !resourcesDir.empty()) {
+        appendCandidate(candidates, resourcesDir / "bin" / withExecutableSuffix("cult-transcoder"));
+    }
+    appendCandidate(candidates, fs::path(projectRoot) / "build" / "internal" / "cult_transcoder" /
+                                withExecutableSuffix("cult-transcoder"));
+    appendCandidate(candidates, fs::path(projectRoot) / "internal" / "cult_transcoder" / "build" /
+                                withExecutableSuffix("cult-transcoder"));
+
+    std::error_code ec;
+    for (const auto& candidate : candidates) {
+        if (fs::exists(candidate, ec)) return candidate;
+        ec.clear();
+    }
+    return candidates.empty() ? fs::path{} : candidates.front();
+}
+
+static fs::path findSpatialRenderer(const std::string& projectRoot) {
+    if (const char* env = std::getenv("SPATIALROOT_SPATIAL_RENDER"); env && *env) {
+        return fs::path(env);
+    }
+
+    std::vector<fs::path> candidates;
+    if (const fs::path exeDir = executableDirectory(); !exeDir.empty()) {
+        appendCandidate(candidates, exeDir / withExecutableSuffix("spatialroot_spatial_render"));
+        appendCandidate(candidates, exeDir.parent_path() / "bin" /
+                                    withExecutableSuffix("spatialroot_spatial_render"));
+    }
+    appendCandidate(candidates, fs::path(projectRoot) / "build" / "source" / "spatial_engine" /
+                                "spatialRender" / withExecutableSuffix("spatialroot_spatial_render"));
+
+    std::error_code ec;
+    for (const auto& candidate : candidates) {
+        if (fs::exists(candidate, ec)) return candidate;
+        ec.clear();
+    }
+    return candidates.empty() ? fs::path{} : candidates.front();
+}
+
+static bool canWriteTestFile(const fs::path& root, fs::path& testFileOut, std::string& errorOut) {
+    std::error_code ec;
+    fs::create_directories(root, ec);
+    if (ec) {
+        errorOut = ec.message();
+        return false;
+    }
+
+    testFileOut = root / "SpatialRoot-package-self-test.tmp";
+    std::ofstream out(testFileOut, std::ios::trunc);
+    if (!out) {
+        errorOut = "failed to open file for writing";
+        return false;
+    }
+    out << "Spatial Root package self-test\n";
+    out.close();
+
+    fs::remove(testFileOut, ec);
+    if (ec) errorOut = "write succeeded, cleanup failed: " + ec.message();
+    return true;
+}
+
+static int runPackageSelfTest(const AppLaunchOptions& launchOptions) {
+    const fs::path exePath = currentExecutablePath();
+    const fs::path exeDir = executableDirectory();
+    const fs::path appRoot = resolveAppRoot();
+    const fs::path resourcesPath = resolveResourcesPath();
+    const fs::path layoutsPath = resolveLayoutsPath(launchOptions.projectRoot);
+    const fs::path cultPath = findCultTranscoder(launchOptions.projectRoot);
+    const fs::path rendererPath = findSpatialRenderer(launchOptions.projectRoot);
+    const fs::path cacheRoot = SpatialRootPaths::cacheRoot(launchOptions.tempRootOverride);
+
+    std::error_code ec;
+    const fs::path cwd = fs::current_path(ec);
+
+    fs::path tempTestFile;
+    std::string tempWriteError;
+    const bool tempWritable = canWriteTestFile(cacheRoot, tempTestFile, tempWriteError);
+
+    std::ostringstream report;
+    report << "Spatial Root package self-test\n";
+    report << "executable path: " << (exePath.empty() ? "<unresolved>" : exePath.string()) << '\n';
+    report << "app root: " << (appRoot.empty() ? "<unresolved>" : appRoot.string()) << '\n';
+    report << "resources path: " << (resourcesPath.empty() ? "<unresolved>" : resourcesPath.string()) << '\n';
+    report << "resources exist: " << (fs::exists(resourcesPath) ? "yes" : "no") << '\n';
+    report << "layouts path: " << (layoutsPath.empty() ? "<unresolved>" : layoutsPath.string()) << '\n';
+    report << "layouts exist: " << (fs::exists(layoutsPath) ? "yes" : "no") << '\n';
+    report << "cult-transcoder path: " << (cultPath.empty() ? "<unresolved>" : cultPath.string()) << '\n';
+    report << "cult-transcoder exists: " << (fs::exists(cultPath) ? "yes" : "no") << '\n';
+    report << "spatial-render/helper path: " << (rendererPath.empty() ? "<unresolved>" : rendererPath.string()) << '\n';
+    report << "spatial-render/helper exists: " << (fs::exists(rendererPath) ? "yes" : "no") << '\n';
+    report << "current working directory: " << (cwd.empty() ? "<unresolved>" : cwd.string()) << '\n';
+    report << "writable temp/cache path: " << cacheRoot.string() << '\n';
+    report << "temp/cache write test: " << (tempWritable ? "ok" : "failed") << '\n';
+    if (!tempWritable && !tempWriteError.empty()) {
+        report << "temp/cache write error: " << tempWriteError << '\n';
+    }
+
+#ifdef _WIN32
+    const char* runtimeDlls[] = {
+        "msvcp140.dll",
+        "vcruntime140.dll",
+        "vcruntime140_1.dll",
+    };
+    for (const char* dll : runtimeDlls) {
+        report << "runtime dll " << dll << ": "
+               << (fs::exists(exeDir / dll) ? "present" : "missing") << '\n';
+    }
+#endif
+
+    const std::string reportText = report.str();
+    printf("%s", reportText.c_str());
+
+    fs::path logPath = appRoot / "SpatialRoot-package-self-test.log";
+    if (appRoot.empty()) logPath = "SpatialRoot-package-self-test.log";
+    std::ofstream logOut(logPath, std::ios::trunc);
+    if (logOut) logOut << reportText;
+
+    const bool ok = fs::exists(resourcesPath) &&
+                    fs::exists(layoutsPath) &&
+                    fs::exists(cultPath) &&
+                    fs::exists(rendererPath) &&
+                    tempWritable;
+#ifdef _WIN32
+    const bool runtimeOk = fs::exists(exeDir / "msvcp140.dll") &&
+                           fs::exists(exeDir / "vcruntime140.dll") &&
+                           fs::exists(exeDir / "vcruntime140_1.dll");
+    return (ok && runtimeOk) ? 0 : 1;
+#else
+    return ok ? 0 : 1;
+#endif
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 int main(int argc, char* argv[]) {
     const AppLaunchOptions launchOptions = parseLaunchOptions(argc, argv);
+    const fs::path exePath = currentExecutablePath();
+    const fs::path appRoot = resolveAppRoot();
+    const fs::path resourcesPath = resolveResourcesPath();
+    const fs::path cultPath = findCultTranscoder(launchOptions.projectRoot);
+    const fs::path rendererPath = findSpatialRenderer(launchOptions.projectRoot);
 
+    StartupLogger::initialize(appRoot);
+    StartupLogger::append("startup entered");
+    StartupLogger::append("resolved executable path: " + (exePath.empty() ? std::string("<unresolved>") : exePath.string()));
+    StartupLogger::append("resolved app root: " + (appRoot.empty() ? std::string("<unresolved>") : appRoot.string()));
+    StartupLogger::append("resolved resources directory: " + (resourcesPath.empty() ? std::string("<unresolved>") : resourcesPath.string()));
+    StartupLogger::append("helper binary check cult-transcoder: " + (cultPath.empty() ? std::string("<unresolved>") : cultPath.string()) +
+                          " (exists=" + (fs::exists(cultPath) ? "yes" : "no") + ")");
+    StartupLogger::append("helper binary check spatial-render: " + (rendererPath.empty() ? std::string("<unresolved>") : rendererPath.string()) +
+                          " (exists=" + (fs::exists(rendererPath) ? "yes" : "no") + ")");
+
+    if (launchOptions.packageSelfTest) {
+        StartupLogger::append("package self-test requested");
+        return runPackageSelfTest(launchOptions);
+    }
+
+    StartupLogger::append("GUI init start");
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit()) {
         fprintf(stderr, "[main] glfwInit() failed\n");
+        StartupLogger::append("last successful startup step before failure: GUI init start");
         return 1;
     }
 
@@ -111,11 +418,13 @@ int main(int argc, char* argv[]) {
     if (!window) {
         fprintf(stderr, "[main] glfwCreateWindow() failed\n");
         glfwTerminate();
+        StartupLogger::append("last successful startup step before failure: glfwInit");
         return 1;
     }
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);  // vsync
+    StartupLogger::append("window + OpenGL context ready");
 
     // ── Dear ImGui setup ─────────────────────────────────────────────────────
     IMGUI_CHECKVERSION();
@@ -213,11 +522,13 @@ int main(int argc, char* argv[]) {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+    StartupLogger::append("ImGui init complete");
 
     // ── App setup ────────────────────────────────────────────────────────────
     App app(launchOptions.projectRoot,
             launchOptions.keepTempSessions,
             launchOptions.tempRootOverride);
+    StartupLogger::append("startup complete; audio/backend init deferred until engine start");
 
     // Wire GLFW window close callback → App::requestShutdown()
     // IMPORTANT: Must call session.shutdown() before the process exits to avoid

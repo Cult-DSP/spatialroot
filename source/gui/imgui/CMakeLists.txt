@@ -64,6 +64,7 @@ set(APP_SOURCES
     src/App.cpp
     src/DefaultLayoutManager.cpp
     src/SpatialRootPaths.cpp
+    src/StartupLogger.cpp
     src/SubprocessRunner.cpp
     src/FileDialog.cpp
     src/stb_image_impl.cpp
@@ -171,7 +172,9 @@ elseif(WIN32)
         DESTINATION "resources"
         COMPONENT SpatialRootRuntime
     )
-    install(FILES "${CMAKE_SOURCE_DIR}/README.md"
+    install(FILES
+        "${CMAKE_SOURCE_DIR}/README.md"
+        "${CMAKE_SOURCE_DIR}/LICENSE"
         DESTINATION .
         COMPONENT SpatialRootRuntime
     )

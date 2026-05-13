@@ -118,11 +118,11 @@ Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OS
 
 **Build:** `./init.sh` then `./build.sh --gui`. **Run:** `./run.sh`.
 
-**GUI path resolution (packaging audit complete — May 2026):**
+**GUI path resolution (Windows portable ZIP hardening complete — May 13, 2026):**
 
 | Path | How resolved | Packaged-build override |
 |------|--------------|------------------------|
-| `source/speaker_layouts/**` (layout presets) | `SPATIALROOT_ASSET_ROOT / kLayoutPaths[i]`, falls back to `mProjectRoot / kLayoutPaths[i]` | Set `SPATIALROOT_ASSET_ROOT` to the directory containing `source/speaker_layouts/` |
+| `source/speaker_layouts/**` (layout presets) | `SPATIALROOT_ASSET_ROOT`, packaged `resources/speaker_layouts/`, install-tree `share/spatialroot/speaker_layouts/`, then repo fallback | Set `SPATIALROOT_ASSET_ROOT` only when testing nonstandard layouts |
 | `cult-transcoder` binary | `SPATIALROOT_CULT_TRANSCODER` env var, falls back to `build/internal/cult_transcoder/cult-transcoder` | Set `SPATIALROOT_CULT_TRANSCODER=/path/to/cult-transcoder` |
 | `spatialroot_spatial_render` binary | `SPATIALROOT_SPATIAL_RENDER` env var, falls back to `build/source/spatial_engine/spatialRender/…` | Set `SPATIALROOT_SPATIAL_RENDER=/path/to/spatialroot_spatial_render` |
 | Temp sessions root | `SpatialRootPaths::defaultCacheRoot()` (platform XDG/AppData paths) | `SPATIALROOT_TEMP_ROOT` |
@@ -130,7 +130,7 @@ Native GUI linking `EngineSessionCore` directly in-process. No subprocess, no OS
 
 **Developer path:** run from repo root (or pass `--root /path/to/repo`). No env vars required.
 
-**Packaged path:** set env vars before launch, or (future) CMake install rules to stage assets and binaries next to the GUI executable. CMake install rules not yet implemented — deferred to distribution pass.
+**Packaged path:** the Windows alpha ZIP now stages `SpatialRoot.exe`, `cult-transcoder.exe`, `spatialroot_spatial_render.exe`, `resources/`, `README.md`, `LICENSE`, and the official Microsoft VC runtime DLLs in one flat package root. Users should not need to set env vars for the normal ZIP flow. NSIS/MSI remains deferred until the portable ZIP is proven.
 
 ### `cult-transcoder` — ADM ↔ LUSID Tool
 
