@@ -3,9 +3,8 @@
 //
 // Runs a subprocess (e.g. cult-transcoder) on a background thread and streams
 // its stdout+stderr to an OutputCallback, one line at a time.
-// On POSIX, the process is launched with a real argv vector (no shell), so
-// spaces and shell metacharacters in paths are preserved verbatim.
-// On Windows, the current implementation falls back to _popen().
+// On both POSIX and Windows, the process is launched without routing through
+// the shell, so spaces and shell metacharacters in paths are preserved.
 //
 // Thread safety: OutputCallback is called from the background thread.
 // The caller is responsible for protecting any shared state the callback touches

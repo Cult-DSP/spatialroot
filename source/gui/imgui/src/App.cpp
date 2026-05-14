@@ -634,11 +634,16 @@ void App::renderEngineTab() {
         if (mSourceIsAdm) { ImGui::SameLine(); ImGui::TextColored(kGreen, "ADM"); }
         else if (mSourceIsLusid) { ImGui::SameLine(); ImGui::TextColored(kGreen, "LUSID"); }
         ImGui::SameLine(120.f);
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 78.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 180.f);
         if (ImGui::InputText("##source", &mSourcePath)) detectSource();
         ImGui::SameLine();
-        if (ImGui::Button("Browse##src")) {
-            const std::string p = pickFileOrDirectory("Select Audio Source");
+        if (ImGui::Button("Browse File##src")) {
+            const std::string p = pickFile("Select ADM WAV", {"*.wav"}, "WAV files");
+            if (!p.empty()) { mSourcePath = p; detectSource(); }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Browse Package##src")) {
+            const std::string p = pickDirectory("Select LUSID Package Directory");
             if (!p.empty()) { mSourcePath = p; detectSource(); }
         }
         if (!mSourceHint.empty()) {
@@ -646,6 +651,8 @@ void App::renderEngineTab() {
             ImGui::SetCursorPosX(120.f);
             ImGui::TextColored(isError ? kRed : kGreen, "%s", mSourceHint.c_str());
         }
+        ImGui::SetCursorPosX(120.f);
+        ImGui::TextDisabled("Use a .wav file for ADM input or a folder containing scene.lusid.json for a LUSID package.");
         ImGui::SetCursorPosX(120.f);
         if (ImGui::Button("Download Atmos Examples##atmosdl")) {
 #ifdef __APPLE__

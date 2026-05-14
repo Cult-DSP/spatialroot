@@ -35,6 +35,44 @@ That failure confirmed an important packaging gap: CI build success did not prov
 - The staged DLLs come from the Visual Studio / MSVC redistributable locations discovered by that module on the `windows-2022` runner.
 - The install destination is the package root, beside `SpatialRoot.exe`.
 
+---
+
+## Additional Windows Hardening In This Pass
+
+This pass also fixed several Windows-specific runtime issues beyond the VC runtime packaging problem.
+
+### Subprocess launching
+
+- [source/gui/imgui/src/SubprocessRunner.cpp](../source/gui/imgui/src/SubprocessRunner.cpp) no longer uses `_popen()` on Windows.
+- The GUI now launches helper binaries with `CreateProcessW` and captures stdout/stderr through inherited pipes.
+- This removes the previous `cmd.exe` quoting fragility for paths containing spaces and shell metacharacters.
+
+### File dialogs and path length
+
+- [source/gui/imgui/src/FileDialog.cpp](../source/gui/imgui/src/FileDialog.cpp) now uses `IFileOpenDialog` on Windows instead of `GetOpenFileNameA` / `SHBrowseForFolderA`.
+- This removes the fixed `MAX_PATH` picker buffers from the main Windows file/directory selection path.
+- The misleading combined file-or-directory helper was also changed so it no longer behaves like a surprising folder-only picker on Windows.
+
+### JSON and layout validation
+
+- [source/spatial_engine/src/JSONLoader.cpp](../source/spatial_engine/src/JSONLoader.cpp) now validates LUSID scene structure more explicitly:
+  - requires a JSON object root
+  - requires `frames` to be an array
+  - validates top-level field types
+  - skips malformed frames/nodes with warnings where safe
+  - throws a clear error if no valid renderable sources remain
+- [source/spatial_engine/src/LayoutLoader.cpp](../source/spatial_engine/src/LayoutLoader.cpp) now validates speaker layout JSON with field-specific errors instead of assuming all arrays/fields exist.
+
+### WAV / ADM path opening
+
+- [source/spatial_engine/src/SndFileHelpers.hpp](../source/spatial_engine/src/SndFileHelpers.hpp) was added so Windows libsndfile reads/writes use `sf_wchar_open`.
+- The shared WAV/open paths in:
+  - [source/spatial_engine/src/WavUtils.cpp](../source/spatial_engine/src/WavUtils.cpp)
+  - [source/spatial_engine/realtimeEngine/src/Streaming.hpp](../source/spatial_engine/realtimeEngine/src/Streaming.hpp)
+  - [source/spatial_engine/realtimeEngine/src/MultichannelReader.hpp](../source/spatial_engine/realtimeEngine/src/MultichannelReader.hpp)
+  now route through that helper.
+- This hardens Windows ADM/WAV file access alongside the JSON/package path fixes.
+
 **Expected app-local DLLs in the ZIP:**
 
 - `msvcp140.dll`
@@ -200,8 +238,16 @@ Current Windows packaging flow:
 - [source/gui/imgui/CMakeLists.txt](../source/gui/imgui/CMakeLists.txt)
 - [source/gui/imgui/src/main.cpp](../source/gui/imgui/src/main.cpp)
 - [source/gui/imgui/src/App.cpp](../source/gui/imgui/src/App.cpp)
+- [source/gui/imgui/src/FileDialog.cpp](../source/gui/imgui/src/FileDialog.cpp)
+- [source/gui/imgui/src/SubprocessRunner.cpp](../source/gui/imgui/src/SubprocessRunner.cpp)
 - [source/gui/imgui/src/StartupLogger.hpp](../source/gui/imgui/src/StartupLogger.hpp)
 - [source/gui/imgui/src/StartupLogger.cpp](../source/gui/imgui/src/StartupLogger.cpp)
+- [source/spatial_engine/src/JSONLoader.cpp](../source/spatial_engine/src/JSONLoader.cpp)
+- [source/spatial_engine/src/LayoutLoader.cpp](../source/spatial_engine/src/LayoutLoader.cpp)
+- [source/spatial_engine/src/WavUtils.cpp](../source/spatial_engine/src/WavUtils.cpp)
+- [source/spatial_engine/src/SndFileHelpers.hpp](../source/spatial_engine/src/SndFileHelpers.hpp)
+- [source/spatial_engine/realtimeEngine/src/Streaming.hpp](../source/spatial_engine/src/../realtimeEngine/src/Streaming.hpp)
+- [source/spatial_engine/realtimeEngine/src/MultichannelReader.hpp](../source/spatial_engine/src/../realtimeEngine/src/MultichannelReader.hpp)
 - [cmake/VerifyWindowsPackage.cmake](../cmake/VerifyWindowsPackage.cmake)
 - [.github/workflows/windows-package.yml](../.github/workflows/windows-package.yml)
 - [README.md](../README.md)
@@ -248,6 +294,7 @@ cd "C:\Users\Lucian\Downloads\Spatial Root Alpha Test"
 - Windows audio backend behavior still needs real-user validation on a non-builder machine.
 - If a future dependency becomes dynamically linked on Windows, the package audit must be kept strict so new DLL requirements are staged intentionally.
 - A dedicated future pass can re-evaluate static `/MT` runtime linking once the portable ZIP baseline is proven.
+- Windows Unicode-path behavior is improved for libsndfile-backed WAV/ADM opens and the native file picker, but the wider app still carries some narrow-string path plumbing. Non-ASCII path testing on a real Windows machine is still recommended.
 
 ---
 

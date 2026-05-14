@@ -37,6 +37,7 @@
 #include <vector>
 
 #include <sndfile.h>  // via Gamma (AlloLib external)
+#include "../../src/SndFileHelpers.hpp"
 
 // Forward declaration — full definition in Streaming.hpp
 struct SourceStream;
@@ -63,7 +64,7 @@ public:
 
         // Open file
         mSfInfo = {};
-        mSndFile = sf_open(path.c_str(), SFM_READ, &mSfInfo);
+        mSndFile = spatialroot::openSndFileRead(path, &mSfInfo);
         if (!mSndFile) {
             std::cerr << "[MultichannelReader] ERROR: Cannot open WAV: " << path
                       << " — " << sf_strerror(nullptr) << std::endl;
@@ -234,4 +235,3 @@ private:
     // Not all channels need to be mapped (empty channels are skipped).
     std::map<int, SourceStream*> mChannelMap;
 };
-

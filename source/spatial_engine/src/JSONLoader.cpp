@@ -5,7 +5,11 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 
+#include "SndFileHelpers.hpp"
+
 using json = nlohmann::json;
+
+namespace fs = std::filesystem;
 
 // Helper to check if a value is finite
 static bool isFiniteValue(double v) {
@@ -44,22 +48,44 @@ static std::pair<TimeUnit, double> parseTimeUnit(const std::string& timeUnitStr,
     return {unit, multiplier};
 }
 
+static json readJsonObjectFromFile(const std::string& path, const char* label) {
+    const fs::path fsPath = spatialroot::pathFromString(path);
+    std::ifstream f(fsPath, std::ios::binary);
+    if (!f.good()) {
+        throw std::runtime_error(std::string("Cannot open ") + label + ": " + path);
+    }
+
+    try {
+        const json j = json::parse(f, nullptr, true, true);
+        if (!j.is_object()) {
+            throw std::runtime_error(std::string(label) + " root must be a JSON object.");
+        }
+        return j;
+    } catch (const json::parse_error& e) {
+        throw std::runtime_error(std::string("Failed to parse ") + label + ": " + e.what());
+    } catch (const json::exception& e) {
+        throw std::runtime_error(std::string("Invalid ") + label + ": " + e.what());
+    }
+}
+
 // ============================================================================
 // NEW: Load LUSID scene format (v0.5+)
 // ============================================================================
 
 SpatialData JSONLoader::loadLusidScene(const std::string &path) {
-    std::ifstream f(path);
-    if (!f.good()) throw std::runtime_error("Cannot open LUSID scene JSON: " + path);
-
-    json j;
-    f >> j;
+    const json j = readJsonObjectFromFile(path, "LUSID scene JSON");
 
     SpatialData d;
 
     // Parse top-level fields
+    if (j.contains("sampleRate") && !j["sampleRate"].is_number_integer()) {
+        throw std::runtime_error("LUSID scene JSON field 'sampleRate' must be an integer.");
+    }
     d.sampleRate = j.value("sampleRate", 48000);
 
+    if (j.contains("timeUnit") && !j["timeUnit"].is_string()) {
+        throw std::runtime_error("LUSID scene JSON field 'timeUnit' must be a string.");
+    }
     std::string timeUnitStr = j.value("timeUnit", "seconds");
     auto [timeUnit, timeMultiplier] = parseTimeUnit(timeUnitStr, d.sampleRate);
     d.timeUnit = timeUnit;
@@ -68,35 +94,65 @@ SpatialData JSONLoader::loadLusidScene(const std::string &path) {
     if (j.contains("duration") && j["duration"].is_number()) {
         d.duration = j["duration"].get<double>();
         std::cout << "LUSID scene duration: " << d.duration << " seconds\n";
+    } else if (j.contains("duration")) {
+        throw std::runtime_error("LUSID scene JSON field 'duration' must be numeric.");
     } else {
         d.duration = -1.0; // Not specified, will fall back to WAV file length
     }
 
+    if (j.contains("version") && !j["version"].is_string()) {
+        throw std::runtime_error("LUSID scene JSON field 'version' must be a string.");
+    }
     std::string version = j.value("version", "0.5");
     std::cout << "Loading LUSID scene v" << version << "\n";
 
     if (!j.contains("frames") || !j["frames"].is_array()) {
-        std::cerr << "Warning: LUSID scene has no 'frames' array\n";
-        return d;
+        throw std::runtime_error("LUSID scene JSON must contain a 'frames' array.");
     }
 
     int totalSources = 0;
     int totalDropped = 0;
+    int totalWarnings = 0;
 
     // Iterate over frames
-    for (auto &frame : j["frames"]) {
+    for (size_t frameIndex = 0; frameIndex < j["frames"].size(); ++frameIndex) {
+        auto &frame = j["frames"][frameIndex];
+        if (!frame.is_object()) {
+            std::cerr << "Warning: frame[" << frameIndex << "] is not an object, skipping\n";
+            totalWarnings++;
+            continue;
+        }
         if (!frame.contains("time") || !frame["time"].is_number()) {
-            std::cerr << "Warning: frame missing 'time', skipping\n";
+            std::cerr << "Warning: frame[" << frameIndex << "] missing numeric 'time', skipping\n";
+            totalWarnings++;
             continue;
         }
         double frameTime = frame["time"].get<double>() * timeMultiplier;
 
         if (!frame.contains("nodes") || !frame["nodes"].is_array()) {
+            std::cerr << "Warning: frame[" << frameIndex << "] missing 'nodes' array, skipping\n";
+            totalWarnings++;
             continue;
         }
 
-        for (auto &node : frame["nodes"]) {
-            if (!node.contains("id") || !node.contains("type")) {
+        for (size_t nodeIndex = 0; nodeIndex < frame["nodes"].size(); ++nodeIndex) {
+            auto &node = frame["nodes"][nodeIndex];
+            if (!node.is_object()) {
+                std::cerr << "Warning: frame[" << frameIndex << "].nodes[" << nodeIndex
+                          << "] is not an object, skipping\n";
+                totalWarnings++;
+                continue;
+            }
+            if (!node.contains("id") || !node["id"].is_string()) {
+                std::cerr << "Warning: frame[" << frameIndex << "].nodes[" << nodeIndex
+                          << "] missing string 'id', skipping\n";
+                totalWarnings++;
+                continue;
+            }
+            if (!node.contains("type") || !node["type"].is_string()) {
+                std::cerr << "Warning: frame[" << frameIndex << "].nodes[" << nodeIndex
+                          << "] missing string 'type', skipping\n";
+                totalWarnings++;
                 continue;
             }
 
@@ -107,6 +163,13 @@ SpatialData JSONLoader::loadLusidScene(const std::string &path) {
             if (nodeType == "audio_object" || nodeType == "direct_speaker") {
                 if (!node.contains("cart") || !node["cart"].is_array() || node["cart"].size() < 3) {
                     totalDropped++;
+                    totalWarnings++;
+                    continue;
+                }
+                if (!node["cart"][0].is_number() || !node["cart"][1].is_number() || !node["cart"][2].is_number()) {
+                    totalDropped++;
+                    totalWarnings++;
+                    std::cerr << "Warning: node '" << nodeId << "' has non-numeric cart coordinates, skipping\n";
                     continue;
                 }
 
@@ -183,8 +246,14 @@ SpatialData JSONLoader::loadLusidScene(const std::string &path) {
     if (totalDropped > 0) {
         std::cerr << "Total invalid keyframes dropped: " << totalDropped << "\n";
     }
+    if (totalWarnings > 0) {
+        std::cerr << "Total LUSID warnings: " << totalWarnings << "\n";
+    }
 
     bool hasLFE = d.sources.find("LFE") != d.sources.end();
+    if (d.sources.empty()) {
+        throw std::runtime_error("LUSID scene JSON contained no valid renderable sources.");
+    }
     std::cout << "Loaded LUSID scene: " << totalSources << " spatial sources"
               << (hasLFE ? " + LFE" : "") << "\n";
 
@@ -201,11 +270,7 @@ SpatialData JSONLoader::loadSpatialInstructions(const std::string &path) {
     std::cerr << "WARNING: loadSpatialInstructions() is deprecated. Use loadLusidScene() instead.\n";
 
     // Parse old format inline (same logic as old_schema_loader/JSONLoader.cpp)
-    std::ifstream f(path);
-    if (!f.good()) throw std::runtime_error("Cannot open spatial JSON");
-
-    json j;
-    f >> j;
+    const json j = readJsonObjectFromFile(path, "spatial JSON");
 
     SpatialData d;
     d.sampleRate = j["sampleRate"];

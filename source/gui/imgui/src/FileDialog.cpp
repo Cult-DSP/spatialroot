@@ -5,99 +5,131 @@
 // macOS: implemented in FileDialog_macOS.mm (NSOpenPanel via Objective-C++).
 // Windows and Linux implementations follow.
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Windows — Win32 OPENFILENAME dialog
-// ─────────────────────────────────────────────────────────────────────────────
 #if defined(_WIN32)
 
 #ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <commdlg.h>    // GetOpenFileName — linked via Comdlg32 (see CMakeLists.txt)
-#include <shlobj.h>
+#include <shobjidl.h>
 
-std::string pickFile(const std::string&              title,
-                     const std::vector<std::string>& filterPatterns,
-                     const std::string&              filterDescription) {
-    // Build double-null-terminated filter string: "Description\0*.ext1;*.ext2\0\0"
-    std::string filterStr;
-    if (!filterDescription.empty() && !filterPatterns.empty()) {
-        filterStr += filterDescription;
-        filterStr += '\0';
-        for (size_t i = 0; i < filterPatterns.size(); ++i) {
-            if (i > 0) filterStr += ';';
-            filterStr += filterPatterns[i];
-        }
-        filterStr += '\0';
+namespace {
+std::wstring wideFromUtf8OrAnsi(const std::string& input) {
+    if (input.empty()) return {};
+
+    int len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.c_str(), -1, nullptr, 0);
+    if (len > 0) {
+        std::wstring out(static_cast<size_t>(len), L'\0');
+        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, input.c_str(), -1, out.data(), len);
+        out.resize(static_cast<size_t>(len - 1));
+        return out;
     }
-    filterStr += '\0';  // double null terminate
 
-    char szFile[MAX_PATH] = {};
-    OPENFILENAMEA ofn    = {};
-    ofn.lStructSize      = sizeof(ofn);
-    ofn.lpstrFilter      = filterStr.size() > 1 ? filterStr.c_str() : nullptr;
-    ofn.lpstrFile        = szFile;
-    ofn.nMaxFile         = MAX_PATH;
-    ofn.lpstrTitle       = title.c_str();
-    ofn.Flags            = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+    len = MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, out.data(), len);
+    out.resize(static_cast<size_t>(len - 1));
+    return out;
+}
 
-    if (GetOpenFileNameA(&ofn))
-        return std::string(szFile);
-    return {};
+std::string narrowAnsiFromWide(const std::wstring& input) {
+    if (input.empty()) return {};
+    const int len = WideCharToMultiByte(CP_ACP, 0, input.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return {};
+    std::string out(static_cast<size_t>(len), '\0');
+    WideCharToMultiByte(CP_ACP, 0, input.c_str(), -1, out.data(), len, nullptr, nullptr);
+    out.resize(static_cast<size_t>(len - 1));
+    return out;
+}
+
+class ScopedComInit {
+public:
+    ScopedComInit() {
+        mHr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    }
+    ~ScopedComInit() {
+        if (SUCCEEDED(mHr)) CoUninitialize();
+    }
+    bool ok() const { return SUCCEEDED(mHr) || mHr == RPC_E_CHANGED_MODE; }
+
+private:
+    HRESULT mHr = E_FAIL;
+};
+
+std::string runFileDialog(const std::wstring& title,
+                          const std::vector<std::string>& filterPatterns,
+                          const std::string& filterDescription,
+                          bool pickFolders) {
+    ScopedComInit com;
+    if (!com.ok()) return {};
+
+    IFileOpenDialog* dialog = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
+                                  IID_PPV_ARGS(&dialog));
+    if (FAILED(hr)) return {};
+
+    dialog->SetTitle(title.c_str());
+
+    DWORD opts = 0;
+    dialog->GetOptions(&opts);
+    opts |= FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST;
+    if (pickFolders) opts |= FOS_PICKFOLDERS;
+    dialog->SetOptions(opts);
+
+    std::vector<std::wstring> widePatterns;
+    std::vector<COMDLG_FILTERSPEC> specs;
+    std::wstring descriptionWide = wideFromUtf8OrAnsi(filterDescription);
+    if (!pickFolders && !filterPatterns.empty() && !descriptionWide.empty()) {
+        std::wstring joined;
+        widePatterns.reserve(filterPatterns.size());
+        for (size_t i = 0; i < filterPatterns.size(); ++i) {
+            widePatterns.push_back(wideFromUtf8OrAnsi(filterPatterns[i]));
+            if (i > 0) joined += L';';
+            joined += widePatterns.back();
+        }
+        widePatterns.push_back(joined);
+        specs.push_back(COMDLG_FILTERSPEC{descriptionWide.c_str(), widePatterns.back().c_str()});
+        dialog->SetFileTypes(static_cast<UINT>(specs.size()), specs.data());
+        dialog->SetFileTypeIndex(1);
+    }
+
+    std::string result;
+    if (dialog->Show(nullptr) == S_OK) {
+        IShellItem* item = nullptr;
+        if (dialog->GetResult(&item) == S_OK) {
+            PWSTR path = nullptr;
+            if (item->GetDisplayName(SIGDN_FILESYSPATH, &path) == S_OK) {
+                result = narrowAnsiFromWide(path);
+                CoTaskMemFree(path);
+            }
+            item->Release();
+        }
+    }
+
+    dialog->Release();
+    return result;
+}
+}
+
+std::string pickFile(const std::string& title,
+                     const std::vector<std::string>& filterPatterns,
+                     const std::string& filterDescription) {
+    return runFileDialog(wideFromUtf8OrAnsi(title), filterPatterns, filterDescription, false);
 }
 
 std::string pickFileOrDirectory(const std::string& title) {
-    // Use IFileOpenDialog with FOS_PICKFOLDERS | FOS_ALLFILESYSTEMED to allow both files and folders.
-    // Double-clicking a folder navigates into it; selecting and clicking Open returns the path.
-    IFileOpenDialog* pDialog = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDialog));
-    if (FAILED(hr)) return {};
-
-    wchar_t titleW[MAX_PATH] = {};
-    mbstowcs_s(nullptr, titleW, title.c_str(), MAX_PATH - 1);
-    pDialog->SetTitle(titleW);
-    DWORD opts = 0;
-    pDialog->GetOptions(&opts);
-    pDialog->SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
-
-    if (pDialog->Show(nullptr) == S_OK) {
-        IShellItem* pItem = nullptr;
-        if (pDialog->GetResult(&pItem) == S_OK) {
-            PWSTR pszPath = nullptr;
-            if (pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszPath) == S_OK) {
-                char pathA[MAX_PATH] = {};
-                wcstombs_s(nullptr, pathA, pszPath, MAX_PATH - 1);
-                std::string result(pathA);
-                CoTaskMemFree(pszPath);
-                pItem->Release();
-                pDialog->Release();
-                return result;
-            }
-            pItem->Release();
-        }
-    }
-    pDialog->Release();
-    return {};
+    // Windows has no simple standard native dialog that truly allows both a
+    // file and a folder selection in one picker without custom UI. Prefer the
+    // explicit file/package buttons in the app; this fallback behaves as a
+    // file picker to avoid surprising folder-only behavior.
+    return runFileDialog(wideFromUtf8OrAnsi(title), {}, "", false);
 }
 
 std::string pickDirectory(const std::string& title) {
-    BROWSEINFOA bi = {};
-    bi.lpszTitle = title.c_str();
-    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-    PIDLIST_ABSOLUTE pidl = SHBrowseForFolderA(&bi);
-    if (!pidl) return {};
-
-    char path[MAX_PATH] = {};
-    const bool ok = SHGetPathFromIDListA(pidl, path);
-    CoTaskMemFree(pidl);
-    return ok ? std::string(path) : std::string();
+    return runFileDialog(wideFromUtf8OrAnsi(title), {}, "", true);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Linux — zenity --file-selection
-// Falls back to empty string if zenity is not installed.
-// ─────────────────────────────────────────────────────────────────────────────
 #elif !defined(__APPLE__)
 
 std::string pickFile(const std::string&              title,
@@ -128,8 +160,6 @@ std::string pickFile(const std::string&              title,
 }
 
 std::string pickFileOrDirectory(const std::string& title) {
-    // zenity --file-selection (without --directory) allows both files and folders.
-    // Double-clicking a folder navigates into it.
     std::string cmd = "zenity --file-selection --title=\"" + title + "\" 2>/dev/null";
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return {};

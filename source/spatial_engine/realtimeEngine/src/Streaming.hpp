@@ -108,6 +108,7 @@
 #include "RealtimeTypes.hpp"
 #include "JSONLoader.hpp"  // SpatialData, Keyframe — shared from source/spatial_engine/src/
 #include "MultichannelReader.hpp"  // ADM direct streaming — multichannel reader
+#include "../../src/SndFileHelpers.hpp"
 
 namespace fs = std::filesystem;
 
@@ -231,7 +232,7 @@ struct SourceStream {
 
         // Open the file (header only — no data loaded into memory)
         sfInfo = {};
-        sndFile = sf_open(path.c_str(), SFM_READ, &sfInfo);
+        sndFile = spatialroot::openSndFileRead(path, &sfInfo);
         if (!sndFile) {
             std::cerr << "[Streaming] ERROR: Cannot open WAV: " << path
                       << " — " << sf_strerror(nullptr) << std::endl;
@@ -533,7 +534,7 @@ public:
 
         for (const auto& [sourceName, keyframes] : scene.sources) {
             // Build file path: sourcesFolder/sourceName.wav
-            fs::path wavPath = fs::path(mConfig.sourcesFolder) / (sourceName + ".wav");
+            fs::path wavPath = spatialroot::pathFromString(mConfig.sourcesFolder) / (sourceName + ".wav");
 
             if (!fs::exists(wavPath)) {
                 std::cerr << "[Streaming] WARNING: Missing source WAV: "

@@ -1,4 +1,5 @@
 #include "WavUtils.hpp"
+#include "SndFileHelpers.hpp"
 #include <sndfile.h>
 #include <filesystem>
 #include <iostream>
@@ -7,7 +8,7 @@ namespace fs = std::filesystem;
 
 MonoWavData loadMonoFile(const fs::path &path) {
     SF_INFO info;
-    SNDFILE *snd = sf_open(path.string().c_str(), SFM_READ, &info);
+    SNDFILE *snd = spatialroot::openSndFileRead(path, &info);
     if (!snd) throw std::runtime_error("Failed to open WAV: " + path.string());
 
     if (info.channels != 1)
@@ -31,7 +32,7 @@ WavUtils::loadSources(const std::string &folder,
     std::map<std::string, MonoWavData> out;
 
     for (auto &[name, kf] : sourceKeys) {
-        fs::path p = fs::path(folder) / (name + ".wav");
+        fs::path p = spatialroot::pathFromString(folder) / (name + ".wav");
 
         if (!fs::exists(p)) {
             throw std::runtime_error("Missing source WAV: " + p.string());
@@ -85,7 +86,7 @@ WavUtils::loadSourcesFromADM(const std::string &admFile,
 
     // Open the ADM file
     SF_INFO info;
-    SNDFILE *snd = sf_open(admFile.c_str(), SFM_READ, &info);
+    SNDFILE *snd = spatialroot::openSndFileRead(admFile, &info);
     if (!snd) {
         throw std::runtime_error("Failed to open ADM WAV: " + admFile);
     }
@@ -164,7 +165,7 @@ void WavUtils::writeMultichannelWav(const std::string &path,
               << mw.samples[0].size() << " samples/ch, "
               << dataSizeBytes / (1024 * 1024) << " MB)\n";
 
-    SNDFILE *snd = sf_open(path.c_str(), SFM_WRITE, &info);
+    SNDFILE *snd = spatialroot::openSndFileWrite(path, &info);
     if (!snd) {
         std::cerr << "Error opening file for write: " << sf_strerror(nullptr) << "\n";
         throw std::runtime_error("Cannot create WAV file");
