@@ -94,6 +94,9 @@ public:
     /// Returns true on success.
     bool init() {
         mLastError.clear();
+        mSelectedDeviceId = -1;
+        mOpenedDeviceId = -1;
+        mOpenedDeviceName.clear();
         mBackendFamilyLabel = mAudioIO.compiledBackendName();
         if (mBackendFamilyLabel == "RtAudio") {
             mBackendApiLabel = "RtAudio API unknown";
@@ -107,90 +110,38 @@ public:
         std::cout << "  Output channels:  " << mConfig.outputChannels << std::endl;
         std::cout << "  Input channels:   " << mConfig.inputChannels << std::endl;
 
-        // ── Explicit output device selection ─────────────────────────────
-        // If --device was provided, resolve the name to a specific AudioDevice
-        // before opening. AlloLib/RtAudio will then open exactly that device
-        // rather than whatever the OS currently has as default output.
-        //
-        // Matching: exact full-name comparison, case-insensitive.
-        // If no exact match is found, the error message lists all available
-        // output devices so the user can correct the name.
-        //
-        // If no device name was given (empty string), fall through and let
-        // RtAudio use the system default — same behaviour as before this patch.
-        if (!mConfig.outputDeviceName.empty()) {
-            const int nDev = al::AudioDevice::numDevices();
+        const al::AudioDevice defaultDev = al::AudioDevice::defaultOutput();
+        std::cout << "[Backend] Requested output device name: "
+                  << (mConfig.outputDeviceName.empty() ? "(system default)" : mConfig.outputDeviceName)
+                  << std::endl;
+        std::cout << "[Backend] Requested output device id:   "
+                  << (mConfig.outputDeviceId >= 0 ? std::to_string(mConfig.outputDeviceId)
+                                                  : std::string("(system default)"))
+                  << std::endl;
+        logDeviceInventory(defaultDev);
 
-            // Build a lowercased version of the target name for comparison.
-            std::string targetLower = mConfig.outputDeviceName;
-            std::transform(targetLower.begin(), targetLower.end(),
-                           targetLower.begin(),
-                           [](unsigned char c){ return std::tolower(c); });
-
-            int foundIdx = -1;
-            for (int i = 0; i < nDev; ++i) {
-                al::AudioDevice dev(i);
-                if (!dev.valid()) continue;
-                std::string devName = dev.name();
-                std::string devLower = devName;
-                std::transform(devLower.begin(), devLower.end(),
-                               devLower.begin(),
-                               [](unsigned char c){ return std::tolower(c); });
-                if (devLower == targetLower) {
-                    foundIdx = i;
-                    break;
-                }
-            }
-
-            if (foundIdx < 0) {
-                setLastError("Selected output device was not found. " + backendContextSummary());
-                std::cerr << "[Backend] FATAL: Output device not found: \""
-                          << mConfig.outputDeviceName << "\"\n"
-                          << "  Available output devices (run --list-devices for full list):\n";
-                for (int i = 0; i < nDev; ++i) {
-                    al::AudioDevice dev(i);
-                    if (dev.valid() && dev.channelsOutMax() > 0) {
-                        std::cerr << "    [" << i << "] \""
-                                  << dev.name() << "\""
-                                  << "  (" << dev.channelsOutMax() << " out ch)\n";
-                    }
-                }
-                std::cerr << "  → Aborting." << std::endl;
-                return false;
-            }
-
-            al::AudioDevice selectedDev(foundIdx);
-            cacheSelectedDevice(selectedDev.name(), selectedDev.defaultSampleRate());
-            const int devMaxOut = selectedDev.channelsOutMax();
-            if (devMaxOut < mConfig.outputChannels) {
-                setLastError("Selected output device does not provide enough channels. "
-                             + backendContextSummary());
-                std::cerr << "[Backend] FATAL: Device \""
-                          << mConfig.outputDeviceName << "\" has only "
-                          << devMaxOut << " output channel(s), but the "
-                          << "speaker layout requires "
-                          << mConfig.outputChannels << ".\n"
-                          << "  → Check that the correct device and speaker "
-                          << "layout are selected." << std::endl;
-                return false;
-            }
-
-            std::cout << "[Backend] Output device selected: ["
-                      << foundIdx << "] \""
-                      << selectedDev.name() << "\"  ("
-                      << devMaxOut << " ch available, "
-                      << mConfig.outputChannels << " required)." << std::endl;
-            mAudioIO.deviceOut(selectedDev);
-        } else {
-            const al::AudioDevice defaultDev = al::AudioDevice::defaultOutput();
-            if (defaultDev.valid() && defaultDev.hasOutput()) {
-                cacheSelectedDevice(defaultDev.name(), defaultDev.defaultSampleRate());
-            } else {
-                cacheSelectedDevice("(system default)", 0.0);
-            }
-            std::cout << "[Backend] No --device specified — using system "
-                      << "default output device." << std::endl;
+        bool explicitSelection = false;
+        al::AudioDevice resolvedOutputDevice;
+        if (!resolveOutputDevice(defaultDev, explicitSelection, resolvedOutputDevice)) {
+            return false;
         }
+
+        cacheSelectedDevice(resolvedOutputDevice.name(), resolvedOutputDevice.defaultSampleRate());
+        mSelectedDeviceId = resolvedOutputDevice.id();
+        const int devMaxOut = resolvedOutputDevice.channelsOutMax();
+        if (devMaxOut < mConfig.outputChannels) {
+            setLastError("Selected output device does not provide enough channels. "
+                         + backendContextSummary());
+            std::cerr << "[Backend] FATAL: Resolved device "
+                      << describeDevice(resolvedOutputDevice)
+                      << " exposes only " << devMaxOut
+                      << " output channel(s), but the speaker layout requires "
+                      << mConfig.outputChannels << "." << std::endl;
+            return false;
+        }
+
+        std::cout << "[Backend] Resolved backend device: "
+                  << describeDevice(resolvedOutputDevice) << std::endl;
 
         if (mSelectedDevicePreferredSampleRateKnown &&
             static_cast<int>(std::round(mSelectedDevicePreferredSampleRate)) != kRequiredSampleRateHz) {
@@ -204,6 +155,7 @@ public:
         mAudioIO.init(
             audioCallback,              // static callback function
             this,                       // userData → passed back in callback
+            resolvedOutputDevice,       // exact output device to open
             mConfig.bufferSize,         // frames per buffer
             (double)mConfig.sampleRate, // sample rate
             mConfig.outputChannels,     // output channels
@@ -214,24 +166,54 @@ public:
 
         // Open the device (allocates hardware buffers)
         if (!mAudioIO.open()) {
-            setLastError("Backend init/open failed. " + backendContextSummary());
-            std::cerr << "[Backend] ERROR: Failed to open audio device." << std::endl;
+            const std::string openErr = mAudioIO.lastErrorMessage();
+            std::ostringstream err;
+            err << "Backend init/open failed. " << backendContextSummary();
+            if (!openErr.empty()) err << ". Open-stream error: " << openErr;
+            setLastError(err.str());
+            std::cerr << "[Backend] ERROR: Failed to open audio device.";
+            if (!openErr.empty()) std::cerr << " RtAudio error: " << openErr;
+            std::cerr << std::endl;
             return false;
         }
 
         std::cout << "[Backend] Audio device opened successfully." << std::endl;
+        mOpenedDeviceId = mAudioIO.outputDeviceId();
+        if (mOpenedDeviceId >= 0) {
+            const al::AudioDevice openedDevice(mOpenedDeviceId);
+            mOpenedDeviceName = openedDevice.valid() ? std::string(openedDevice.name())
+                                                     : resolvedOutputDevice.name();
+        } else {
+            mOpenedDeviceName = resolvedOutputDevice.name();
+        }
 
         // Report actual device parameters (may differ from requested).
-        // AlloLib/RtAudio negotiates with the OS default device; the actual
-        // channel count may be lower than requested if the wrong device is
-        // selected (e.g., MacBook built-in instead of MOTU).
         // NOTE: channelsOutDevice() reads oParams.nChannels — the value RtAudio
         // clamped to min(requested, deviceMax) during open(). This is the true
         // negotiated count. channelsOut() returns mNumO (the requested count) and
         // must NOT be used here — it makes the guard always false.
         const int actualOutChannels = static_cast<int>(mAudioIO.channelsOutDevice());
+        const double actualOpenSampleRate = mAudioIO.streamSampleRate();
         std::cout << "  Actual output channels: " << actualOutChannels << std::endl;
         std::cout << "  Actual buffer size:     " << mAudioIO.framesPerBuffer() << std::endl;
+        std::cout << "  Actual opened backend device: id=" << mOpenedDeviceId
+                  << ", name=\"" << mOpenedDeviceName << "\"" << std::endl;
+        std::cout << "  Actual sample rate:     "
+                  << (actualOpenSampleRate > 0.0
+                          ? std::to_string(static_cast<int>(std::round(actualOpenSampleRate))) + " Hz"
+                          : std::string("unknown"))
+                  << std::endl;
+
+        if (explicitSelection && mOpenedDeviceId >= 0 && mOpenedDeviceId != resolvedOutputDevice.id()) {
+            setLastError("Opened backend device does not match the selected device. "
+                         + backendContextSummary());
+            std::cerr << "[Backend] FATAL: Requested explicit device "
+                      << describeDevice(resolvedOutputDevice)
+                      << " but backend reports id=" << mOpenedDeviceId
+                      << ", name=\"" << mOpenedDeviceName << "\"." << std::endl;
+            mAudioIO.close();
+            return false;
+        }
 
         // ── Post-open channel count validation ────────────────────────────
         // The layout requires exactly mConfig.outputChannels output channels.
@@ -246,8 +228,6 @@ public:
                       << actualOutChannels << " output channel(s), but the "
                       << "speaker layout requires " << mConfig.outputChannels
                       << " channel(s).\n"
-                      << "  → Check macOS System Settings > Sound: is the correct "
-                      << "output device (e.g., MOTU) set as default?\n"
                       << "  → Aborting — refusing to start with incorrect channel "
                       << "count (silent speaker drops are not acceptable)."
                       << std::endl;
@@ -275,8 +255,14 @@ public:
         std::cout << "[Backend] Starting audio stream..." << std::endl;
 
         if (!mAudioIO.start()) {
-            setLastError("Audio stream start failed. " + backendContextSummary());
-            std::cerr << "[Backend] ERROR: Failed to start audio stream." << std::endl;
+            const std::string startErr = mAudioIO.lastErrorMessage();
+            std::ostringstream err;
+            err << "Audio stream start failed. " << backendContextSummary();
+            if (!startErr.empty()) err << ". Start-stream error: " << startErr;
+            setLastError(err.str());
+            std::cerr << "[Backend] ERROR: Failed to start audio stream.";
+            if (!startErr.empty()) std::cerr << " RtAudio error: " << startErr;
+            std::cerr << std::endl;
             return false;
         }
 
@@ -296,7 +282,12 @@ public:
         }
 
         mConfig.playing.store(true);
-        std::cout << "[Backend] Audio stream started." << std::endl;
+        std::cout << "[Backend] Audio stream started on id=" << mOpenedDeviceId
+                  << " name=\"" << mOpenedDeviceName << "\" at "
+                  << (mEffectiveStreamSampleRateKnown
+                          ? std::to_string(static_cast<int>(std::round(mEffectiveStreamSampleRate))) + " Hz"
+                          : std::string("unknown sample rate"))
+                  << "." << std::endl;
         return true;
     }
 
@@ -357,6 +348,7 @@ public:
         return mBackendFamilyLabel + " / " + mBackendApiLabel;
     }
     const std::string& selectedDeviceName() const { return mSelectedDeviceName; }
+    int selectedDeviceId() const { return mSelectedDeviceId; }
     double selectedDevicePreferredSampleRate() const { return mSelectedDevicePreferredSampleRate; }
     bool selectedDevicePreferredSampleRateKnown() const { return mSelectedDevicePreferredSampleRateKnown; }
     double effectiveStreamSampleRate() const { return mEffectiveStreamSampleRate; }
@@ -419,7 +411,14 @@ private:
     std::string backendContextSummary() const {
         std::ostringstream os;
         os << "Backend: " << backendDisplayLabel()
-           << ". Device: " << (mSelectedDeviceName.empty() ? "(system default)" : mSelectedDeviceName)
+           << ". Requested device id: "
+           << (mConfig.outputDeviceId >= 0 ? std::to_string(mConfig.outputDeviceId)
+                                           : std::string("(system default)"))
+           << ". Device: " << (mSelectedDeviceName.empty() ? "(system default)" : mSelectedDeviceName);
+        if (mSelectedDeviceId >= 0) {
+            os << " (id=" << mSelectedDeviceId << ")";
+        }
+        os
            << ". Requested sample rate: " << mConfig.sampleRate << " Hz";
         if (mSelectedDevicePreferredSampleRateKnown) {
             os << ". Preferred/default sample rate: "
@@ -435,7 +434,108 @@ private:
         } else {
             os << ". Effective stream sample rate: unknown";
         }
+        if (mOpenedDeviceId >= 0) {
+            os << ". Opened backend device id: " << mOpenedDeviceId;
+        }
         return os.str();
+    }
+
+    static std::string lowerAscii(std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    }
+
+    static std::string describeDevice(const al::AudioDevice& device) {
+        std::ostringstream os;
+        os << "id=" << device.id()
+           << ", name=\"" << device.name() << "\""
+           << ", maxOut=" << device.channelsOutMax()
+           << ", preferredRate=";
+        if (device.defaultSampleRate() > 0.0) {
+            os << static_cast<int>(std::round(device.defaultSampleRate())) << " Hz";
+        } else {
+            os << "unknown";
+        }
+        return os.str();
+    }
+
+    void logDeviceInventory(const al::AudioDevice& defaultDev) const {
+        std::cout << "[Backend] System default output device: "
+                  << (defaultDev.valid() && defaultDev.hasOutput()
+                          ? describeDevice(defaultDev)
+                          : std::string("unavailable"))
+                  << std::endl;
+        std::cout << "[Backend] Enumerated output devices:" << std::endl;
+        const int nDev = al::AudioDevice::numDevices();
+        for (int i = 0; i < nDev; ++i) {
+            const al::AudioDevice dev(i);
+            if (!dev.valid() || !dev.hasOutput()) continue;
+            std::cout << "  - " << describeDevice(dev)
+                      << ", isDefault="
+                      << ((defaultDev.valid() && dev.id() == defaultDev.id()) ? "yes" : "no")
+                      << std::endl;
+        }
+    }
+
+    bool resolveOutputDevice(const al::AudioDevice& defaultDev,
+                             bool& explicitSelection,
+                             al::AudioDevice& resolvedDevice) {
+        explicitSelection = false;
+
+        if (mConfig.outputDeviceId >= 0) {
+            explicitSelection = true;
+            const al::AudioDevice byId(mConfig.outputDeviceId);
+            if (!byId.valid() || !byId.hasOutput()) {
+                setLastError("Selected output device id was not found. " + backendContextSummary());
+                std::cerr << "[Backend] FATAL: Requested output device id "
+                          << mConfig.outputDeviceId << " is not a valid output device."
+                          << std::endl;
+                return false;
+            }
+            resolvedDevice = byId;
+            return true;
+        }
+
+        if (!mConfig.outputDeviceName.empty()) {
+            explicitSelection = true;
+            const std::string targetLower = lowerAscii(mConfig.outputDeviceName);
+            std::vector<int> matches;
+            const int nDev = al::AudioDevice::numDevices();
+            for (int i = 0; i < nDev; ++i) {
+                const al::AudioDevice dev(i);
+                if (!dev.valid() || !dev.hasOutput()) continue;
+                if (lowerAscii(dev.name()) == targetLower) {
+                    matches.push_back(dev.id());
+                }
+            }
+            if (matches.empty()) {
+                setLastError("Selected output device was not found. " + backendContextSummary());
+                std::cerr << "[Backend] FATAL: Output device not found by name: \""
+                          << mConfig.outputDeviceName << "\"." << std::endl;
+                return false;
+            }
+            if (matches.size() > 1) {
+                setLastError("Selected output device name is ambiguous. " + backendContextSummary());
+                std::cerr << "[Backend] FATAL: Output device name is ambiguous: \""
+                          << mConfig.outputDeviceName << "\" matches "
+                          << matches.size()
+                          << " devices. Select by backend device id instead."
+                          << std::endl;
+                return false;
+            }
+            resolvedDevice = al::AudioDevice(matches.front());
+            return true;
+        }
+
+        if (!defaultDev.valid() || !defaultDev.hasOutput()) {
+            setLastError("System default output device is unavailable. " + backendContextSummary());
+            std::cerr << "[Backend] FATAL: No valid system default output device is available."
+                      << std::endl;
+            return false;
+        }
+        resolvedDevice = defaultDev;
+        return true;
     }
 
     // ── Static audio callback (C-style, required by AlloLib) ─────────────
@@ -686,8 +786,11 @@ private:
     std::string     mBackendFamilyLabel;
     std::string     mBackendApiLabel;
     std::string     mSelectedDeviceName;
+    int             mSelectedDeviceId = -1;
     double          mSelectedDevicePreferredSampleRate = 0.0;
     bool            mSelectedDevicePreferredSampleRateKnown = false;
+    std::string     mOpenedDeviceName;
+    int             mOpenedDeviceId = -1;
     double          mEffectiveStreamSampleRate = 0.0;
     bool            mEffectiveStreamSampleRateKnown = false;
     std::string     mLastError;

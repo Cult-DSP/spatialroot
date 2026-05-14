@@ -139,13 +139,10 @@ struct RealtimeConfig {
     int    sampleRate       = 48000;   // Audio sample rate in Hz
     int    bufferSize       = 512;     // Frames per audio callback buffer
     int    inputChannels    = 0;       // Input channels (0 = output only)
+    int    outputDeviceId   = -1;      // backend device id; -1 = system default
 
-    // Explicit output device name. Empty string = system default (not
-    // recommended for hardware installations with specific output devices).
-    // Set via --device CLI flag. Matched by exact full-name comparison
-    // at RealtimeBackend::init(); see that method for the error path that
-    // prints all available devices on mismatch.
-    // Run --list-devices to see what names the engine can see.
+    // Explicit output device display name. Used for display, CLI fallback,
+    // and error messages. When both id and name are provided, the id wins.
     std::string outputDeviceName;
 
     // ── Physical output bus width ────────────────────────────────────────

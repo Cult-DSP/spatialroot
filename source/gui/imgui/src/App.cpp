@@ -281,6 +281,7 @@ App::App(std::string projectRoot, bool keepTempSessions, std::string tempRootOve
     tryLoadDefaultLayoutOnStartup();
 
     appendEngineLog("[GUI] Select a source and layout, then click START.");
+    scanDevices();
 
     int lw = 0, lh = 0, lch = 0;
     unsigned char* logoData = stbi_load_from_memory(
@@ -584,6 +585,12 @@ void App::renderEngineTab() {
         (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceOutputChannels.size()))
             ? mDeviceOutputChannels[mDeviceIdx]
             : 0;
+    const int selectedDeviceBackendId =
+        (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceBackendIds.size()))
+            ? mDeviceBackendIds[mDeviceIdx]
+            : -1;
+    const int activeDeviceBackendId =
+        (mStatus.outputDeviceId >= 0) ? mStatus.outputDeviceId : selectedDeviceBackendId;
     const double scannedDeviceSampleRate =
         (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceSampleRates.size()))
             ? mDeviceSampleRates[mDeviceIdx]
@@ -726,6 +733,9 @@ void App::renderEngineTab() {
                    << (audioReady ? "Ready" : (audioNotReady ? "Not Ready" : "Unknown")) << "\n"
                    << "Backend: " << backendLabel << "\n"
                    << "Device: " << activeDeviceName << "\n"
+                   << "Device ID: "
+                   << (activeDeviceBackendId >= 0 ? std::to_string(activeDeviceBackendId)
+                                                    : std::string("system default")) << "\n"
                    << "Output Channels: "
                    << (selectedOutputChannels > 0 ? std::to_string(selectedOutputChannels) : "unknown") << "\n"
                    << "Required sample rate: " << requiredSampleRate << " Hz\n"
@@ -755,6 +765,10 @@ void App::renderEngineTab() {
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::Combo("##device", &mDeviceIdx, items.data(), (int)items.size())) {
                     mDeviceName = (mDeviceIdx == 0) ? "" : mDeviceList[mDeviceIdx];
+                    mDeviceBackendId =
+                        (mDeviceIdx >= 0 && mDeviceIdx < static_cast<int>(mDeviceBackendIds.size()))
+                            ? mDeviceBackendIds[mDeviceIdx]
+                            : -1;
                 }
             }
             if (selectedOutputChannels > 0) {
@@ -1621,6 +1635,7 @@ void App::doLaunchEngine(const std::string& scenePath,
     EngineOptions opts;
     opts.sampleRate = 48000;
     opts.bufferSize = kBufferSizes[mBufferSizeIdx];
+    opts.outputDeviceId = mDeviceBackendId;
     opts.outputDeviceName = mDeviceName;
     opts.oscPort = 9009;
     opts.elevationMode = static_cast<ElevationMode>(mElevationMode);
@@ -1823,10 +1838,14 @@ void App::resetRuntimeToDefaults() {
 }
 
 void App::scanDevices() {
+    const int previousDeviceId = mDeviceBackendId;
+    const std::string previousDeviceName = mDeviceName;
     mDeviceList.clear();
+    mDeviceBackendIds.clear();
     mDeviceOutputChannels.clear();
     mDeviceSampleRates.clear();
     mDeviceList.push_back("(system default)");
+    mDeviceBackendIds.push_back(-1);
     mDeviceOutputChannels.push_back(0);
     mDeviceSampleRates.push_back(0.0);
     const int n = al::AudioDevice::numDevices();
@@ -1834,12 +1853,23 @@ void App::scanDevices() {
         al::AudioDevice dev(i);
         if (dev.valid() && dev.hasOutput()) {
             mDeviceList.push_back(std::string(dev.name()));
+            mDeviceBackendIds.push_back(dev.id());
             mDeviceOutputChannels.push_back(dev.channelsOutMax());
             mDeviceSampleRates.push_back(dev.defaultSampleRate());
         }
     }
     mDeviceIdx = 0;
+    mDeviceBackendId = -1;
     mDeviceName = "";
+    for (int i = 1; i < static_cast<int>(mDeviceBackendIds.size()); ++i) {
+        if ((previousDeviceId >= 0 && mDeviceBackendIds[i] == previousDeviceId) ||
+            (!previousDeviceName.empty() && mDeviceList[i] == previousDeviceName)) {
+            mDeviceIdx = i;
+            mDeviceBackendId = mDeviceBackendIds[i];
+            mDeviceName = mDeviceList[i];
+            break;
+        }
+    }
 }
 
 void App::detectSource() {

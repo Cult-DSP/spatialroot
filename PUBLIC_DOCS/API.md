@@ -90,7 +90,8 @@ While running, call `update()`, `queryStatus()`, and `consumeDiagnostics()` regu
 | --- | --- | --- | --- |
 | `sampleRate` | `int` | `48000` | Audio sample rate in Hz |
 | `bufferSize` | `int` | `512` | Frames per audio callback |
-| `outputDeviceName` | `std::string` | `""` | Exact device name; empty selects the system default |
+| `outputDeviceId` | `int` | `-1` | Stable backend output-device id; `-1` selects the system default |
+| `outputDeviceName` | `std::string` | `""` | Display name / CLI fallback; used only when no device id is provided |
 | `oscPort` | `int` | `9009` | OSC control port; set to `0` to disable OSC |
 | `elevationMode` | `ElevationMode` | `RescaleAtmosUp` | Vertical remapping mode |
 
@@ -195,6 +196,7 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 - `audioBackendLabel`
 - `requestedSampleRate`
 - `effectiveStreamSampleRate`
+- `outputDeviceId`
 - `outputDeviceName`
 - `outputDevicePreferredSampleRate`
 

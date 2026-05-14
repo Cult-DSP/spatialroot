@@ -182,6 +182,7 @@ bool EngineSession::configureEngine(const EngineOptions& opts)
 {
     mConfig.sampleRate = opts.sampleRate;
     mConfig.bufferSize = opts.bufferSize;
+    mConfig.outputDeviceId = opts.outputDeviceId;
     mConfig.outputDeviceName = opts.outputDeviceName;
     mOscPort = opts.oscPort;
     mConfig.elevationMode.store(static_cast<int>(opts.elevationMode), std::memory_order_relaxed);
@@ -552,9 +553,11 @@ EngineStatus EngineSession::queryStatus() const
     st.paused = mConfig.paused.load(std::memory_order_relaxed);
     st.isExitRequested = (mBackend && !mBackend->isRunning()); 
     st.requestedSampleRate = mConfig.sampleRate;
+    st.outputDeviceId = mConfig.outputDeviceId;
     st.outputDeviceName = mConfig.outputDeviceName.empty() ? "(system default)" : mConfig.outputDeviceName;
     if (mBackend) {
         st.audioBackendLabel = mBackend->backendDisplayLabel();
+        st.outputDeviceId = mBackend->selectedDeviceId();
         st.outputDeviceName = mBackend->selectedDeviceName().empty()
                                 ? st.outputDeviceName
                                 : mBackend->selectedDeviceName();

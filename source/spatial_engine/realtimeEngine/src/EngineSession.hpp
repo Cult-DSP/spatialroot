@@ -32,6 +32,7 @@ struct EngineStatus {
     int requestedSampleRate = 48000;
     double effectiveStreamSampleRate = 0.0;
     bool effectiveStreamSampleRateKnown = false;
+    int outputDeviceId = -1;
     std::string outputDeviceName;
     double outputDevicePreferredSampleRate = 0.0;
     bool outputDevicePreferredSampleRateKnown = false;
@@ -67,6 +68,7 @@ struct DiagnosticEvents {
 struct EngineOptions {
     int sampleRate = 48000;
     int bufferSize = 512;
+    int outputDeviceId = -1;
     std::string outputDeviceName;
     int oscPort = 9009;
     ElevationMode elevationMode = ElevationMode::RescaleAtmosUp;

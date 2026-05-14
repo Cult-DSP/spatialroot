@@ -19,7 +19,7 @@
 
 | Struct | Purpose |
 |---|---|
-| `EngineOptions` | Core system settings (sample rate, buffer size, device name, OSC port, elevation mode) |
+| `EngineOptions` | Core system settings (sample rate, buffer size, device id/name, OSC port, elevation mode) |
 | `SceneInput` | Audio scene definition (LUSID scene path, sources folder, ADM file) |
 | `LayoutInput` | Speaker layout path and optional remap CSV path |
 | `RuntimeParams` | Initial gain/focus/mix values passed at configure time |
@@ -35,6 +35,7 @@
 struct EngineOptions {
     int sampleRate = 48000;
     int bufferSize = 512;
+    int outputDeviceId = -1;        // stable backend id; -1 = system default
     std::string outputDeviceName;   // empty = system default
     int oscPort = 9009;             // 0 = disable OSC entirely
     ElevationMode elevationMode = ElevationMode::RescaleAtmosUp;
@@ -83,6 +84,7 @@ std::string audioBackendLabel;              // best-effort runtime backend/API l
 int requestedSampleRate = 48000;           // requested engine rate
 double effectiveStreamSampleRate = 0.0;    // actual running stream rate, if known
 bool effectiveStreamSampleRateKnown = false;
+int outputDeviceId = -1;                   // resolved backend output device id, if known
 std::string outputDeviceName;              // selected output device, if known
 double outputDevicePreferredSampleRate = 0.0; // device preferred/default rate, if known
 bool outputDevicePreferredSampleRateKnown = false;
@@ -102,7 +104,7 @@ Semantics:
 
 The engine enforces a strict, linear initialization sequence:
 
-1. `configureEngine(const EngineOptions&)` — stores sampleRate, bufferSize, outputDeviceName, oscPort, elevationMode into `mConfig`. Always returns `true`.
+1. `configureEngine(const EngineOptions&)` — stores sampleRate, bufferSize, outputDeviceId, outputDeviceName, oscPort, elevationMode into `mConfig`. Always returns `true`.
 2. `loadScene(const SceneInput&)` — parses LUSID scene via `JSONLoader`, initializes `Streaming`. Returns `false` if scene file missing or no sources loaded.
 3. `applyLayout(const LayoutInput&)` — requires `loadScene` to have succeeded (`mSceneData` guard). Loads speaker layout, initializes `Pose` and `Spatializer`. Calls `configureOutputRouting()` internally.
 4. `configureRuntime(const RuntimeParams&)` — clamps and writes gain/focus/mix atomics to `mConfig`. **Does not perform output routing setup** (moved to `applyLayout()`). Safe before and after `start()`. Syncs OSC param values if the OSC server is already running. **OSC ParameterServer is NOT started here — it starts in `start()`.**
