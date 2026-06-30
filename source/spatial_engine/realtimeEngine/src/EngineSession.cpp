@@ -501,7 +501,10 @@ bool EngineSession::start()
 
 void EngineSession::shutdown()
 {
-    shutdownInternalHostBus();
+    const bool hostBusActive = mHostBusPrepared;
+    if (hostBusActive) {
+        shutdownInternalHostBus();
+    }
     if (mParamServer) {
         mParamServer->stopServer();
         mParamServer.reset();
@@ -604,6 +607,11 @@ int EngineSession::renderHostBlock(float* interleavedOutput, int numFrames, int 
     }
     if (numFrames != mHostBusConfig.blockSize) {
         setLastError("renderHostBlock frame count does not match HostBusConfig block size.");
+        std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
+        return 0;
+    }
+    if (numChannels != mHostBusConfig.outputChannels) {
+        setLastError("renderHostBlock channel count does not match HostBusConfig outputChannels.");
         std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
         return 0;
     }
@@ -713,6 +721,8 @@ EngineStatus EngineSession::queryStatus() const
     st.nanGuardCount = mState.nanGuardCount.load(std::memory_order_relaxed);
     st.speakerProximityCount = mState.speakerProximityCount.load(std::memory_order_relaxed);
     st.paused = mConfig.paused.load(std::memory_order_relaxed);
+    // Mirrors the explicit host/app exit-request flag only. It is not tied to
+    // backend-running state, host-bus preparation, or natural end-of-session.
     st.isExitRequested = mConfig.shouldExit.load(std::memory_order_relaxed);
     st.requestedSampleRate = mConfig.sampleRate;
     st.outputDeviceName = mConfig.outputDeviceName.empty() ? "(system default)" : mConfig.outputDeviceName;

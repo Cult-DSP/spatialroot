@@ -27,7 +27,8 @@ struct EngineStatus {
     uint64_t nanGuardCount;
     uint64_t speakerProximityCount;
     bool paused;
-    bool isExitRequested; // Added for main thread polling
+    // Host/app-owned exit-request flag. Not a proxy for backend-running state.
+    bool isExitRequested;
     std::string audioBackendLabel;
     int requestedSampleRate = 48000;
     double effectiveStreamSampleRate = 0.0;

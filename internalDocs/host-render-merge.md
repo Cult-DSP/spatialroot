@@ -33,6 +33,9 @@
     - `shutdownInternalHostBus()`
     - `getRequiredOutputChannelCount() const`
     - `getLastWarning() const`
+  - Clarified `EngineStatus::isExitRequested` semantics:
+    - host/app-owned exit-request flag only
+    - not a proxy for backend-running state
   - Added private warning helper:
     - `setLastWarning(const std::string&)`
   - Added host-bus state members:
@@ -44,7 +47,9 @@
 - `source/spatial_engine/realtimeEngine/src/EngineSession.cpp`
   - Added `setLastWarning()` and `getLastWarning()`.
   - Guarded `start()` so hardware-device startup is rejected when `InternalHostBus` mode is selected or prepared.
-  - Updated `shutdown()` to clear host-bus state first.
+  - Updated `shutdown()` so:
+    - host-bus cleanup is pulled forward only when host-bus mode is actually active
+    - hardware-mode shutdown preserves the older backend-stop-before-streaming-stop order
   - Implemented `setAudioOutputMode()` with mutual-exclusion rules:
     - cannot switch to host-bus mode while hardware output is running
     - cannot switch back to hardware mode while host bus is prepared
@@ -58,7 +63,8 @@
     - validates buffer and dimensions
     - zero-fills output on error
     - calls backend render path without opening a device
-    - copies from the spatializer’s internal render bus into an interleaved host buffer
+    - copies from the routed layout/device output bus into an interleaved host buffer
+    - enforces exact per-call channel-count equality with `HostBusConfig::outputChannels`
     - handles channel mismatch behavior:
       - host channels < required channels: render first host channels only and store warning
       - host channels > required channels: render required channels and zero-fill extras, then store warning
@@ -78,12 +84,11 @@
     - `mHostIO`
   - Host-bus preparation configures an internal `AudioIOData` instance but does **not** open a hardware audio device.
   - Host-bus render path reuses `processBlock()` so the same render pipeline is used for device-owned and host-pull playback.
-
-- `source/spatial_engine/realtimeEngine/src/Spatializer.hpp`
-  - Added `internalChannelBuffer(unsigned int)` so host-pull output can read the compact internal render bus after a block render.
+  - Host-side scratch output is sized to `RealtimeConfig::outputChannels`, preserving the same routed-bus contract as hardware playback.
 
 - `source/spatial_engine/realtimeEngine/src/Streaming.hpp`
   - Added `isLoaderRunning()` so host-bus preparation can safely start the loader thread only when needed.
+  - Added `stopLoader()` and loader-thread restart guards so repeated prepare/shutdown cycles do not double-start or reuse a stale joinable thread.
 
 ### Public and Maintainer Docs
 
@@ -95,11 +100,13 @@
   - Documented `AudioOutputMode` and `HostBusConfig`.
   - Added new `EngineSession` host-render methods to the public methods table.
   - Documented channel mismatch behavior and zero-fill expectations.
+  - Clarified that `HostBusConfig::outputChannels` is a fixed prepared contract for all `renderHostBlock()` calls.
+  - Clarified that `EngineStatus::isExitRequested` is a host/app-owned exit-request flag only.
 
 - `internalDocs/API_internal.md`
   - Added `AudioOutputMode` and `HostBusConfig` to the internal contract table.
   - Added host-render lifecycle methods to the maintainer API contract.
-  - Documented host-bus shutdown behavior and hardware/host-bus mutual exclusion.
+  - Documented host-bus shutdown behavior, hardware/host-bus mutual exclusion, fixed host channel-count contract, and `isExitRequested` semantics.
 
 - `internalDocs/REALTIME_ENGINE.md`
   - Expanded backend responsibilities to include Internal Host Bus mode.
@@ -113,6 +120,7 @@
 
 - `README.md`
   - Added `internalDocs/HOST_RENDER_BACKEND.md` to the documentation map.
+  - Added a short public note that host-render returns the routed output bus and that prepared host channel count must remain consistent.
 
 - `internalDocs/FUTURE_WORK.md`
   - Added a short backlog note for a dedicated host-render smoke test.
@@ -138,14 +146,16 @@
 - Preserved existing hardware-device playback path.
 - Kept both modes mutually exclusive.
 - Reused the existing realtime render pipeline instead of introducing a parallel rendering implementation.
+- Preserved the pre-existing routing contract by returning the routed layout/device output bus, not the compact internal render bus.
+- Made `HostBusConfig::outputChannels` a strict prepared contract for every `renderHostBlock()` call.
 - Added warning reporting for handled channel-count mismatches.
 - Added zero-fill behavior for host-buffer error cases.
+- Fixed host-bus lifecycle teardown so explicit host-bus cleanup prevents loader-thread reuse hazards without changing the normal hardware shutdown order.
+- Fixed `queryStatus().isExitRequested` so host-bus mode no longer misreports backend state as an exit request.
 
 ## Validation Performed
 
 - Ran `./build.sh --engine-only`
-  - Result: passed
-- Ran `./build/source/spatial_engine/realtimeEngine/spatialroot_realtime --help`
   - Result: passed
 
 ## Validation Still Recommended
@@ -156,44 +166,33 @@
   - calls `renderHostBlock()` for several blocks
   - verifies nonzero output when expected
   - verifies no NaN/Inf output
+  - verifies exact rejection when `renderHostBlock(..., numChannels)` differs from prepared `HostBusConfig::outputChannels`
+  - verifies safe same-session mode switching:
+    - `InternalHostBus -> shutdownInternalHostBus() -> HardwareDevice start()`
+    - repeated `prepareInternalHostBus()/shutdownInternalHostBus()` cycles
   - optionally writes a WAV for inspection
 
 ## Diff Scope Summary
 
-- Runtime/API files modified: 6
+- Runtime/API files modified: 5
 - Public/internal docs modified: 6
 - New maintainer doc added: 1
 - Planning artifact intentionally excluded: 1
 
 ## Diff Stat Snapshot
 
-```text
-PUBLIC_DOCS/API.md                                 |  60 ++++++++
-README.md                                          |   1 +
-internalDocs/AGENTS.md                             |   3 +-
-internalDocs/API_internal.md                       |  11 ++
-internalDocs/FUTURE_WORK.md                        |   4 +
-internalDocs/REALTIME_ENGINE.md                    |   7 +-
-source/spatial_engine/realtimeEngine/src/EngineSession.cpp   | 161 +++++++++++++++++++++
-source/spatial_engine/realtimeEngine/src/EngineSession.hpp   |  14 ++
-source/spatial_engine/realtimeEngine/src/RealtimeBackend.hpp |  66 +++++++++
-source/spatial_engine/realtimeEngine/src/RealtimeTypes.hpp   |  22 +++
-source/spatial_engine/realtimeEngine/src/Spatializer.hpp     |   6 +
-source/spatial_engine/realtimeEngine/src/Streaming.hpp       |   4 +
-12 files changed, 357 insertions(+), 2 deletions(-)
-```
+This snapshot now understates the current landing because follow-up safety and documentation fixes were applied after the initial merge report. Treat the narrative sections above as authoritative.
 
 ## Commit Message Draft
 
 ```text
-Add host-render Internal Host Bus API
+Finalize host-render routing and lifecycle contract
 
-Integrates the experimental Spatial Root embedding host-render path onto
-current devel/main state without merging the stale embedding branch.
-Adds InternalHostBus output mode, host bus configuration, host-pull
-rendering via renderHostBlock(), channel mismatch warnings, and
-maintainer/public documentation while preserving existing hardware-device
-playback.
+Finalize the Internal Host Bus integration by preserving the routed
+layout/device output contract in host-render mode, enforcing fixed host
+channel width per prepared host bus, restoring safe hardware shutdown
+ordering, clarifying isExitRequested semantics, and syncing maintainer and
+public docs to the final behavior.
 ```
 
 ## Notes

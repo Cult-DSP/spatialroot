@@ -40,7 +40,7 @@ The host bus does not expose `Spatializer::mRenderIO` directly except as an inte
 ### Types
 
 - `AudioOutputMode` selects hardware device vs internal host bus
-- `HostBusConfig` defines host block size, sample rate, output channel count, and interleaving mode
+- `HostBusConfig` defines host block size, sample rate, fixed per-call output channel count, and interleaving mode
 
 ### EngineSession Additions
 
@@ -85,6 +85,7 @@ session.shutdown();
 
 `EngineSession::renderHostBlock()` handles channel mismatches conservatively:
 
+- Host must call `renderHostBlock()` with the same `numChannels` value that was declared in `HostBusConfig::outputChannels`
 - Host channels fewer than required layout channels: render only the first `hostChannels`, then store a warning in `getLastWarning()`
 - Host channels greater than required layout channels: render the required channels and zero-fill the extra host channels, then store a warning
 
@@ -95,6 +96,7 @@ session.shutdown();
 - `renderHostBlock()` zero-fills the host buffer on error
 - Hardware output and Internal Host Bus cannot run simultaneously
 - `shutdownInternalHostBus()` also stops the loader thread so a later `start()` on the same session does not double-start streaming
+- Hardware-mode `shutdown()` keeps the original backend-stop-before-streaming-stop order; host-bus cleanup is only pulled forward when host-bus mode is actually active
 
 ## Pending Validation
 

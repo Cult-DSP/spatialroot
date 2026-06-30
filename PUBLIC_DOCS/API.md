@@ -54,13 +54,13 @@ int main() {
         return 1;
     }
 
-    while (true) {
-        EngineStatus status = session.queryStatus();
-        if (status.isExitRequested) break;
+while (appRunning) {
+    EngineStatus status = session.queryStatus();
+    if (status.isExitRequested) break; // optional host/app-owned exit request
 
-        session.update();
-        DiagnosticEvents events = session.consumeDiagnostics();
-        (void)events;
+    session.update();
+    DiagnosticEvents events = session.consumeDiagnostics();
+    (void)events;
     }
 
     session.shutdown();
@@ -153,7 +153,7 @@ Passed to `prepareInternalHostBus()` to describe the host's audio block contract
 | --- | --- | --- |
 | `sampleRate` | `double` | Host sample rate in Hz. Must match `EngineOptions::sampleRate`. |
 | `blockSize` | `int` | Frames per `renderHostBlock()` call. Must match `EngineOptions::bufferSize`. |
-| `outputChannels` | `int` | Number of output channels provided by the host. |
+| `outputChannels` | `int` | Number of output channels the host will provide on every `renderHostBlock()` call. |
 | `interleaved` | `bool` | Must be `true`; only interleaved output is currently supported. |
 
 ### `RuntimeParams`
@@ -249,6 +249,8 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 - `outputDeviceName`
 - `outputDevicePreferredSampleRate`
 
+`EngineStatus::isExitRequested` mirrors an explicit host/app-owned exit-request flag only. It is not a proxy for hardware-backend state, host-bus preparation state, or natural end-of-session detection.
+
 `consumeDiagnostics()` is the event surface for render-bus and device-bus relocation or dominant-cluster changes.
 
 `getFailureDiagnostics()` returns a structured block for the most recent failed `loadScene()`, `applyLayout()`, or `start()` call. It is intended for logs and embedding-host diagnostics panels.
@@ -263,6 +265,7 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 - Host channels greater than required: render the required channels and zero-fill the extra host channels, then store a warning.
 
 The host must still match `sampleRate` and `blockSize` exactly with the configured `EngineSession` values.
+The host must also keep `renderHostBlock(..., numChannels)` exactly equal to `HostBusConfig::outputChannels` for the lifetime of the prepared host bus.
 Call `shutdownInternalHostBus()` when leaving host-pull mode. It clears host-bus state and stops the background loader thread so the session can safely switch back to hardware mode later.
 
 ## Embedding With CMake
