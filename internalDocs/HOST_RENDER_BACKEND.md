@@ -6,6 +6,16 @@ This document captures the current host-render backend implementation that allow
 
 The implementation is intentionally minimal and additive. The default output mode remains device-owned playback via AlloLib `AudioIO`.
 
+## Important Contract
+
+Internal Host Bus mode must preserve the same channel-routing contract as hardware playback:
+
+- Spatial Root always renders first into the compact internal bus (`numSpeakers + numSubwoofers`)
+- `Spatializer::renderBlock()` Phase 7 then routes that internal bus into the layout/device output bus
+- `renderHostBlock()` returns that routed output bus to the host
+
+The host bus does not expose `Spatializer::mRenderIO` directly except as an internal implementation detail.
+
 ## Current Realtime Audio Path
 
 ### Audio Callback Entry Point
@@ -46,7 +56,7 @@ std::string getLastWarning() const;
 ### RealtimeBackend Additions
 
 - `prepareInternalHostBus(const HostBusConfig& config)` configures a host IO buffer without opening a device
-- `renderHostBlock()` runs the per-block render pipeline into the internal bus
+- `renderHostBlock()` runs the normal per-block render pipeline into a host-owned `AudioIOData` scratch output bus sized to `RealtimeConfig::outputChannels`
 - `shutdownInternalHostBus()` clears host-bus prepared state
 
 ## Expected Host Flow
@@ -84,6 +94,7 @@ session.shutdown();
 - Only interleaved output is supported in this implementation
 - `renderHostBlock()` zero-fills the host buffer on error
 - Hardware output and Internal Host Bus cannot run simultaneously
+- `shutdownInternalHostBus()` also stops the loader thread so a later `start()` on the same session does not double-start streaming
 
 ## Pending Validation
 

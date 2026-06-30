@@ -206,6 +206,8 @@ Example ADM files: https://zenodo.org/records/15268471
 
 The realtime engine exposes a C++ embedding API (`EngineSessionCore` static library). See [PUBLIC_DOCS/API.md](PUBLIC_DOCS/API.md) for full documentation.
 
+For host-owned audio-device embedding, the Internal Host Bus / host-render path returns the same routed layout/device output bus used by normal hardware playback, not the compact internal render bus.
+
 ## Documentation Map
 
 - Public API and embedding: [PUBLIC_DOCS/API.md](PUBLIC_DOCS/API.md)

@@ -77,6 +77,8 @@ ADM BWF WAV File
 
 **The speaker layout JSON is the sole routing source.** The engine renders to a compact internal bus (numSpeakers + numSubwoofers channels) and routes to a layout-defined output bus via a one-to-one routing table built from the layout's `deviceChannel` fields. CSV-based routing is legacy-only. See [REALTIME_ENGINE.md § Output Routing Architecture](REALTIME_ENGINE.md#output-routing-architecture).
 
+**Host-render guardrail:** Internal Host Bus mode must preserve that same routing contract. Host-pull rendering returns the routed output bus, not the compact internal bus. If host-render code is changed, verify `getRequiredOutputChannelCount()` and `renderHostBlock()` still reflect the layout/device output width rather than `numInternalChannels()`. See [HOST_RENDER_BACKEND.md](HOST_RENDER_BACKEND.md).
+
 **Offline parity guardrail:** offline render parity work under `source/spatial_engine/spatialRender/` must remain offline-owned unless a future task explicitly authorizes realtime-engine changes. Do not modify `Spatializer.hpp`, `RealtimeBackend.hpp`, `Streaming.hpp`, `Pose.hpp`, or `EngineSession.*` just to advance offline parity.
 
 ---

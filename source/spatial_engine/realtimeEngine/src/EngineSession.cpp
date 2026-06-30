@@ -574,10 +574,6 @@ bool EngineSession::prepareInternalHostBus(const HostBusConfig& config)
     mBackend->setSpatializer(mSpatializer.get());
     mBackend->cacheSourceNames(mStreaming->sourceNames());
 
-    if (!mStreaming->isLoaderRunning()) {
-        mStreaming->startLoader();
-    }
-
     if (!mBackend->prepareInternalHostBus(config)) {
         setLastError(mBackend->getLastError().empty()
                          ? std::string("InternalHostBus preparation failed.")
@@ -585,8 +581,13 @@ bool EngineSession::prepareInternalHostBus(const HostBusConfig& config)
         return false;
     }
 
+    if (!mStreaming->isLoaderRunning()) {
+        mStreaming->startLoader();
+    }
+
     mHostBusConfig = config;
     mHostBusPrepared = true;
+    mConfig.playing.store(true, std::memory_order_relaxed);
     return true;
 }
 
@@ -615,15 +616,13 @@ int EngineSession::renderHostBlock(float* interleavedOutput, int numFrames, int 
         return 0;
     }
 
-    const unsigned int requiredChannels = mSpatializer
-        ? mSpatializer->numInternalChannels()
-        : 0u;
+    const unsigned int requiredChannels = mBackend->hostOutputChannels();
     const unsigned int outChannels = static_cast<unsigned int>(numChannels);
     const unsigned int copyChannels = std::min(requiredChannels, outChannels);
 
     std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
     for (unsigned int ch = 0; ch < copyChannels; ++ch) {
-        const float* src = mSpatializer->internalChannelBuffer(ch);
+        const float* src = mBackend->hostOutputChannelBuffer(ch);
         for (int f = 0; f < numFrames; ++f) {
             interleavedOutput[(f * numChannels) + static_cast<int>(ch)] = src[f];
         }
@@ -649,6 +648,9 @@ int EngineSession::renderHostBlock(float* interleavedOutput, int numFrames, int 
 
 void EngineSession::shutdownInternalHostBus()
 {
+    if (mStreaming && mStreaming->isLoaderRunning()) {
+        mStreaming->stopLoader();
+    }
     if (mBackend) {
         mBackend->shutdownInternalHostBus();
     }
@@ -658,7 +660,7 @@ void EngineSession::shutdownInternalHostBus()
 
 int EngineSession::getRequiredOutputChannelCount() const
 {
-    return mSpatializer ? static_cast<int>(mSpatializer->numInternalChannels()) : 0;
+    return mConfig.outputChannels;
 }
 
 void EngineSession::setPaused(bool isPaused)
@@ -711,7 +713,7 @@ EngineStatus EngineSession::queryStatus() const
     st.nanGuardCount = mState.nanGuardCount.load(std::memory_order_relaxed);
     st.speakerProximityCount = mState.speakerProximityCount.load(std::memory_order_relaxed);
     st.paused = mConfig.paused.load(std::memory_order_relaxed);
-    st.isExitRequested = (mBackend && !mBackend->isRunning()); 
+    st.isExitRequested = mConfig.shouldExit.load(std::memory_order_relaxed);
     st.requestedSampleRate = mConfig.sampleRate;
     st.outputDeviceName = mConfig.outputDeviceName.empty() ? "(system default)" : mConfig.outputDeviceName;
     if (mBackend) {

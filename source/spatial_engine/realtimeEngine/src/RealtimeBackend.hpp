@@ -388,9 +388,14 @@ public:
 
     void shutdownInternalHostBus() {
         mHostBusPrepared = false;
+        mConfig.playing.store(false, std::memory_order_relaxed);
     }
 
     bool isHostBusPrepared() const { return mHostBusPrepared; }
+    unsigned int hostOutputChannels() const { return mHostIO.channelsOut(); }
+    const float* hostOutputChannelBuffer(unsigned int channel) const {
+        return mHostIO.outBuffer(channel);
+    }
 
     // ── Status queries ───────────────────────────────────────────────────
 

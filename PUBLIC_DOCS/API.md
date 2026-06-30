@@ -105,7 +105,7 @@ session.shutdownInternalHostBus();
 session.shutdown();
 ```
 
-`AudioOutputMode::HardwareDevice` and `AudioOutputMode::InternalHostBus` are mutually exclusive. Use `getRequiredOutputChannelCount()` to discover the layout-required output width before entering the host render loop.
+`AudioOutputMode::HardwareDevice` and `AudioOutputMode::InternalHostBus` are mutually exclusive. Use `getRequiredOutputChannelCount()` to discover the routed layout/device output width before entering the host render loop.
 
 ## Core Types
 
@@ -235,7 +235,7 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 | `prepareInternalHostBus(const HostBusConfig&)` | Configures host-pull rendering without opening a device |
 | `renderHostBlock(float* interleavedOutput, int numFrames, int numChannels)` | Renders one host-pull block; zero-fills on error |
 | `shutdownInternalHostBus()` | Clears internal host-bus state |
-| `getRequiredOutputChannelCount()` | Returns the output channel count required by the active layout |
+| `getRequiredOutputChannelCount()` | Returns the routed output-bus width required by the active layout |
 | `getLastWarning()` | Returns the latest non-fatal warning, such as a handled channel mismatch |
 | `shutdown()` | Stops audio and releases session resources |
 
@@ -255,12 +255,15 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 
 ## Host Render Bus — Channel Mismatch Behavior
 
+`renderHostBlock()` returns the same routed output bus used by normal hardware playback. Spatial Root still renders into its compact internal bus first, then applies the layout/device routing table before copying samples into the host buffer.
+
 `renderHostBlock()` handles host/layout channel-count mismatches conservatively:
 
 - Host channels fewer than required: render the first `hostChannels` only and store a warning in `getLastWarning()`.
 - Host channels greater than required: render the required channels and zero-fill the extra host channels, then store a warning.
 
 The host must still match `sampleRate` and `blockSize` exactly with the configured `EngineSession` values.
+Call `shutdownInternalHostBus()` when leaving host-pull mode. It clears host-bus state and stops the background loader thread so the session can safely switch back to hardware mode later.
 
 ## Embedding With CMake
 

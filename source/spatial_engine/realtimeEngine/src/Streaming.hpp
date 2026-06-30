@@ -660,6 +660,12 @@ public:
     // Must be called AFTER loadScene() and BEFORE starting audio.
 
     void startLoader() {
+        if (mLoaderRunning.load(std::memory_order_acquire)) {
+            return;
+        }
+        if (mLoaderThread.joinable()) {
+            mLoaderThread.join();
+        }
         mLoaderRunning.store(true, std::memory_order_release);
         mLoaderThread = std::thread([this]() { loaderWorker(); });
         std::cout << "[Streaming] Background loader thread started." << std::endl;
@@ -667,6 +673,13 @@ public:
 
     bool isLoaderRunning() const {
         return mLoaderRunning.load(std::memory_order_acquire);
+    }
+
+    void stopLoader() {
+        mLoaderRunning.store(false, std::memory_order_release);
+        if (mLoaderThread.joinable()) {
+            mLoaderThread.join();
+        }
     }
 
     // ── Get a sample for a given source at a global frame position ───────
@@ -780,10 +793,7 @@ public:
         // Stop loader thread first — sets the flag (release) and joins.
         // After join() returns, the loader thread has exited and will never
         // again write to any SourceStream buffer.
-        mLoaderRunning.store(false, std::memory_order_release);
-        if (mLoaderThread.joinable()) {
-            mLoaderThread.join();
-        }
+        stopLoader();
         // Close multichannel reader if active
         if (mMultichannelReader) {
             mMultichannelReader->close();

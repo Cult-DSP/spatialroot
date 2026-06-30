@@ -126,10 +126,10 @@ The engine enforces a strict, linear initialization sequence:
 | `queryStatus() -> EngineStatus` | — | Lock-free snapshot. No state mutation. |
 | `consumeDiagnostics() -> DiagnosticEvents` | — | Atomically exchanges event flags. Clears them on read. |
 | `setAudioOutputMode(AudioOutputMode)` | `mOutputMode` | Must be called before `start()` or `prepareInternalHostBus()`. |
-| `prepareInternalHostBus(const HostBusConfig&)` | `mBackend` host-bus state | Replaces `start()` in host-pull mode. Does not open a hardware device. |
-| `renderHostBlock(float*, int, int)` | — | Runs one render block into a host-provided interleaved buffer. Zero-fills on error. |
-| `shutdownInternalHostBus()` | clears host-bus prepared state | Call before `shutdown()` when using host-pull mode. |
-| `getRequiredOutputChannelCount()` | — | Returns the layout-derived internal output width. |
+| `prepareInternalHostBus(const HostBusConfig&)` | `mBackend` host-bus state | Replaces `start()` in host-pull mode. Does not open a hardware device. Starts the loader only after backend host-bus preparation succeeds. |
+| `renderHostBlock(float*, int, int)` | — | Runs one render block into a host-provided interleaved buffer. Zero-fills on error. Returns the routed output bus, not the compact internal render bus. |
+| `shutdownInternalHostBus()` | clears host-bus prepared state | Call before `shutdown()` when using host-pull mode. Also stops the loader thread so later hardware `start()` is safe. |
+| `getRequiredOutputChannelCount()` | — | Returns the layout-derived routed output-bus width (`RealtimeConfig::outputChannels`). |
 | `getLastWarning()` | — | Returns the last non-fatal warning string for handled host-bus conditions. |
 | `shutdown()` | — | Terminal. Destroy and recreate `EngineSession` to restart. |
 
@@ -185,7 +185,14 @@ Violating this sequence **will** cause deadlocks on macOS CoreAudio and ASIO:
 3. `mBackend->shutdown()` + `mBackend.reset()` — halt audio callback gracefully
 4. `mStreaming->shutdown()` + `mStreaming.reset()` — release disk I/O and memory buffers
 
-**Internal Host Bus mode:** `shutdown()` now calls `shutdownInternalHostBus()` first. Hosts may still call `shutdownInternalHostBus()` explicitly to tear down host-bus state before final shutdown.
+**Internal Host Bus mode:** `shutdown()` now calls `shutdownInternalHostBus()` first. Hosts may still call `shutdownInternalHostBus()` explicitly to tear down host-bus state before final shutdown. This is also the supported way to stop the loader thread before switching the same session back to `HardwareDevice` mode.
+
+### Host-Bus Routing Contract
+
+- The pre-existing realtime contract is: render into the compact internal bus, then route into the layout/device output bus in `Spatializer::renderBlock()` Phase 7.
+- Internal host-bus mode now preserves that exact contract. The host receives the routed output bus, not `Spatializer::mRenderIO`.
+- `HostBusConfig::outputChannels` describes the host buffer width only. It does not redefine the layout-required bus width.
+- `getRequiredOutputChannelCount()` reports `mConfig.outputChannels`, which is the routed output width derived from layout `deviceChannel` values.
 
 `mPose`, `mSpatializer`, `mOutputRemap`, and `mSceneData` are destroyed implicitly via `unique_ptr` when `EngineSession` is destructed. They hold no OS-level resources.
 
