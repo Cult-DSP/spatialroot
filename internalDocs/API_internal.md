@@ -25,6 +25,8 @@
 | `RuntimeParams` | Initial gain/focus/mix values passed at configure time |
 | `EngineStatus` | Side-effect-free snapshot of current state (playhead, CPU load, masks, RMS, xruns, backend/sample-rate status) |
 | `DiagnosticEvents` | Relocation and cluster-change event flags + bitmask pairs; consumed once per call |
+| `AudioOutputMode` | Enum selecting hardware device (`HardwareDevice`) vs internal host pull bus (`InternalHostBus`) |
+| `HostBusConfig` | Host render-bus contract: `sampleRate`, `blockSize`, `outputChannels`, `interleaved` |
 
 > **Note:** All structs are global (outside any namespace) to avoid polluting public interfaces with internal legacy types.
 
@@ -123,6 +125,12 @@ The engine enforces a strict, linear initialization sequence:
 | `update()` | — | Should be called from the main thread / host loop. Currently retained for API stability. |
 | `queryStatus() -> EngineStatus` | — | Lock-free snapshot. No state mutation. |
 | `consumeDiagnostics() -> DiagnosticEvents` | — | Atomically exchanges event flags. Clears them on read. |
+| `setAudioOutputMode(AudioOutputMode)` | `mOutputMode` | Must be called before `start()` or `prepareInternalHostBus()`. |
+| `prepareInternalHostBus(const HostBusConfig&)` | `mBackend` host-bus state | Replaces `start()` in host-pull mode. Does not open a hardware device. |
+| `renderHostBlock(float*, int, int)` | — | Runs one render block into a host-provided interleaved buffer. Zero-fills on error. |
+| `shutdownInternalHostBus()` | clears host-bus prepared state | Call before `shutdown()` when using host-pull mode. |
+| `getRequiredOutputChannelCount()` | — | Returns the layout-derived internal output width. |
+| `getLastWarning()` | — | Returns the last non-fatal warning string for handled host-bus conditions. |
 | `shutdown()` | — | Terminal. Destroy and recreate `EngineSession` to restart. |
 
 **Runtime setters (direct C++ control — no OSC required; no OSC sync on individual setters):**
@@ -177,6 +185,8 @@ Violating this sequence **will** cause deadlocks on macOS CoreAudio and ASIO:
 3. `mBackend->shutdown()` + `mBackend.reset()` — halt audio callback gracefully
 4. `mStreaming->shutdown()` + `mStreaming.reset()` — release disk I/O and memory buffers
 
+**Internal Host Bus mode:** `shutdown()` now calls `shutdownInternalHostBus()` first. Hosts may still call `shutdownInternalHostBus()` explicitly to tear down host-bus state before final shutdown.
+
 `mPose`, `mSpatializer`, `mOutputRemap`, and `mSceneData` are destroyed implicitly via `unique_ptr` when `EngineSession` is destructed. They hold no OS-level resources.
 
 ### Explicit Exclusions
@@ -224,6 +234,7 @@ AlloLib parameters bind to internal memory topologies — exposing them directly
 2. **Restartable Stop/Seek is Unsafe:** Ring buffers and ADM block-streamers hold state that cannot be flushed atomically. Transport is strictly `setPaused(bool)`.
 3. **OSC Ownership:** `mParamServer` cannot be shared with the host. Must be spun up and torn down inside `EngineSession` to guarantee valid AlloLib parameter scoping.
 4. **Shutdown Sequence:** `mParamServer->stopServer()` → `mOscParams.reset()` → `mBackend->shutdown()` → `mStreaming->shutdown()` — any other order **will** deadlock on CoreAudio/ASIO.
+5. **Hardware / Host Bus Mutual Exclusion:** `start()` is invalid while `AudioOutputMode::InternalHostBus` is selected, and host-bus preparation is invalid while the hardware backend is running.
 
 ---
 

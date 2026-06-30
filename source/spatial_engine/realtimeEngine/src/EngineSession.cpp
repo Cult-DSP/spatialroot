@@ -14,6 +14,8 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <algorithm>
+#include <cstring>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TeeStreamBuf — writes each character to two underlying stream buffers.
@@ -144,9 +146,19 @@ void EngineSession::setLastError(const std::string& err)
     mLastError = err;
 }
 
+void EngineSession::setLastWarning(const std::string& warning)
+{
+    mLastWarning = warning;
+}
+
 std::string EngineSession::getLastError() const
 {
     return mLastError;
+}
+
+std::string EngineSession::getLastWarning() const
+{
+    return mLastWarning;
 }
 
 std::string EngineSession::getFailureDiagnostics() const
@@ -384,6 +396,12 @@ bool EngineSession::start()
 {
     mFailureDiagnostics.clear();
 
+    if (mOutputMode == AudioOutputMode::InternalHostBus || mHostBusPrepared) {
+        setLastError("start() is not available while InternalHostBus is selected.");
+        storeFailureDiagnostics("start (output mode)", "");
+        return false;
+    }
+
     // Tee stdout+stderr for the pre-loader phase of startup (single-threaded).
     // Capture is RESTORED before startLoader() to avoid racing with the loader
     // background thread. Failures after that point include context info only.
@@ -483,6 +501,7 @@ bool EngineSession::start()
 
 void EngineSession::shutdown()
 {
+    shutdownInternalHostBus();
     if (mParamServer) {
         mParamServer->stopServer();
         mParamServer.reset();
@@ -498,6 +517,148 @@ void EngineSession::shutdown()
         mStreaming->shutdown();
         mStreaming.reset();
     }
+}
+
+bool EngineSession::setAudioOutputMode(AudioOutputMode mode)
+{
+    if (mBackend && mBackend->isRunning() && mode == AudioOutputMode::InternalHostBus) {
+        setLastError("Cannot switch to InternalHostBus while hardware output is running.");
+        return false;
+    }
+    if (mHostBusPrepared && mode == AudioOutputMode::HardwareDevice) {
+        setLastError("Cannot switch to HardwareDevice while InternalHostBus is prepared.");
+        return false;
+    }
+    mOutputMode = mode;
+    return true;
+}
+
+bool EngineSession::prepareInternalHostBus(const HostBusConfig& config)
+{
+    mLastWarning.clear();
+
+    if (mOutputMode != AudioOutputMode::InternalHostBus) {
+        setLastError("InternalHostBus requested but output mode is not InternalHostBus.");
+        return false;
+    }
+    if (!mStreaming || !mPose || !mSpatializer) {
+        setLastError("InternalHostBus requires loadScene() and applyLayout() to succeed first.");
+        return false;
+    }
+    if (mBackend && mBackend->isRunning()) {
+        setLastError("InternalHostBus cannot be prepared while hardware output is running.");
+        return false;
+    }
+    if (config.outputChannels <= 0 || config.blockSize <= 0) {
+        setLastError("InternalHostBus config has invalid channel count or block size.");
+        return false;
+    }
+    if (!config.interleaved) {
+        setLastError("InternalHostBus currently supports interleaved output only.");
+        return false;
+    }
+    if (static_cast<int>(std::round(config.sampleRate)) != mConfig.sampleRate) {
+        setLastError("InternalHostBus sample rate must match EngineSession configuration.");
+        return false;
+    }
+    if (config.blockSize != mConfig.bufferSize) {
+        setLastError("InternalHostBus block size must match EngineSession configuration.");
+        return false;
+    }
+
+    if (!mBackend) {
+        mBackend = std::make_unique<RealtimeBackend>(mConfig, mState);
+    }
+    mBackend->setStreaming(mStreaming.get());
+    mBackend->setPose(mPose.get());
+    mBackend->setSpatializer(mSpatializer.get());
+    mBackend->cacheSourceNames(mStreaming->sourceNames());
+
+    if (!mStreaming->isLoaderRunning()) {
+        mStreaming->startLoader();
+    }
+
+    if (!mBackend->prepareInternalHostBus(config)) {
+        setLastError(mBackend->getLastError().empty()
+                         ? std::string("InternalHostBus preparation failed.")
+                         : mBackend->getLastError());
+        return false;
+    }
+
+    mHostBusConfig = config;
+    mHostBusPrepared = true;
+    return true;
+}
+
+int EngineSession::renderHostBlock(float* interleavedOutput, int numFrames, int numChannels)
+{
+    if (!interleavedOutput || numFrames <= 0 || numChannels <= 0) {
+        setLastError("renderHostBlock called with invalid output buffer or dimensions.");
+        return 0;
+    }
+    if (!mHostBusPrepared || !mBackend || mOutputMode != AudioOutputMode::InternalHostBus) {
+        setLastError("InternalHostBus is not prepared.");
+        std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
+        return 0;
+    }
+    if (numFrames != mHostBusConfig.blockSize) {
+        setLastError("renderHostBlock frame count does not match HostBusConfig block size.");
+        std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
+        return 0;
+    }
+
+    if (!mBackend->renderHostBlock()) {
+        setLastError(mBackend->getLastError().empty()
+                         ? std::string("InternalHostBus render failed.")
+                         : mBackend->getLastError());
+        std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
+        return 0;
+    }
+
+    const unsigned int requiredChannels = mSpatializer
+        ? mSpatializer->numInternalChannels()
+        : 0u;
+    const unsigned int outChannels = static_cast<unsigned int>(numChannels);
+    const unsigned int copyChannels = std::min(requiredChannels, outChannels);
+
+    std::memset(interleavedOutput, 0, sizeof(float) * numFrames * numChannels);
+    for (unsigned int ch = 0; ch < copyChannels; ++ch) {
+        const float* src = mSpatializer->internalChannelBuffer(ch);
+        for (int f = 0; f < numFrames; ++f) {
+            interleavedOutput[(f * numChannels) + static_cast<int>(ch)] = src[f];
+        }
+    }
+
+    if (outChannels < requiredChannels) {
+        std::ostringstream warn;
+        warn << "Host requested " << outChannels << " channels, but layout requires "
+             << requiredChannels << ". Rendering first " << outChannels << " channels only.";
+        setLastWarning(warn.str());
+    } else if (outChannels > requiredChannels) {
+        std::ostringstream warn;
+        warn << "Host requested " << outChannels << " channels, but layout provides "
+             << requiredChannels << ". Channels " << requiredChannels << ".."
+             << (outChannels - 1) << " are zero-filled.";
+        setLastWarning(warn.str());
+    } else {
+        mLastWarning.clear();
+    }
+
+    return numFrames;
+}
+
+void EngineSession::shutdownInternalHostBus()
+{
+    if (mBackend) {
+        mBackend->shutdownInternalHostBus();
+    }
+    mHostBusPrepared = false;
+    mLastWarning.clear();
+}
+
+int EngineSession::getRequiredOutputChannelCount() const
+{
+    return mSpatializer ? static_cast<int>(mSpatializer->numInternalChannels()) : 0;
 }
 
 void EngineSession::setPaused(bool isPaused)

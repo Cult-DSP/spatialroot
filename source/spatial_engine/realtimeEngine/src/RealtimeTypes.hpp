@@ -126,6 +126,28 @@ enum class ElevationMode {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AudioOutputMode — Selects the realtime audio output sink
+// ─────────────────────────────────────────────────────────────────────────────
+// HardwareDevice: Open a system audio device via AlloLib AudioIO (default).
+// InternalHostBus: Do not open a device; host pulls rendered PCM blocks.
+enum class AudioOutputMode {
+    HardwareDevice,
+    InternalHostBus
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HostBusConfig — Configuration for the internal host render bus
+// ─────────────────────────────────────────────────────────────────────────────
+// The host must match the configured sample rate and block size.
+// outputChannels is the host's requested channel count (interleaved by default).
+struct HostBusConfig {
+    double sampleRate = 48000.0;
+    int blockSize = 512;
+    int outputChannels = 2;
+    bool interleaved = true;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RealtimeConfig — Global configuration for the real-time engine
 // ─────────────────────────────────────────────────────────────────────────────
 // Set once at startup, read-only during playback except for the fields marked

@@ -1033,6 +1033,12 @@ public:
         return static_cast<unsigned int>(mRenderIO.channelsOut());
     }
 
+    /// Pointer to the internal render buffer for a given internal channel.
+    /// Safe to read on the audio thread after renderBlock() completes.
+    const float* internalChannelBuffer(unsigned int channel) const {
+        return mRenderIO.outBuffer(channel);
+    }
+
     /// @deprecated Use numInternalChannels().
     [[deprecated("Use numInternalChannels()")]]
     unsigned int numRenderChannels() const {

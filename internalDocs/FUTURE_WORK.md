@@ -2,6 +2,10 @@
 
 This is the canonical future-work tracker for Spatial Root maintainers. Keep this file for active backlog themes and short forward-looking notes; leave historical decision logs in the dated audit documents.
 
+## Internal Host Bus
+
+- add a host-render smoke test: load known content, call `renderHostBlock()` for several blocks, verify output is nonzero and NaN-free, optionally dump a WAV. Blocked on selecting a stable test input/layout pair. See [HOST_RENDER_BACKEND.md](HOST_RENDER_BACKEND.md).
+
 ## Spatialization & Rendering
 
 - continue offline rendering parity work without widening the realtime-engine ownership boundary

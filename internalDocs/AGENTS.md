@@ -24,6 +24,7 @@ This table is the authoritative map of the actively maintained top-level interna
 | Build scripts, CI, bootstrap, dependency wiring | [BUILD_AND_CI.md](BUILD_AND_CI.md) | [CI Overview](BUILD_AND_CI.md#ci-overview) · [Dependency Audit](BUILD_AND_CI.md#dependency-audit) · [Build System Notes](BUILD_AND_CI.md#build-system-notes) |
 | Packaging, bundle layout, runtime discovery, release-signing notes | [PACKAGING.md](PACKAGING.md) | [Staged Tree](PACKAGING.md#staged-tree-macos) · [Discovery Order](PACKAGING.md#discovery-order) · [Release Signing](PACKAGING.md#release-signing-deferred) |
 | Repo cleanup and vendored-dependency audits | [REPO_AUDITING.md](REPO_AUDITING.md) | [Repository Cleanup Audit](REPO_AUDITING.md#repository-cleanup-audit) · [AlloLib Dependency Audit](REPO_AUDITING.md#allolib-dependency-audit) |
+| Internal host bus / host render backend | [HOST_RENDER_BACKEND.md](HOST_RENDER_BACKEND.md) | [New Host Render API](HOST_RENDER_BACKEND.md#new-host-render-api) · [Expected Host Flow](HOST_RENDER_BACKEND.md#expected-host-flow) · [Channel Mismatch Behavior](HOST_RENDER_BACKEND.md#channel-mismatch-behavior) |
 | Active backlog and forward work | [FUTURE_WORK.md](FUTURE_WORK.md) | [Spatialization & Rendering](FUTURE_WORK.md#spatialization--rendering) · [Release & Packaging](FUTURE_WORK.md#release--packaging) |
 | Release-facing internal summary | [alphaRleaseNotes.md](alphaRleaseNotes.md) | [May 2026 Alpha Hardening](alphaRleaseNotes.md#may-2026-alpha-hardening) · [Known Limits](alphaRleaseNotes.md#known-limits) |
 | Historical change log and prior architecture | [devHistory.md](devHistory.md) | [Realtime Audio Backend/API Visibility](devHistory.md#realtime-audio-backendapi-visibility--48-khz-truthfulness-may-11-2026) · [Phase 6 — C++ Refactor Complete](devHistory.md#phase-6--c-refactor-complete-march-29-31-2026) |
@@ -32,7 +33,7 @@ This table is the authoritative map of the actively maintained top-level interna
 
 ## Documentation Policy
 
-- The maintained top-level internal set is: `AGENTS.md`, `API_internal.md`, `REALTIME_ENGINE.md`, `SPATIALIZATION.md`, `DEPENDENCIES.md`, `BUILD_AND_CI.md`, `PACKAGING.md`, `REPO_AUDITING.md`, `FUTURE_WORK.md`, `alphaRleaseNotes.md`, and `devHistory.md`.
+- The maintained top-level internal set is: `AGENTS.md`, `API_internal.md`, `REALTIME_ENGINE.md`, `HOST_RENDER_BACKEND.md`, `SPATIALIZATION.md`, `DEPENDENCIES.md`, `BUILD_AND_CI.md`, `PACKAGING.md`, `REPO_AUDITING.md`, `FUTURE_WORK.md`, `alphaRleaseNotes.md`, and `devHistory.md`.
 - Public docs remain `README.md` and `PUBLIC_DOCS/API.md`.
 - Subfolder docs under paths like `internalDocs/engine_testing/`, `internalDocs/API/`, and `internalDocs/DBAP/` are intentionally outside this consolidation pass.
 

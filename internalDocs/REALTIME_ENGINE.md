@@ -261,7 +261,12 @@ Threading model: audio thread (RT, AlloLib), loader thread (background disk I/O)
 
 > Consolidated from prior agent docs (subfolders removed).
 
-**Responsibilities:** Audio device initialization, callback registration, buffer format conversion, latency tuning, error recovery, backend selection.
+**Responsibilities:** Audio device initialization, callback registration, buffer format conversion, latency tuning, error recovery, backend selection. Also implements Internal Host Bus mode for hosts that own their own audio device.
+
+**Two output modes:**
+
+- **`AudioOutputMode::HardwareDevice` (default):** `RealtimeBackend::init()` opens a hardware device via AlloLib `AudioIO`. The engine owns the device and drives the audio callback.
+- **`AudioOutputMode::InternalHostBus`:** `prepareInternalHostBus(const HostBusConfig&)` configures an internal IO buffer without opening a device. The host drives the render loop by calling `renderHostBlock(float*, int, int)`. See [HOST_RENDER_BACKEND.md](HOST_RENDER_BACKEND.md) for the focused integration notes.
 
 **Real-Time Constraints:** `processBlock()` is the RT entry point — no allocations, no locks, deterministic execution, minimal overhead.
 

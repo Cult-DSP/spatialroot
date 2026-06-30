@@ -665,6 +665,10 @@ public:
         std::cout << "[Streaming] Background loader thread started." << std::endl;
     }
 
+    bool isLoaderRunning() const {
+        return mLoaderRunning.load(std::memory_order_acquire);
+    }
+
     // ── Get a sample for a given source at a global frame position ───────
     // Called from the audio callback — MUST be lock-free and real-time safe.
 

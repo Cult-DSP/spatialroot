@@ -111,6 +111,14 @@ public:
     bool start();
     void shutdown();
 
+    // ── Output mode / host render bus ───────────────────────────────────
+    bool setAudioOutputMode(AudioOutputMode mode);
+    bool prepareInternalHostBus(const HostBusConfig& config);
+    int renderHostBlock(float* interleavedOutput, int numFrames, int numChannels);
+    void shutdownInternalHostBus();
+    int getRequiredOutputChannelCount() const;
+    std::string getLastWarning() const;
+
     void setPaused(bool isPaused); // Transport control API
 
     // Returns current runtime params in user-facing units (dB for gains).
@@ -147,6 +155,7 @@ public:
 
 private:
     void setLastError(const std::string& err);
+    void setLastWarning(const std::string& warning);
     // Builds and stores mFailureDiagnostics from captured stdout+stderr output.
     void storeFailureDiagnostics(const std::string& stage, const std::string& capturedOutput);
 
@@ -161,6 +170,7 @@ private:
     RealtimeConfig mConfig;
     EngineState mState;
     std::string mLastError;
+    std::string mLastWarning;
     std::string mFailureDiagnostics;
 
     std::unique_ptr<SpatialData> mSceneData; // Held securely between loadScene and applyLayout
@@ -176,4 +186,8 @@ private:
 
     int mOscPort = 9009;
     std::string mRemapCsv;
+
+    AudioOutputMode mOutputMode = AudioOutputMode::HardwareDevice;
+    HostBusConfig mHostBusConfig;
+    bool mHostBusPrepared = false;
 };

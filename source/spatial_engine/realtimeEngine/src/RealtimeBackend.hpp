@@ -331,6 +331,67 @@ public:
         }
     }
 
+    // ── Internal Host Bus ───────────────────────────────────────────────
+
+    /// Prepare the internal host render bus (no hardware device opened).
+    bool prepareInternalHostBus(const HostBusConfig& config) {
+        mLastError.clear();
+
+        if (isRunning()) {
+            setLastError("Cannot prepare InternalHostBus while hardware output is running.");
+            return false;
+        }
+        if (!mStreamer || !mPose || !mSpatializer) {
+            setLastError("Host bus requires Streaming, Pose, and Spatializer to be configured.");
+            return false;
+        }
+        if (config.blockSize <= 0 || config.outputChannels <= 0) {
+            setLastError("Host bus config has invalid block size or channel count.");
+            return false;
+        }
+        if (static_cast<int>(std::round(config.sampleRate)) != mConfig.sampleRate) {
+            setLastError("Host bus sample rate must match EngineSession sample rate.");
+            return false;
+        }
+        if (config.blockSize != mConfig.bufferSize) {
+            setLastError("Host bus block size must match EngineSession buffer size.");
+            return false;
+        }
+        if (!config.interleaved) {
+            setLastError("Host bus currently supports interleaved output only.");
+            return false;
+        }
+
+        mHostBusConfig = config;
+        mHostIO.framesPerBuffer(static_cast<unsigned int>(config.blockSize));
+        mHostIO.framesPerSecond(config.sampleRate);
+        mHostIO.channelsIn(0);
+        mHostIO.channelsOut(mConfig.outputChannels);
+        mHostIO.user(this);
+        mHostBusPrepared = true;
+        return true;
+    }
+
+    /// Render one block into the internal bus (host pulls after calling this).
+    bool renderHostBlock() {
+        if (!mHostBusPrepared) {
+            setLastError("InternalHostBus not prepared.");
+            return false;
+        }
+        if (!mSpatializer || !mStreamer || !mPose) {
+            setLastError("Host bus render called before backend wiring completed.");
+            return false;
+        }
+        processBlock(mHostIO);
+        return true;
+    }
+
+    void shutdownInternalHostBus() {
+        mHostBusPrepared = false;
+    }
+
+    bool isHostBusPrepared() const { return mHostBusPrepared; }
+
     // ── Status queries ───────────────────────────────────────────────────
 
     /// Current CPU load of the audio thread (0.0–1.0).
@@ -691,6 +752,11 @@ private:
     double          mEffectiveStreamSampleRate = 0.0;
     bool            mEffectiveStreamSampleRateKnown = false;
     std::string     mLastError;
+
+    // ── Internal Host Bus state ─────────────────────────────────────────
+    HostBusConfig   mHostBusConfig;
+    bool            mHostBusPrepared = false;
+    al::AudioIOData mHostIO{this};
 
     // ── Agent pointers (set once before start(), never changed) ──────────
     // THREADING: Set on the MAIN thread before start(). After start() these

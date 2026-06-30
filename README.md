@@ -213,6 +213,7 @@ The realtime engine exposes a C++ embedding API (`EngineSessionCore` static libr
   - [internalDocs/AGENTS.md](internalDocs/AGENTS.md) (navigation index)
   - [internalDocs/DEPENDENCIES.md](internalDocs/DEPENDENCIES.md) (LUSID + layout formats)
   - [internalDocs/REALTIME_ENGINE.md](internalDocs/REALTIME_ENGINE.md) (engine architecture and bug audit)
+  - [internalDocs/HOST_RENDER_BACKEND.md](internalDocs/HOST_RENDER_BACKEND.md) (internal host bus / host-pull render API)
   - [internalDocs/SPATIALIZATION.md](internalDocs/SPATIALIZATION.md) (offline rendering and spatialization details)
   - [internalDocs/PACKAGING.md](internalDocs/PACKAGING.md) (packaging and install notes)
   - [internalDocs/FUTURE_WORK.md](internalDocs/FUTURE_WORK.md) (active backlog and deferred work)

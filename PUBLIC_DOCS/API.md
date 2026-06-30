@@ -70,6 +70,8 @@ int main() {
 
 ## Lifecycle
 
+### Hardware Device Mode (default)
+
 Call methods in this order:
 
 1. `configureEngine()`
@@ -81,6 +83,29 @@ Call methods in this order:
 While running, call `update()`, `queryStatus()`, and `consumeDiagnostics()` regularly from the main thread. `shutdown()` is always safe and is terminal for that session instance.
 
 `configureRuntime()` is safe both before and after `start()`. Direct setters such as `setMasterGainDb()` and `setDbapFocus()` may also be used to update live runtime state.
+
+### Internal Host Bus Mode
+
+For hosts that own the audio device themselves, use the internal host bus path instead of `start()`. In this mode Spatial Root renders PCM into a host-provided interleaved buffer and does not open a hardware device.
+
+```cpp
+session.configureEngine(engine);
+session.loadScene(scene);
+session.applyLayout(layout);
+session.configureRuntime(runtime);
+
+session.setAudioOutputMode(AudioOutputMode::InternalHostBus);
+session.prepareInternalHostBus({48000.0, 512, hostChannels, true});
+
+while (hostAudioIsRunning) {
+    session.renderHostBlock(hostBuffer, 512, hostChannels);
+}
+
+session.shutdownInternalHostBus();
+session.shutdown();
+```
+
+`AudioOutputMode::HardwareDevice` and `AudioOutputMode::InternalHostBus` are mutually exclusive. Use `getRequiredOutputChannelCount()` to discover the layout-required output width before entering the host render loop.
 
 ## Core Types
 
@@ -110,6 +135,26 @@ Exactly one source mode must be provided.
 | --- | --- | --- |
 | `layoutPath` | `std::string` | Path to the speaker layout JSON file |
 | `remapCsvPath` | `std::string` | Deprecated internal scaffolding; public callers should leave this empty |
+
+### `AudioOutputMode`
+
+Selects the audio output path before calling `start()` or `prepareInternalHostBus()`.
+
+| Value | Meaning |
+| --- | --- |
+| `HardwareDevice` | Default. Spatial Root opens and owns the audio device via AlloLib `AudioIO`. |
+| `InternalHostBus` | Spatial Root renders into a host-owned buffer. No hardware device is opened. |
+
+### `HostBusConfig`
+
+Passed to `prepareInternalHostBus()` to describe the host's audio block contract.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `sampleRate` | `double` | Host sample rate in Hz. Must match `EngineOptions::sampleRate`. |
+| `blockSize` | `int` | Frames per `renderHostBlock()` call. Must match `EngineOptions::bufferSize`. |
+| `outputChannels` | `int` | Number of output channels provided by the host. |
+| `interleaved` | `bool` | Must be `true`; only interleaved output is currently supported. |
 
 ### `RuntimeParams`
 
@@ -186,6 +231,12 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 | `consumeDiagnostics()` | Returns and clears pending relocation or cluster events |
 | `getLastError()` | Returns the last synchronous failure string |
 | `getFailureDiagnostics()` | Returns the last startup-stage diagnostic block |
+| `setAudioOutputMode(AudioOutputMode)` | Selects hardware device or internal host bus mode |
+| `prepareInternalHostBus(const HostBusConfig&)` | Configures host-pull rendering without opening a device |
+| `renderHostBlock(float* interleavedOutput, int numFrames, int numChannels)` | Renders one host-pull block; zero-fills on error |
+| `shutdownInternalHostBus()` | Clears internal host-bus state |
+| `getRequiredOutputChannelCount()` | Returns the output channel count required by the active layout |
+| `getLastWarning()` | Returns the latest non-fatal warning, such as a handled channel mismatch |
 | `shutdown()` | Stops audio and releases session resources |
 
 ## Status And Diagnostics
@@ -201,6 +252,15 @@ If `containsAudio.json` is present, it is the preferred source-to-file mapping c
 `consumeDiagnostics()` is the event surface for render-bus and device-bus relocation or dominant-cluster changes.
 
 `getFailureDiagnostics()` returns a structured block for the most recent failed `loadScene()`, `applyLayout()`, or `start()` call. It is intended for logs and embedding-host diagnostics panels.
+
+## Host Render Bus — Channel Mismatch Behavior
+
+`renderHostBlock()` handles host/layout channel-count mismatches conservatively:
+
+- Host channels fewer than required: render the first `hostChannels` only and store a warning in `getLastWarning()`.
+- Host channels greater than required: render the required channels and zero-fill the extra host channels, then store a warning.
+
+The host must still match `sampleRate` and `blockSize` exactly with the configured `EngineSession` values.
 
 ## Embedding With CMake
 
